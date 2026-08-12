@@ -14,7 +14,7 @@ jobs:
           enable-cache: true
       - run: uv sync --frozen --dev
       - run: uv run python run_tests.py
-      - run: uv run python scripts/publish_ledger.py
+      - run: uv run python scripts/build_static_site.py
       - name: Ensure publication is reproducible
         run: git diff --exit-code -- web/api/v1/predictions.json
   web-smoke:

@@ -9,7 +9,7 @@ append-only `data/predictions.jsonl` ledger into `web/api/v1/predictions.json`.
 From the project root:
 
 ```bash
-./.venv/bin/python scripts/publish_ledger.py
+./.venv/bin/python scripts/build_static_site.py
 ./.venv/bin/python -m http.server 8765 --directory web
 ```
 
