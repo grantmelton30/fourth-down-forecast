@@ -14,6 +14,8 @@ class ValidatedRidge:
     scale: np.ndarray
     medians: np.ndarray
     beta: np.ndarray
+    lower: np.ndarray
+    upper: np.ndarray
     challenger_promoted: bool
     validation_base_rmse: float
     validation_challenger_rmse: float
@@ -21,6 +23,7 @@ class ValidatedRidge:
     def predict(self, frame: pd.DataFrame) -> np.ndarray:
         values = frame.reindex(columns=self.features).to_numpy(float)
         values = np.where(np.isnan(values), self.medians, values)
+        values = np.clip(values, self.lower, self.upper)
         design = np.column_stack([np.ones(len(values)), (values - self.center) / self.scale])
         return design @ self.beta
 
@@ -80,9 +83,13 @@ def fit_validated_ridge(
     promoted = challenger_rmse <= base_rmse - minimum_improvement
     selected = challenger if promoted else base
     final_fit = _fit(clean, selected, target, alpha)
+    bounds = clean.loc[:, selected].to_numpy(float)
+    bounds = np.where(np.isnan(bounds), final_fit[2], bounds)
     return ValidatedRidge(
         features=selected, center=final_fit[0], scale=final_fit[1],
-        medians=final_fit[2], beta=final_fit[3], challenger_promoted=promoted,
+        medians=final_fit[2], beta=final_fit[3],
+        lower=np.nanmin(bounds, axis=0), upper=np.nanmax(bounds, axis=0),
+        challenger_promoted=promoted,
         validation_base_rmse=base_rmse,
         validation_challenger_rmse=challenger_rmse,
     )

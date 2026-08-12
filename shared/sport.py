@@ -146,6 +146,13 @@ class SportAdapter:
     def games(self, season: int, week: int) -> pd.DataFrame:
         raise NotImplementedError
 
+    def games_observed(self, game_id: str) -> dict[str, int]:
+        """Current-season evidence available before this game's kickoff."""
+        return {"home": 0, "away": 0}
+
+    def season_schedule(self, season: int) -> pd.DataFrame:
+        return pd.DataFrame()
+
     def backtest_frame(self):
         raise NotImplementedError
 
@@ -451,6 +458,9 @@ class NFLAdapter(SportAdapter):
             "wind",
         ]
         return sel[[c for c in cols if c in sel.columns]].reset_index(drop=True)
+
+    def season_schedule(self, season: int) -> pd.DataFrame:
+        return self._schedules()[self._schedules()["season"].eq(season)].copy()
 
     def backtest_frame(self):
         # nfl-model tags this artifact with a hash of the config that produced it, so a
@@ -843,6 +853,142 @@ class NCAAAdapter(SportAdapter):
             p = self._wf_path()
             self._cache["wf"] = pd.read_parquet(p) if p.exists() else pd.DataFrame()
         return self._cache["wf"]
+
+    def _preseason_features(self) -> pd.DataFrame:
+        """Cached free preseason sources plus a strictly prior-year power candidate."""
+        if "preseason" in self._cache:
+            return self._cache["preseason"]
+        features = self._module("features")
+        raw: dict[str, list[pd.DataFrame]] = {
+            name: [] for name in ("returning", "portal", "recruiting", "talent", "coaching")
+        }
+        stems = {
+            "returning": "returning", "portal": "portal",
+            "recruiting": "recruiting", "talent": "talent", "coaching": "coaches",
+        }
+        for name, stem in stems.items():
+            for path in sorted(self._cache_dir().glob(f"{stem}_[0-9][0-9][0-9][0-9].json")):
+                try:
+                    payload = json.loads(path.read_text())
+                except (json.JSONDecodeError, OSError):
+                    continue
+                if payload:
+                    raw[name].append(pd.json_normalize(payload))
+        sources = {
+            name: pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+            for name, frames in raw.items()
+        }
+        manual_path = self.profile.repo / "data" / "manual" / "preseason_features.csv"
+        manual = pd.read_csv(manual_path) if manual_path.exists() else None
+        preseason = features.normalize_preseason_sources(**sources, manual=manual)
+        prior = features.previous_season_power(
+            self._walkforward(), seasons=list(self._cfg().all_seasons)
+        )
+        preseason = preseason.merge(
+            prior, on=["season", "team"], how="outer", suffixes=("", "_prior")
+        )
+        if "prior_power_rating_prior" in preseason:
+            preseason["prior_power_rating"] = preseason[
+                "prior_power_rating_prior"
+            ].combine_first(preseason.get("prior_power_rating"))
+            preseason = preseason.drop(columns="prior_power_rating_prior")
+        self._cache["preseason"] = preseason
+        return preseason
+
+    def _live_features(self) -> pd.DataFrame:
+        if "live_features" not in self._cache:
+            backtest = self._module("backtest")
+            features = self._module("features")
+            base = backtest.build_features(
+                self._market(), self._walkforward(), self._cfg()
+            )
+            self._cache["live_features"] = features.add_preseason_matchup_features(
+                base, self._preseason_features()
+            )
+        return self._cache["live_features"]
+
+    def projection_mean(self, game_id: str) -> "dict | None":
+        """Validated football-only mean for publication; market is never an input."""
+        frame = self._live_features()
+        row = frame[frame["game_id"].astype(str).eq(str(game_id))]
+        if row.empty:
+            return None
+        week = int(row.iloc[0]["week"])
+        key = f"live_mean_{self._module('features').maturity_phase(week)}"
+        if key not in self._cache:
+            market = self._market()
+            training_market = market[
+                market.get("completed", False).fillna(False).astype(bool)
+                & market["actual_margin"].notna() & market["actual_total"].notna()
+            ]
+            if training_market.empty:
+                return None
+            training = self._module("backtest").build_features(
+                training_market, self._walkforward(), self._cfg()
+            )
+            training = self._module("features").add_preseason_matchup_features(
+                training, self._preseason_features()
+            )
+            self._cache[key] = self._module("live_mean").fit_live_mean(training, week)
+        model = self._cache[key]
+        spread, total = model.predict(row)
+        return {
+            "spread": spread, "total": total, "phase": model.phase,
+            "validation_season": model.validation_season,
+            "spread_preseason_promoted": model.spread.challenger_promoted,
+            "total_preseason_promoted": model.total.challenger_promoted,
+        }
+
+    def games_observed(self, game_id: str) -> dict[str, int]:
+        games = self._games_with_venues()
+        row = games[games["game_id"].astype(str).eq(str(game_id))]
+        if row.empty:
+            return {"home": 0, "away": 0}
+        game = row.iloc[0]
+        kickoff = pd.to_datetime(game.get("kickoff"), utc=True, errors="coerce")
+        completed_flag = (
+            games["completed"].fillna(False).astype(bool)
+            if "completed" in games else pd.Series(False, index=games.index)
+        )
+        completed = games[
+            games["season"].eq(game["season"]) & completed_flag
+            & (pd.to_datetime(games["kickoff"], utc=True, errors="coerce") < kickoff)
+        ]
+        return {
+            side: int((
+                completed["homeTeam"].eq(game[f"{side}Team"])
+                | completed["awayTeam"].eq(game[f"{side}Team"])
+            ).sum())
+            for side in ("home", "away")
+        }
+
+    def preseason_missing(self, game_id: str) -> tuple[str, ...]:
+        frame = self._live_features()
+        row = frame[frame["game_id"].astype(str).eq(str(game_id))]
+        if row.empty:
+            return ("preseason feature record",)
+        row = row.iloc[0]
+        checks = {
+            "returning production": ("home_returning_production", "away_returning_production"),
+            "transfer portal": ("home_portal_net_rating", "away_portal_net_rating"),
+            "recruiting/talent": ("home_talent_composite", "away_talent_composite"),
+            "quarterback continuity": ("home_qb_continuity", "away_qb_continuity"),
+            "head coach continuity": ("home_head_coach_continuity", "away_head_coach_continuity"),
+            "coordinator continuity": (
+                "home_offensive_coordinator_continuity",
+                "away_offensive_coordinator_continuity",
+                "home_defensive_coordinator_continuity",
+                "away_defensive_coordinator_continuity",
+            ),
+        }
+        return tuple(
+            name for name, columns in checks.items()
+            if any(column not in row.index or pd.isna(row[column]) for column in columns)
+        )
+
+    def season_schedule(self, season: int) -> pd.DataFrame:
+        games = self._games_with_venues()
+        return games[games["season"].eq(season)].copy()
 
     def _games_with_venues(self) -> pd.DataFrame:
         """The full schedule joined to venue coordinates.

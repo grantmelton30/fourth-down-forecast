@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.features import (PRESEASON_FEATURES, add_preseason_matchup_features,
-                          maturity_phase)
+                          maturity_phase, previous_season_power)
 from src.live_mean import fit_live_mean
 
 
@@ -55,3 +56,14 @@ def test_preseason_features_are_interacted_with_historical_maturity_phase():
     assert maturity_phase(5) == "developing"
     assert maturity_phase(8) == "established"
     assert set(PRESEASON_FEATURES)
+
+
+def test_previous_season_power_is_available_before_week_one():
+    ratings = pd.DataFrame([
+        {"season": 2024, "week": 12, "team": "A", "off_rating": .2, "def_rating": -.1},
+        {"season": 2024, "week": 12, "team": "B", "off_rating": -.1, "def_rating": .1},
+        {"season": 2025, "week": 1, "team": "A", "off_rating": 9, "def_rating": 9},
+    ])
+    prior = previous_season_power(ratings, seasons=[2025])
+    assert prior.loc[prior.team.eq("A"), "prior_power_rating"].iloc[0] == pytest.approx(.3)
+    assert prior.loc[prior.team.eq("B"), "prior_power_rating"].iloc[0] == pytest.approx(-.2)

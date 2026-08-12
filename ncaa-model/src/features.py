@@ -12,7 +12,7 @@ PLAY_FEATURES = (
     "red_zone_td_rate", "starting_field_position",
 )
 PRESEASON_FEATURES = (
-    "returning_production", "portal_net_rating", "recruiting_rating",
+    "prior_power_rating", "returning_production", "portal_net_rating", "recruiting_rating",
     "talent_composite", "qb_continuity", "head_coach_continuity",
     "offensive_coordinator_continuity", "defensive_coordinator_continuity",
 )
@@ -28,6 +28,24 @@ def maturity_phase(week: int) -> str:
     if week <= 5:
         return "developing"
     return "established"
+
+
+def previous_season_power(
+    walkforward: pd.DataFrame, seasons: list[int] | None = None,
+) -> pd.DataFrame:
+    """Leakage-safe final prior-year rating exposed as a preseason candidate."""
+    if walkforward is None or walkforward.empty:
+        return pd.DataFrame(columns=["season", "team", "prior_power_rating"])
+    final = (walkforward.sort_values(["season", "week"])
+             .drop_duplicates(["season", "team"], keep="last").copy())
+    final["season"] = pd.to_numeric(final["season"], errors="coerce") + 1
+    final["prior_power_rating"] = (
+        pd.to_numeric(final["off_rating"], errors="coerce")
+        - pd.to_numeric(final["def_rating"], errors="coerce")
+    )
+    if seasons is not None:
+        final = final[final["season"].isin(seasons)]
+    return final[["season", "team", "prior_power_rating"]].reset_index(drop=True)
 
 
 def add_preseason_matchup_features(
@@ -295,4 +313,5 @@ def load_free_preseason(client, seasons: list[int]) -> dict[str, pd.DataFrame]:
 
 __all__ = ["PLAY_FEATURES", "PRESEASON_FEATURES", "add_preseason_matchup_features",
            "build_team_game_features", "game_uncertainty_multiplier", "load_free_preseason",
-           "matchup_feature_table", "normalize_preseason_sources", "rolling_team_features"]
+           "matchup_feature_table", "maturity_phase", "normalize_preseason_sources",
+           "previous_season_power", "rolling_team_features"]

@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#matchups">Skip to matchups</a>
+  <a class="skip-link" href="#workspace">Skip to forecast workspace</a>
   <header class="site-header">
     <a class="brand" href="#">
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
@@ -18,7 +18,14 @@
     <div class="data-state"><span class="pulse"></span><span id="data-status">Loading ledger</span></div>
   </header>
 
-  <main>
+  <nav class="workspace-nav" aria-label="Forecast workspace">
+    <button class="active" data-view="projections">Projections</button>
+    <button data-view="league">League overview</button>
+    <button data-view="teams">Teams & schedules</button>
+  </nav>
+
+  <main id="workspace">
+    <div id="projections-view" class="workspace-view active">
     <section class="control-deck" aria-labelledby="page-title">
       <div class="title-block">
         <p class="eyebrow">Independent football projections · v2</p>
@@ -68,6 +75,55 @@
       <div><span>Missing-data rule</span><strong>Unknown is never assumed healthy</strong></div>
       <div><span>Promotion rule</span><strong>Held-out seasons must improve</strong></div>
     </section>
+    </div>
+
+    <div id="league-view" class="workspace-view">
+      <section class="view-heading">
+        <p class="eyebrow">League command center</p>
+        <div><h1>Read the whole field.</h1><p>Power structure, schedule volume, evidence maturity, and market coverage in one scan.</p></div>
+        <div class="segmented compact" role="group" aria-label="League overview league">
+          <button class="active" data-explorer-league="nfl">NFL</button>
+          <button data-explorer-league="ncaa">NCAA</button>
+        </div>
+      </section>
+      <section id="league-summary" class="stat-ribbon" aria-live="polite"></section>
+      <section class="overview-grid">
+        <article class="data-panel rankings-panel">
+          <header><span>Power table</span><strong id="rankings-period"></strong></header>
+          <div class="ranking-head"><span>Rank / team</span><span>Overall</span><span>Off.</span><span>Def.</span></div>
+          <div id="ranking-list"></div>
+        </article>
+        <aside class="data-panel evidence-panel">
+          <header><span>Evidence state</span><strong>Publication</strong></header>
+          <div id="evidence-overview"></div>
+        </aside>
+      </section>
+    </div>
+
+    <div id="teams-view" class="workspace-view">
+      <section class="view-heading team-heading">
+        <p class="eyebrow">Team room</p>
+        <div><h1>One team.<br><em>Every angle.</em></h1><p>Current model standing, unit ratings, published forecasts, and the full season schedule.</p></div>
+        <div class="team-controls">
+          <div class="segmented compact" role="group" aria-label="Team league">
+            <button class="active" data-team-league="nfl">NFL</button>
+            <button data-team-league="ncaa">NCAA</button>
+          </div>
+          <label>Team<select id="team-select"></select></label>
+        </div>
+      </section>
+      <section id="team-identity" class="team-identity"></section>
+      <section class="team-grid">
+        <article class="data-panel">
+          <header><span>Season schedule</span><strong id="team-schedule-label"></strong></header>
+          <div id="team-schedule" class="schedule-list"></div>
+        </article>
+        <aside class="data-panel">
+          <header><span>Published forecasts</span><strong>Current ledger</strong></header>
+          <div id="team-forecasts" class="team-forecast-list"></div>
+        </aside>
+      </section>
+    </div>
   </main>
 
   <dialog id="detail-dialog">

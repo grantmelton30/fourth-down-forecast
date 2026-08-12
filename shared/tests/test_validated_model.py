@@ -48,3 +48,17 @@ def test_missing_candidate_values_are_imputed_from_training_only():
     )
     pred = model.predict(pd.DataFrame({"base": [0.2], "candidate": [np.nan]}))
     assert np.isfinite(pred[0])
+
+
+def test_predictions_clip_features_to_historical_support():
+    frame = _frame(True)
+    model = fit_validated_ridge(
+        frame, base_features=["base"], candidate_features=["candidate"],
+        target="actual", season_column="season", minimum_fit_rows=300,
+    )
+    extreme = model.predict(pd.DataFrame({"base": [1e9], "candidate": [-1e9]}))[0]
+    boundary = model.predict(pd.DataFrame({
+        "base": [model.upper[model.features.index("base")]],
+        "candidate": [model.lower[model.features.index("candidate")]],
+    }))[0]
+    assert extreme == boundary

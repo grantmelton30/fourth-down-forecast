@@ -1,8 +1,10 @@
 # Free website deployment
 
 The public site is a static read-only client. It cannot import model code, fit a model,
-or mutate a projection. `scripts/publish_ledger.py` is the only bridge: it converts the
-append-only `data/predictions.jsonl` ledger into `web/api/v1/predictions.json`.
+or mutate a projection. `scripts/publish_ledger.py` converts the append-only
+`data/predictions.jsonl` ledger into `web/api/v1/predictions.json`; the prebuilt
+`web/api/v1/explorer.json` supplies league rankings and schedules. The browser never
+loads model caches or fits projections, preserving both fast startup and published values.
 
 ## Local preview
 

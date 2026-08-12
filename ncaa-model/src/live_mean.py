@@ -24,7 +24,8 @@ class LiveMeanModel:
 
 def _candidates(frame: pd.DataFrame, phase: str, kind: str) -> list[str]:
     phased = [column for column in frame if column.endswith(f"_{kind}_{phase}")]
-    return phased or [column for column in frame if column.endswith(f"_{kind}")]
+    candidates = phased or [column for column in frame if column.endswith(f"_{kind}")]
+    return [column for column in candidates if frame[column].notna().any()]
 
 
 def fit_live_mean(frame: pd.DataFrame, week: int) -> LiveMeanModel:

@@ -28,3 +28,4 @@ jobs:
           trap 'kill "$server_pid"' EXIT
           curl --fail --retry 5 --retry-connrefused http://127.0.0.1:8765/ >/dev/null
           curl --fail http://127.0.0.1:8765/api/v1/predictions.json | python3 -m json.tool >/dev/null
+          curl --fail http://127.0.0.1:8765/api/v1/explorer.json | python3 -m json.tool >/dev/null

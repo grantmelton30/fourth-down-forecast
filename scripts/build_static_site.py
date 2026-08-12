@@ -16,6 +16,10 @@ DIST = ROOT / "dist"
 def main() -> int:
     subprocess.run([sys.executable, str(ROOT / "scripts" / "publish_ledger.py")],
                    check=True)
+    explorer = WEB / "api/v1/explorer.json"
+    if not explorer.exists():
+        subprocess.run([sys.executable, str(ROOT / "scripts" / "build_explorer.py")],
+                       check=True)
     if DIST.exists():
         shutil.rmtree(DIST)
     DIST.mkdir(parents=True)
@@ -24,7 +28,7 @@ def main() -> int:
     shutil.copytree(WEB / "api", DIST / "api")
     required = [DIST / "index.html", DIST / "styles.css", DIST / "app.js",
                 DIST / "favicon.svg",
-                DIST / "api/v1/predictions.json"]
+                DIST / "api/v1/predictions.json", DIST / "api/v1/explorer.json"]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
         raise RuntimeError(f"static build is incomplete: {missing}")

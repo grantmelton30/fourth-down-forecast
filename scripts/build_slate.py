@@ -14,8 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "shared"))
 
 from prediction_contract import PredictionLedger  # noqa: E402
-from publication import build_public_record  # noqa: E402
-from slate_builder import (calibration_from_weights, forecast_from_sim, market_for_game,
+from publication import assess_quality, build_public_record  # noqa: E402
+from slate_builder import (calibration_from_weights, calibration_permissions,
+                           forecast_from_projection, forecast_from_sim, market_for_game,
                            source_digest)  # noqa: E402
 from sport import load_adapter  # noqa: E402
 
@@ -32,14 +33,17 @@ def manual_lines(path: Path) -> pd.DataFrame:
     return frame
 
 
-def unavailable_for(league: str, evidence) -> tuple[str, ...]:
+def unavailable_for(league: str, evidence, adapter=None, game_id=None) -> tuple[str, ...]:
     missing = []
     if evidence is None or not evidence.is_consensus:
         missing.append("three-source market consensus")
     if league == "nfl" and not (ROOT / "nfl-model/data/manual/availability.csv").exists():
         missing.append("confirmed live player availability")
-    if league == "ncaa" and not (ROOT / "ncaa-model/data/manual/preseason_features.csv").exists():
-        missing.append("confirmed QB/coordinator continuity")
+    if league == "ncaa":
+        if adapter is not None and hasattr(adapter, "preseason_missing"):
+            missing.extend(adapter.preseason_missing(str(game_id)))
+        elif not (ROOT / "ncaa-model/data/manual/preseason_features.csv").exists():
+            missing.append("confirmed QB/coordinator continuity")
     return tuple(missing)
 
 
@@ -62,6 +66,13 @@ def main() -> int:
             continue
         season, week = period
         games = adapter.games(season, week)
+        league_lines = lines
+        if league == "ncaa" and hasattr(adapter, "market_snapshots"):
+            league_lines = pd.concat(
+                [lines, adapter.market_snapshots()], ignore_index=True, sort=False
+            )
+        weights = adapter.blend_weights()
+        permissions = calibration_permissions(weights, league)
         for _, game in games.iterrows():
             kickoff = pd.to_datetime(game.get("kickoff"), utc=True, errors="coerce")
             if pd.isna(kickoff) or kickoff.to_pydatetime() <= now:
@@ -71,11 +82,37 @@ def main() -> int:
             if sim is None:
                 skipped += 1
                 continue
-            independent = forecast_from_sim(sim)
-            market, evidence = market_for_game(game, lines, league=league, as_of=now)
+            mean = (
+                adapter.projection_mean(str(game["game_id"]))
+                if league == "ncaa" and hasattr(adapter, "projection_mean") else None
+            )
+            independent = (
+                forecast_from_projection(
+                    sim, spread=mean["spread"], total=mean["total"]
+                )
+                if mean is not None else forecast_from_sim(sim)
+            )
+            market, evidence = market_for_game(
+                game, league_lines, league=league, as_of=now)
             calibrated = calibration_from_weights(
-                independent, market, adapter.blend_weights(), league)
-            unavailable = unavailable_for(league, evidence)
+                independent, market, weights, league)
+            unavailable = unavailable_for(
+                league, evidence, adapter=adapter, game_id=game["game_id"])
+            observed = (
+                adapter.games_observed(str(game["game_id"]))
+                if hasattr(adapter, "games_observed") else {"home": 0, "away": 0}
+            )
+            spread_difference = (
+                independent.spread - market.spread if market is not None else None
+            )
+            quality = assess_quality(
+                league=league, week=week,
+                home_games_observed=observed["home"],
+                away_games_observed=observed["away"],
+                unavailable_features=unavailable, market_evidence=evidence,
+                spread_difference=spread_difference,
+                calibration_status=permissions, bets_allowed=adapter.bets_allowed(),
+            )
             record = build_public_record(
                 league=league, game_id=str(game["game_id"]), season=season, week=week,
                 kickoff=kickoff.isoformat(), home_team=str(game["home_team"]),
@@ -84,6 +121,10 @@ def main() -> int:
                 model_version=f"{league}-{source_digest(adapter.profile.repo)}",
                 data_cutoff=now.isoformat(), unavailable_features=unavailable,
                 bets_allowed=adapter.bets_allowed(), generated_at=now.isoformat(),
+                confidence=quality.label, quality_reasons=quality.reasons,
+                warnings=quality.warnings, pick_eligible=quality.pick_eligible,
+                out_of_distribution=quality.out_of_distribution,
+                calibration_status=permissions, games_observed=observed,
             )
             built += int(ledger.append(record))
     print(f"appended {built} predictions; skipped {skipped} unavailable/past games")
