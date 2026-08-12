@@ -1,0 +1,265 @@
+seasons:
+  train_start: 2019          # ratings history; 2019-2020 are NOT opener-graded (DECISIONS D2)
+  backtest_start: 2021       # first season with opener coverage
+  backtest_secondary: 2023   # literal pre-committed fallback window
+  current: 2026
+  # 2020 was structurally abnormal (partial conference schedules, no crowds) AND carries
+  # no opening lines. Excluded from scoring on both counts.
+  exclude_from_scoring: [2019, 2020]
+
+api:
+  monthly_call_budget: 900   # 100-call safety margin under the 1000 free tier
+  cache_permanent: true
+  # LIVE-SEASON CACHE TTL, in hours. Applies ONLY to the season named by `seasons.current`;
+  # every earlier season is immutable and stays permanently cached, which is what keeps a
+  # cold build inside the free tier.
+  #
+  # Why this exists: the caches are keyed on a season RANGE, not on recency. Once the
+  # in-progress season is ingested, a `plays_2019_2026.parquet` would be written and then
+  # returned unchanged forever -- the model would freeze at whatever week was first cached
+  # and still look like it was working. Same failure as the lambda-900 ratings artifact,
+  # except here the input that changes is time.
+  #
+  # 12 hours costs at most a couple of refetches a day across games+drives+lines plus the
+  # current week's plays -- a few dozen calls a week against a 900 budget. Lower it for
+  # in-game refreshes, raise it if the budget gets tight.
+  live_refresh_hours: 12
+
+teams:
+  division: "fbs"
+  fcs_bucket_name: "__FCS__"
+  # LAST-RESORT FALLBACK ONLY, used when the __FCS__ bucket has no fitted rating yet;
+  # normally `ratings.resolve_team_ratings` returns the ridge's own fitted bucket.
+  # These were previously -0.155 / 0.170, which were not on the scale the ridge actually
+  # produces: -0.155 sat below EVERY fitted off_rating in 2019-2025 and 0.170 above every
+  # fitted def_rating. The bucket's own fitted values average -0.0207 and 0.0800 over 109
+  # team-weeks, so the old numbers overstated an FCS opponent by roughly 0.23 of net_epa.
+  fcs_off_rating: -0.021
+  fcs_def_rating: 0.080
+  fcs_game_weight: 0.45
+  # Power conferences over the backtest window. Notre Dame is an Independent by
+  # classification but P5 in every sense that matters; other FBS independents sit with G5.
+  p5_conferences: ["ACC", "Big Ten", "Big 12", "Pac-12", "SEC"]
+  p5_teams: ["Notre Dame"]
+
+ratings:
+  half_life_games: 6
+  lambda_off: 850.0
+  lambda_def: 950.0
+  lambda_grid: [400, 600, 850, 1150, 1500, 2000]
+  # PRIOR WEIGHT AND OFFSEASON MEMORY. Measured 2026-08-08 on 3,472 graded games.
+  # Previously 5.0 / 0.42, which were cell #1 of the 12-cell pre-registered grid -- and
+  # BOTH sat at the minimum of their searched range (half_life 6/10/16, prior_weight
+  # 5/10/16), i.e. the search wanted to shrink harder and the grid would not let it.
+  #
+  #   offseason_regression=1.0 means a team's prior for a new season IS the league mean:
+  #   last year carries nothing, and ratings develop purely from games actually played.
+  #
+  # Spread RMSE across a 2-D sweep, best cell by some margin:
+  #     0.42 / 5.0  (old)   16.718    SD ratio 0.982
+  #     1.00 / 8.0  (new)   16.563    SD ratio 0.910
+  # Totals move the same way, 16.567 -> 16.519. The early-season window this most affects
+  # gains most: weeks 4-6 go 16.573 -> 16.348.
+  #
+  # NOT dispersion collapse, which was the obvious way to fake this. RMSE has a genuine
+  # interior optimum -- it worsens again at prior_weight 20 (16.630) and 30 (16.791).
+  # prior_weight 12 scores a hair better (16.562) but drags the SD ratio to 0.858, a 0.142
+  # deviation against GATE_SCALE's 0.15 tolerance; 0.001 of RMSE is not worth sitting on a
+  # gate boundary. At 8.0 the deviation is 0.090 and the gate keeps its margin.
+  #
+  # THIS CONTRADICTS THE PERSISTENCE MEASUREMENT, and the tension is real. Regressing each
+  # team's end-of-season rating on the previous season's gives persistence 0.669
+  # (CI [0.625, 0.707], n=786), which argues for RETAINING ~0.66 rather than discarding
+  # everything. Both are correct: ratings genuinely do persist, and the model still cannot
+  # exploit that persistence better than starting from the mean can. The prior's signal is
+  # real but the model's use of it adds more variance than it removes. Do not "fix" this
+  # back on the strength of the persistence number alone.
+  #
+  # CAVEAT, stated plainly: this is POST-HOC selection, outside the pre-registered grid
+  # that DECISIONS D3 exists to enforce. The mitigation is that it holds on a pseudo-holdout
+  # -- fitted-window seasons 2021-23 improve by 0.161 and unseen 2024-25 by 0.144 -- and
+  # that the gradient is monotone rather than a lone lucky cell. It is not a substitute for
+  # a pre-registered re-run.
+  #
+  # Changes no verdict: ratio against the close goes 1.0837 -> 1.0737, still above 1.0, so
+  # GATE_RMSE fails and bets_allowed() stays False.
+  prior_weight_games: 8.0
+  league_mean_plays_per_game: 70.0
+  offseason_regression: 1.0
+  off_weight: 1.45
+  def_weight: 1.0
+  conference_shrink_weight: 2.5
+
+pace:
+  # MEASURED, not guessed. The previous 12.1 / 2.1 / 900.0 were placeholders of exactly the
+  # kind that cost the NFL build 1.22 points of bias in every total.
+  #
+  # Counted on the drive TABLE, which is the definition the simulator uses -- it plays one
+  # drive per count through the drive multinomial, and that multinomial is fit on the same
+  # table. `game_offense.drives` is a DIFFERENT count, 0.123 per team-game higher, because
+  # the table drops non-scrimmage rows (kickoffs, OT possession markers, Uncategorized);
+  # the two agree exactly on 89.2% of team-games. Do not mix them: the pace ridge is fit in
+  # game_offense units but returns mean-centred deviations, so only this level is affected.
+  #
+  # College pace is in secular decline -- 12.57 (2019), 12.11, 12.10, 11.75, 11.59, 11.62
+  # (2025) -- so the pooled 2019-2025 mean of 11.88 already overstates the current game.
+  # This is the 2023-2025 level, which is what a 2026 projection should assume.
+  league_mean_drives_per_team: 11.65
+  # The simulator draws ONE count per game and gives it to both teams, so this must match
+  # variation BETWEEN games (1.87), not between team-games (1.94).
+  drives_sd: 1.87
+  half_life_games: 8
+  # Tuned by walk-forward RMSE on realised drive counts over 77 weeks / 13,671 team-games,
+  # 2021-2025. The curve is single-troughed: RMSE 1.9050 at lambda 1, 1.8904 at 15, 1.9318
+  # at the old 900. Shrinking pace 60x harder than optimal cost 2.2% of drive-count
+  # accuracy and flattened the per-team pace signal the totals path depends on -- the same
+  # failure the NFL build hit. Re-derive with the sweep in NEXT_SESSION.md if the ridge or
+  # its half-life changes.
+  lambda: 15.0
+
+context:
+  # NOT added to the spread. The drive multinomial's own `is_home_offense` term is the
+  # league baseline; this is only the centre that per-venue deviations are measured
+  # against. See the header of src/context.py -- adding it would double-count HFA.
+  hfa_league_mean: 2.6
+  hfa_venue_shrink_games: 30
+  hfa_neutral_site: 0.0
+  # Wind, applied to the TOTAL only (wind has essentially no effect on the spread).
+  # MEASURED on 4,311 outdoor FBS-vs-FBS games 2019-2025 (ex 2020) by
+  # `analysis/measure_wind.py`, which regresses actual total on the model's own pace and
+  # efficiency predictors plus wind -- the physical question. Regressing the MARKET
+  # residual on wind answers a different question (does the market misprice wind) and must
+  # not be used to set these.
+  #
+  # NOT THE NFL'S HINGE. nfl-model uses a 15 mph threshold and 0.35 points per mph above
+  # it. College is best fit linear from zero: sweeping the threshold, RMSE is minimised at
+  # 0 and the coefficient is significant there (t = -2.89) while the 15 mph hinge rests on
+  # 163 games (t = -2.12). College simply does not play in much wind -- mean 7.0 mph, p90
+  # 12.3 -- so a high threshold fits a thin tail.
+  #
+  # CENTRED, and it must stay that way. The totals projection is fit on real games, which
+  # already carry average wind, so only the DEVIATION from average may be applied. Using
+  # the raw coefficient would drag every projected total down by 0.187 * 7.0 = 1.31 points.
+  # A calm game gains 1.31, a 7 mph game gets nothing, a 20 mph game loses 2.43.
+  wind_total_center_mph: 7.0
+  wind_total_points_per_mph: 0.1867
+  # A dome is the calm end of the same relationship: 0.1867 * 7.0. Derived from the wind
+  # fit rather than measured separately, so it is consistent with it by construction --
+  # the previous 0.5 was nfl-model's and had no college evidence behind it.
+  dome_total_bump: 1.31
+
+# Every constant here was measured from the cached CFBD payloads over 2019-2025 excluding
+# 2020, by `analysis/measure_simulation_constants.py`. Rerun that module rather than
+# editing these by hand. The same module reproduces nfl-model's independently-derived
+# values to within 0.002 on its drive table, which is what licenses the NCAA numbers.
+#
+# NONE OF THESE COULD HAVE BEEN COPIED FROM THE NFL, AND TWO GO THE OPPOSITE WAY TO THE
+# INTUITION. College extra points are kicked from the 3-yard line and NFL ones from the 15,
+# so the college kick is a ~20-yarder against a ~33-yarder and college converts them MORE
+# often, not less (0.973 vs 0.940). Precisely because that kick is nearly automatic,
+# college goes for two LESS often in regulation, not more (0.070 vs 0.095) -- the OT rule
+# that forces a two-point try from the third overtime does not touch regulation, and OT
+# drives are excluded from the fit. Where college kicking really is worse is field goals,
+# 8.8% of drives against the NFL's 14.9%, and that lives in the drive multinomial, not here.
+simulation:
+  n_sims: 20000
+  seed: 20260805
+  # P(kick good | extra point attempted).
+  xp_make_prob: 0.9732
+  # P(go for two) league-wide. The simulator overrides this off the two-point chart on
+  # endgame drives, where the decision is made by the scoreboard rather than by this rate.
+  two_point_attempt_rate: 0.0696
+  two_point_success_prob: 0.3986
+  # Poisson rates per team per game for scores the drive multinomial cannot produce.
+  # Measured from /plays, not /drives: a kickoff is not a scrimmage drive, so counting
+  # driveResult values misses every kickoff-return touchdown -- 0.0201 of the 0.0377,
+  # more than half the special-teams total.
+  defensive_td_lambda: 0.1019
+  special_teams_td_lambda: 0.0377
+  safety_lambda: 0.0241
+  # P(a team's second-to-last drive is also played from the scoreboard). Its last drive
+  # always is. Measured as the mean number of drives starting in the last 5:00 of Q4,
+  # among team-games that had at least one -- the conditioning matters, because the
+  # simulator gives every team a final drive by construction. College runs 1.4243 of them
+  # against the NFL's 1.3408, hence 0.4243 against 0.34.
+  endgame_second_drive_prob: 0.4243
+  # Post-touchdown margins that pull a two-point try, fitted per margin over 45,385 college
+  # touchdown drives. Only -5, -2 and +5 are shared with the NFL's [-10,-5,-2,1,5]; college
+  # adds a two-score ladder (-12, +12, +19) the NFL chart has no entries for, and shows no
+  # spike at all at -10 or +1. Applied only on endgame drives.
+  two_point_chart: [-18, -12, -5, -2, 5, 12, 19]
+  # P(go for two | on-chart margin, endgame drive). College coaches follow their chart much
+  # less often than NFL ones: 0.472 measured on-chart against an 0.042 off-chart baseline,
+  # where the NFL uses 0.80.
+  chart_follow_rate: 0.4722
+  # College football has NO ties: overtime repeats until somebody wins. Measured tie rate
+  # over 4,464 FBS-vs-FBS games 2019-2025 is exactly 0.00%. The NFL's 3 exchanges left
+  # 0.63% of simulated games tied, stealing mass from the small margins. 25 is far beyond
+  # any real college overtime (the record is 7 periods) so a tie effectively cannot survive.
+  #
+  # CAVEAT: sim_core still plays those exchanges under NFL rules -- ordinary field position
+  # rather than first-and-10 at the opponent's 25 with no clock, and no forced two-point
+  # try from the third period. The COUNT of exchanges is right; the scoring environment
+  # inside them is not. Affects only the ~4% of games reaching overtime.
+  overtime_max_exchanges: 25
+
+market:
+  devig_method: "multiplicative"
+  model_weight_cap: 0.70
+  # DECISIONS D1: consensus carries NO opening line at all (0.0% of 1,503 games) and was
+  # priority #1 in the playbook, which made GATE_OPENER_COVERAGE fail at 16.8%. Dropped.
+  provider_priority: ["Bovada", "ESPN Bet", "DraftKings"]
+  # Grade against the OPENER; the close is retained solely to measure CLV.
+  grade_against: "open"
+
+betting:
+  breakeven_prob_110: 0.5238
+  min_cover_prob: 0.545
+  min_edge_points_spread: 2.5
+  # DECISIONS D6c: 3.5 was calibrated for an expected b of ~0.45. At the fitted
+  # b_total = 0.24 it requires a 14.5-point raw disagreement -- larger than any in the
+  # sample -- so the filter was inert, not selective. This is a robustness FLOOR on the
+  # blended edge; min_cover_prob (0.545 vs a 0.5238 breakeven) remains the real filter.
+  # Re-derived on the DE-BIASED projection (DECISIONS D6c): the floor is the median
+  # market move between open and close on the eligible slate, so a pick must disagree by
+  # more than the market shifts on its own. Re-measured at 1.50, selecting 10.8% of the
+  # slate against §10's expected 8-15%. The earlier 1.0 was set against a biased
+  # projection and admitted 26%.
+  min_edge_points_total: 1.5
+  max_abs_market_spread: 24.5
+  min_total: 38.0
+  max_total: 78.0
+  exclude_fcs_games: true
+  # MECHANISTIC EXCLUSION (DECISIONS D6d). Weeks where GATE_UNBIASED_BY_WEEK still fails
+  # for TOTALS after the time-varying intercept correction -- |a| >= 0.5 -- plus weeks too
+  # thin to test (n < 40). Decided by the gate, not by any outcome: these weeks were
+  # identified before the paper period was re-run. Reducing the correction's shrinkage
+  # from 40 to 0 barely moves them (wk13: +0.82 -> +0.74), so the residual is
+  # year-specific rather than a learnable within-season pattern.
+  exclude_weeks_total: [10, 13, 14, 15, 16]
+  # CONCENTRATION CAPS. A pick set dominated by a handful of teams is more likely to be a
+  # few rating errors generating repeat disagreements than a distributed edge. Hard limits,
+  # enforced by greedy selection on descending edge within each season.
+  max_team_pick_share: 0.15
+  max_conference_pick_share: 0.25
+  kelly_fraction: 0.20
+  max_stake_pct_bankroll: 0.015
+  bankroll: 10000
+  default_price: -110
+
+gates:
+  opener_coverage_min: 0.70
+  opener_separation_min: 0.5
+  unbiased_max_abs_a: 0.5
+  scale_ratio_tolerance: 0.15
+  blend_t_threshold: 2.0
+  garbage_drop_min: 0.05
+  garbage_drop_max: 0.30
+  api_budget_max_cold: 250
+  # Phase 0D. Model RMSE / market RMSE, graded against the CLOSE. 1.0 is the conservative
+  # reading: a model less accurate than the line it bets against is not promoted, even if
+  # its residual `b` is positive. Deliberately strict — see backtest.py::rmse_gate.
+  rmse_max_ratio: 1.0
+
+output:
+  excel_path: "output/ncaa_week_{season}_{week}.xlsx"

@@ -1,0 +1,171 @@
+seasons:
+  train_start: 2016
+  backtest_start: 2019
+  current: 2026
+ratings:
+  half_life_games: 9
+  lambda_off: 220.0
+  lambda_def: 260.0
+  prior_weight_games: 6.0
+  league_mean_plays_per_game: 63.0
+  offseason_regression: 0.28
+  off_weight: 1.6
+  def_weight: 1.0
+  lambda_grid:
+  - 80
+  - 120
+  - 160
+  - 220
+  - 300
+  - 400
+  - 550
+  - 750
+  # The first real grid search (2026-08-05) selected lambda_off=750, the ceiling, which
+  # means the search was truncated and the true optimum is at least that high. The model
+  # was badly under-regularized at the old 220/260. These upper points exist so the next
+  # `--tune-lambdas` run can find an interior optimum instead of pinning to the boundary.
+  - 1100
+  - 1600
+  - 2400
+pace:
+  league_mean_drives_per_team: 11.1
+  drives_sd: 1.7
+  half_life_games: 12
+  lambda: 10.0
+qb:
+  enabled: true
+  max_adjustment_points: 7.0
+  min_dropbacks: 150
+  regression_dropbacks: 320
+context:
+  hfa_league_mean: 1.7
+  hfa_venue_shrink_games: 40
+  hfa_neutral_site: 0.0
+  rest_point_per_day: 0.12
+  rest_max_points: 1.0
+  short_week_penalty: 0.5
+  travel_points_per_1000mi: 0.15
+  timezone_cross_penalty: 0.25
+  # WIND AND DOME, MEASURED on 1,792 completed outdoor games 2016-2025 rather than
+  # assumed. Both were previously guesses and the dome bump was wrong by 6x.
+  #
+  # NOT A 15 MPH HINGE. Sweeping the threshold, RMSE is minimised at 0 and the slope is
+  # strongly significant there (t = -5.03); the old 15 mph hinge rested on 143 games and
+  # was not distinguishable from zero (t = -1.82). Wind hurts scoring from the first mph,
+  # not only above some cliff. Same specification ncaa-model arrived at independently.
+  #
+  # CENTRED, and it must stay that way. The totals projection is fit on real games that
+  # already carry average wind, so only the deviation from average is new information.
+  # A calm game gains 2.7 points, an 8 mph game nothing, a 25 mph game loses 5.6.
+  #
+  # WIND SURVIVES EVERY CONTROL, which is why it is trusted where the dome bump is not.
+  # Against a weather-free model's residual it is -0.277 (t = -3.16) with temperature in
+  # the regression alongside it, and wind and temperature turn out to be uncorrelated in
+  # this sample (r = -0.08), so this is not a cold-weather effect wearing a wind label.
+  # The gradient is also steeper below 10 mph (-0.29/mph) than above it (-0.15/mph),
+  # which is why the old 15 mph hinge threw away most of the signal.
+  #
+  # TEMPERATURE IS REAL TOO AND IS NOT MODELLED: +0.072 points per degree F (t = +2.69),
+  # roughly 2.9 points across a 40-degree swing. The playbook's "temperature is noise"
+  # note is not supported on NFL data. Left unimplemented deliberately -- adding it means
+  # re-deriving the centring and re-running the gates -- but it is the next weather term
+  # worth having, ahead of precipitation.
+  wind_total_center_mph: 8.17
+  wind_total_points_per_mph: 0.3339
+  # Discard physically implausible readings. nflverse carries a handful of bad values --
+  # NYG@PIT 2016 wk13 is recorded at 71 mph, against a 99th percentile of 23 -- and with
+  # an uncapped linear term that single row moved the game's total by 19.6 points. Above
+  # this the reading is treated as absent, not as calm.
+  wind_max_plausible_mph: 40.0
+  # +3.16 fitted on raw totals controlling for wind (t = +5.37). TREAT THAT t WITH
+  # SUSPICION: that fit does not control for team strength, and dome teams are not a
+  # random sample of offenses. Re-fitting against a weather-free model's residual -- which
+  # does remove team strength -- puts the dome effect at +1.7 relative to a calm outdoor
+  # game (t = +1.61, NOT significant) or about +4.1 relative to an average-wind one.
+  # 3.16 sits inside that range and is kept as the central estimate, but the honest
+  # reading is "somewhere between 2 and 4, and not sharply identified".
+  #
+  # Unlike wind, this one cannot be sharpened with more seasons alone: it is confounded
+  # with which franchises happen to play indoors, and there are only ~10 of them.
+  dome_total_bump: 3.16
+  week18_rest_starters_points: 3.0
+  # INJURIES, measured on 1,535 walk-forward games against the current model's residual.
+  # Burden is the summed prior snap share of everyone listed Out or Doubtful, so one unit
+  # is roughly one full-time starter. The differential is worth -0.518 points of margin
+  # per unit (t = -2.15); a raw headcount gets -0.303 (t = -2.04) and the two are
+  # collinear, so the snap weighting is a refinement rather than a different signal.
+  #
+  # SPREAD ONLY. Against the total residual the burden sum is -0.011 (t = -0.05) -- a
+  # depleted team scores less and concedes more, and those cancel.
+  injury_points_per_burden: 0.518
+  # The worst observed team-week is 9.8 starter-equivalents. Uncapped that is a 5-point
+  # swing off a t = -2.15 coefficient, which is far more than this sample can support.
+  injury_max_points: 2.0
+simulation:
+  n_sims: 20000
+  seed: 20260730
+  drive_count_dist: normal_rounded
+  xp_make_prob: 0.94
+  two_point_attempt_rate: 0.095
+  two_point_success_prob: 0.475
+  defensive_td_lambda: 0.13
+  special_teams_td_lambda: 0.045
+  safety_lambda: 0.035
+  # Moved out of shared/sim_core.py, which hardcoded these three at the NFL's values and so
+  # silently imposed them on college too. The values here are exactly what was hardcoded --
+  # this is a lift-and-shift, not a retune. See sim_core for how each was measured, and
+  # ncaa-model/config/ncaa.yaml for how far college diverges on all three.
+  endgame_second_drive_prob: 0.34
+  two_point_chart: [-10, -5, -2, 1, 5]
+  chart_follow_rate: 0.80
+  # Overtime exchanges before a game is left tied. 3 is the NFL's existing behaviour,
+  # lifted out of sim_core unchanged; it reproduces the real 0.4% regular-season tie rate.
+  overtime_max_exchanges: 3
+market:
+  devig_method: multiplicative
+  model_weight_cap: 0.6
+betting:
+  breakeven_prob_110: 0.5238
+  min_cover_prob: 0.545
+  min_edge_points_spread: 1.5
+  min_edge_points_total: 2.5
+  kelly_fraction: 0.25
+  max_stake_pct_bankroll: 0.02
+  bankroll: 10000
+  default_price: -110
+output:
+  excel_path: output/nfl_week_{season}_{week}.xlsx
+projection:
+  # WHICH ESTIMATOR PRODUCES E[margin]. Measured 2026-08-07 on this repo's own backtest
+  # frame under the current 750/550 ratings: 1,119 walk-forward games, both estimators
+  # predicting identical games, paired season-clustered bootstrap on squared errors.
+  #
+  #   market   simulator   linear    winner                95% CI on mean sq-err diff
+  #   spread   13.668      13.196    linear, by 0.47       [+8.36, +16.98]  significant
+  #   total    13.445      13.630    simulator, by 0.19    [-8.44, -1.86]   significant
+  #
+  # So this knob covers SPREADS ONLY. Totals stay on the simulator because the simulator
+  # measurably wins there -- a margin is a difference and is near-linear in net_diff, while
+  # a total is generated by drives and pace x efficiency is compositional, which a linear
+  # model cannot represent. PATCH_03 §5.1 and ncaa-model DECISIONS D4 state the rule as
+  # "the simulator is never in the mean path"; that rule came from a MARGIN measurement
+  # generalised to both markets without ever being tested on totals, and it is wrong for
+  # totals here.
+  #
+  # Do not port this to ncaa-model. The same comparison on 3,472 college games found the
+  # LINEAR projection wins college totals (16.567 vs 16.954, significant) -- the two leagues
+  # genuinely diverge. See ncaa-model/DECISIONS.md D4.
+  #
+  # The simulator still produces the whole margin distribution; only its centre is replaced,
+  # via SimResult.recentered(), which preserves the key-number spikes that resimulating
+  # would not reproduce. Set to `simulator` to restore the old behaviour -- the backtest
+  # frame is hashed on this block, so flipping it rebuilds rather than serving a stale frame.
+  spread_source: linear
+  # Least squares needs a real sample before it beats the simulator it is replacing. At
+  # ~220 NFL games a season this makes 2021 the first linear-projected season; 2019 and 2020
+  # fall back to the simulator and say so in `model_spread_source`.
+  min_train_games: 300
+tuned:
+  lambda_off: 750.0
+  lambda_def: 550.0
+  rmse: 13.528734376885922

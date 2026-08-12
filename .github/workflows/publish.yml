@@ -1,0 +1,25 @@
+name: publish-ledger
+on:
+  workflow_dispatch:
+  schedule:
+    # Free GitHub-hosted scheduler. Source refresh stays manual until required secrets
+    # and live data availability have been explicitly verified.
+    - cron: "17 11 * * 2,5"
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --dev
+      - run: uv run python scripts/publish_ledger.py
+      - name: Commit changed static artifact
+        run: |
+          if git diff --quiet -- web/api/v1/predictions.json; then exit 0; fi
+          git config user.name "fourth-down-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add web/api/v1/predictions.json
+          git commit -m "publish prediction ledger"
+          git push

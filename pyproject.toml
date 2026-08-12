@@ -1,0 +1,16 @@
+[project]
+name = "football-score-models"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "nflreadpy==0.1.5", "polars==1.43.2", "pandas==2.2.3", "numpy==2.3.5",
+  "scipy==1.18.0", "scikit-learn==1.9.0", "statsmodels==0.14.6",
+  "xlsxwriter==3.2.9", "streamlit==1.61.1", "pyyaml==6.0.3",
+  "requests==2.34.2", "nfelodcm==0.2.21",
+]
+[dependency-groups]
+dev = ["pytest==8.4.2"]
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+pythonpath = [".", "shared"]
+markers = ["integration: requires external historical cache artifacts"]

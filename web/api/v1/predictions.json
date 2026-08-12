@@ -1,0 +1,906 @@
+{
+  "generated_at": "2026-08-12T03:30:46.447443Z",
+  "leagues": [
+    "nfl"
+  ],
+  "record_count": 16,
+  "records": [
+    {
+      "away_team": "NE",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_NE_SEA",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "SEA",
+      "independent": {
+        "away_score": 22.49629999999998,
+        "home_score": 21.91214999999998,
+        "home_win_probability": 0.4908000000000001,
+        "interval_80_high": 16.0,
+        "interval_80_low": -18.0,
+        "source": "independent football simulation",
+        "spread": -0.5841500000000002,
+        "total": 44.40844999999996
+      },
+      "kickoff": "2026-09-09T20:20:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 20.5,
+        "home_score": 24.0,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 3.5,
+        "total": 44.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": -4.08415,
+        "total": -0.09155000000004065
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "f38b53a2681f3bb114da02d1",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "SF",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_SF_LA",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "LA",
+      "independent": {
+        "away_score": 29.17049999999999,
+        "home_score": 26.67734999999999,
+        "home_win_probability": 0.43780000000000013,
+        "interval_80_high": 15.0,
+        "interval_80_low": -21.0,
+        "source": "independent football simulation",
+        "spread": -2.4931500000000018,
+        "total": 55.84784999999998
+      },
+      "kickoff": "2026-09-10T20:35:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 22.5,
+        "home_score": 26.0,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 3.5,
+        "total": 48.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": -5.993150000000002,
+        "total": 7.34784999999998
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "70f5db6c4cb93fd80e38caae",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "ATL",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_ATL_PIT",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "PIT",
+      "independent": {
+        "away_score": 19.05384999999999,
+        "home_score": 26.12444999999998,
+        "home_win_probability": 0.7014000000000002,
+        "interval_80_high": 24.0,
+        "interval_80_low": -9.0,
+        "source": "independent football simulation",
+        "spread": 7.0705999999999944,
+        "total": 45.17829999999997
+      },
+      "kickoff": "2026-09-13T13:00:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 19.75,
+        "home_score": 22.75,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 3.0,
+        "total": 42.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": 4.0705999999999944,
+        "total": 2.6782999999999717
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "8d631b0142e27d0f225384c4",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "BAL",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_BAL_IND",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "IND",
+      "independent": {
+        "away_score": 29.137099999999982,
+        "home_score": 20.985199999999985,
+        "home_win_probability": 0.2891000000000001,
+        "interval_80_high": 9.0,
+        "interval_80_low": -27.0,
+        "source": "independent football simulation",
+        "spread": -8.151899999999996,
+        "total": 50.12229999999997
+      },
+      "kickoff": "2026-09-13T13:00:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 26.0,
+        "home_score": 22.5,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": -3.5,
+        "total": 48.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": -4.651899999999996,
+        "total": 1.6222999999999672
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "249ab3de1fb4314b8bd55ad4",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "BUF",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_BUF_HOU",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "HOU",
+      "independent": {
+        "away_score": 26.65794999999998,
+        "home_score": 18.69739999999998,
+        "home_win_probability": 0.28475000000000006,
+        "interval_80_high": 8.0,
+        "interval_80_low": -25.0,
+        "source": "independent football simulation",
+        "spread": -7.960549999999996,
+        "total": 45.35534999999996
+      },
+      "kickoff": "2026-09-13T13:00:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 23.0,
+        "home_score": 21.5,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": -1.5,
+        "total": 44.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": -6.460549999999996,
+        "total": 0.8553499999999588
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "c5673642f9ee5958ee5f2376",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "CHI",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_CHI_CAR",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "CAR",
+      "independent": {
+        "away_score": 26.267649999999986,
+        "home_score": 21.140649999999983,
+        "home_win_probability": 0.3658500000000001,
+        "interval_80_high": 11.0,
+        "interval_80_low": -23.0,
+        "source": "independent football simulation",
+        "spread": -5.1270000000000024,
+        "total": 47.40829999999997
+      },
+      "kickoff": "2026-09-13T13:00:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 24.5,
+        "home_score": 22.0,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": -2.5,
+        "total": 46.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": -2.6270000000000024,
+        "total": 0.9082999999999686
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "218bb381e6df8cb0c57cfbdf",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "CLE",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_CLE_JAX",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "JAX",
+      "independent": {
+        "away_score": 16.250049999999977,
+        "home_score": 28.205999999999964,
+        "home_win_probability": 0.8091000000000002,
+        "interval_80_high": 30.0,
+        "interval_80_low": -5.0,
+        "source": "independent football simulation",
+        "spread": 11.955949999999987,
+        "total": 44.45604999999994
+      },
+      "kickoff": "2026-09-13T13:00:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 16.5,
+        "home_score": 24.0,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 7.5,
+        "total": 40.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": 4.455949999999987,
+        "total": 3.956049999999941
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "977a69efbb342aea1bdfb022",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "NO",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_NO_DET",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "DET",
+      "independent": {
+        "away_score": 20.993349999999985,
+        "home_score": 26.727199999999982,
+        "home_win_probability": 0.6648500000000002,
+        "interval_80_high": 23.0,
+        "interval_80_low": -11.0,
+        "source": "independent football simulation",
+        "spread": 5.733849999999998,
+        "total": 47.72054999999997
+      },
+      "kickoff": "2026-09-13T13:00:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 21.25,
+        "home_score": 28.25,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 7.0,
+        "total": 49.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": -1.2661500000000023,
+        "total": -1.7794500000000326
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "92bc721df8555483924015f1",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "NYJ",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_NYJ_TEN",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "TEN",
+      "independent": {
+        "away_score": 20.004249999999978,
+        "home_score": 23.51159999999998,
+        "home_win_probability": 0.6063000000000001,
+        "interval_80_high": 20.0,
+        "interval_80_low": -13.0,
+        "source": "independent football simulation",
+        "spread": 3.5073500000000015,
+        "total": 43.51584999999996
+      },
+      "kickoff": "2026-09-13T13:00:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 17.75,
+        "home_score": 20.75,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 3.0,
+        "total": 38.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": 0.5073500000000015,
+        "total": 5.015849999999958
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "7bf82acdd934a71b3c87a644",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "TB",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_TB_CIN",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "CIN",
+      "independent": {
+        "away_score": 22.845299999999988,
+        "home_score": 27.61974999999999,
+        "home_win_probability": 0.6371500000000001,
+        "interval_80_high": 23.0,
+        "interval_80_low": -12.0,
+        "source": "independent football simulation",
+        "spread": 4.774450000000002,
+        "total": 50.46504999999998
+      },
+      "kickoff": "2026-09-13T13:00:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 24.0,
+        "home_score": 27.5,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 3.5,
+        "total": 51.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": 1.2744500000000016,
+        "total": -1.0349500000000234
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "45a5f6bc056441616e79e44c",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "ARI",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_ARI_LAC",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "LAC",
+      "independent": {
+        "away_score": 18.846549999999986,
+        "home_score": 26.693849999999976,
+        "home_win_probability": 0.7236000000000002,
+        "interval_80_high": 25.0,
+        "interval_80_low": -8.0,
+        "source": "independent football simulation",
+        "spread": 7.8472999999999935,
+        "total": 45.54039999999996
+      },
+      "kickoff": "2026-09-13T16:25:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 18.0,
+        "home_score": 28.5,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 10.5,
+        "total": 46.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": -2.6527000000000065,
+        "total": -0.9596000000000373
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "a5499116dc0b17c5d237769f",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "GB",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_GB_MIN",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "MIN",
+      "independent": {
+        "away_score": 19.997999999999987,
+        "home_score": 25.855649999999986,
+        "home_win_probability": 0.6725000000000001,
+        "interval_80_high": 23.0,
+        "interval_80_low": -10.0,
+        "source": "independent football simulation",
+        "spread": 5.857649999999997,
+        "total": 45.85364999999997
+      },
+      "kickoff": "2026-09-13T16:25:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 23.5,
+        "home_score": 22.0,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": -1.5,
+        "total": 45.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": 7.357649999999997,
+        "total": 0.3536499999999734
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "6be840f14051c248744e5fd3",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "MIA",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_MIA_LV",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "LV",
+      "independent": {
+        "away_score": 19.919799999999984,
+        "home_score": 21.946799999999985,
+        "home_win_probability": 0.5666000000000002,
+        "interval_80_high": 18.0,
+        "interval_80_low": -14.0,
+        "source": "independent football simulation",
+        "spread": 2.027000000000002,
+        "total": 41.86659999999997
+      },
+      "kickoff": "2026-09-13T16:25:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 18.5,
+        "home_score": 22.0,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 3.5,
+        "total": 40.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": -1.472999999999998,
+        "total": 1.3665999999999698
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "c87874e7738fb25d29237e70",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "WAS",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_WAS_PHI",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "PHI",
+      "independent": {
+        "away_score": 19.860399999999988,
+        "home_score": 24.580599999999986,
+        "home_win_probability": 0.6422000000000001,
+        "interval_80_high": 21.0,
+        "interval_80_low": -11.0,
+        "source": "independent football simulation",
+        "spread": 4.7202,
+        "total": 44.440999999999974
+      },
+      "kickoff": "2026-09-13T16:25:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 21.5,
+        "home_score": 26.0,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 4.5,
+        "total": 47.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": 0.22020000000000017,
+        "total": -3.059000000000026
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "524fc0b1cea80ce52bfa25e6",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "DAL",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_DAL_NYG",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "NYG",
+      "independent": {
+        "away_score": 29.967349999999985,
+        "home_score": 21.824399999999986,
+        "home_win_probability": 0.2904000000000001,
+        "interval_80_high": 9.0,
+        "interval_80_low": -27.0,
+        "source": "independent football simulation",
+        "spread": -8.142949999999999,
+        "total": 51.79174999999997
+      },
+      "kickoff": "2026-09-13T20:20:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 25.5,
+        "home_score": 23.0,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": -2.5,
+        "total": 48.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": -5.642949999999999,
+        "total": 3.291749999999972
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "43ee809d054295a20ec953ea",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    },
+    {
+      "away_team": "DEN",
+      "calibrated": null,
+      "confidence": "limited data",
+      "data_cutoff": "2026-08-12T03:30:46.447443Z",
+      "game_id": "2026_01_DEN_KC",
+      "generated_at": "2026-08-12T03:30:46.447443Z",
+      "home_team": "KC",
+      "independent": {
+        "away_score": 19.06749999999999,
+        "home_score": 24.473649999999985,
+        "home_win_probability": 0.6589000000000003,
+        "interval_80_high": 22.0,
+        "interval_80_low": -10.0,
+        "source": "independent football simulation",
+        "spread": 5.4061499999999985,
+        "total": 43.54114999999997
+      },
+      "kickoff": "2026-09-14T20:15:00Z",
+      "league": "nfl",
+      "market": {
+        "away_score": 19.75,
+        "home_score": 22.75,
+        "home_win_probability": null,
+        "interval_80_high": null,
+        "interval_80_low": null,
+        "source": "published line baseline",
+        "spread": 3.0,
+        "total": 42.5
+      },
+      "market_evidence": {
+        "book_count_spread": 1,
+        "book_count_total": 1,
+        "is_consensus": false,
+        "label": "published line baseline",
+        "observed_at": null,
+        "providers": [
+          "nflverse published line"
+        ],
+        "spread_dispersion": null,
+        "total_dispersion": null
+      },
+      "model_market_difference": {
+        "spread": 2.4061499999999985,
+        "total": 1.0411499999999734
+      },
+      "model_version": "nfl-476f7ea5f3864539",
+      "prediction_id": "f44fa5e03dfd1fade03b7ef3",
+      "schema_version": 2,
+      "season": 2026,
+      "unavailable_features": [
+        "confirmed live player availability",
+        "three-source market consensus"
+      ],
+      "week": 1
+    }
+  ],
+  "schema_version": 2
+}

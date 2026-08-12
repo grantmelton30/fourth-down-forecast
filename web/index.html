@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Independent NFL and NCAA score projections with market consensus and calibrated comparisons.">
+  <title>Fourth Down · Football Forecast Ledger</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#matchups">Skip to matchups</a>
+  <header class="site-header">
+    <a class="brand" href="#">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span><strong>Fourth Down</strong><small>forecast ledger</small></span>
+    </a>
+    <div class="data-state"><span class="pulse"></span><span id="data-status">Loading ledger</span></div>
+  </header>
+
+  <main>
+    <section class="control-deck" aria-labelledby="page-title">
+      <div class="title-block">
+        <p class="eyebrow">Independent football projections · v2</p>
+        <h1 id="page-title">See the model.<br><em>Then see the market.</em></h1>
+        <p class="lede">Four numbers, kept structurally separate. The raw football model never reads a betting line; calibration is displayed alongside it, never over it.</p>
+      </div>
+      <div class="controls" aria-label="Prediction filters">
+        <div class="segmented" role="group" aria-label="League">
+          <button class="active" data-league="all">All</button>
+          <button data-league="nfl">NFL</button>
+          <button data-league="ncaa">NCAA</button>
+        </div>
+        <label>Week
+          <select id="week-filter"><option value="all">All available</option></select>
+        </label>
+        <label>Sort
+          <select id="sort-filter">
+            <option value="kickoff">Kickoff</option>
+            <option value="difference">Largest difference</option>
+            <option value="confidence">Data quality</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="legend" aria-label="Forecast definitions">
+      <div><b>01</b><span><strong>Model</strong>Football-only score and line.</span></div>
+      <div><b>02</b><span><strong>Market</strong>Median of 3+ free line entries, when available.</span></div>
+      <div><b>03</b><span><strong>Calibrated</strong>Past-season validated blend.</span></div>
+      <div><b>04</b><span><strong>Difference</strong>Model minus market. Not automatically an edge.</span></div>
+    </section>
+
+    <section id="matchups" class="matchups" aria-live="polite">
+      <div class="table-head" aria-hidden="true">
+        <span>Matchup</span><span>01 Model</span><span>02 Market</span><span>03 Calibrated</span><span>04 Difference</span>
+      </div>
+      <div id="game-list" class="game-list"></div>
+      <div id="empty-state" class="empty-state" hidden>
+        <p class="yard-number">00</p>
+        <div><h2>No published slate yet.</h2><p>The site is ready, but it will not invent picks. Run the prospective model refresh to append evidence to the ledger; this page then updates from the versioned JSON artifact.</p></div>
+      </div>
+    </section>
+
+    <section class="integrity-strip">
+      <div><span>Publication rule</span><strong>Every snapshot is immutable</strong></div>
+      <div><span>Consensus rule</span><strong>Minimum 3 independent books</strong></div>
+      <div><span>Missing-data rule</span><strong>Unknown is never assumed healthy</strong></div>
+      <div><span>Promotion rule</span><strong>Held-out seasons must improve</strong></div>
+    </section>
+  </main>
+
+  <dialog id="detail-dialog">
+    <button class="dialog-close" aria-label="Close details">×</button>
+    <div id="dialog-content"></div>
+  </dialog>
+
+  <footer><span>Fourth Down</span><span>Projection tool · not betting advice</span><a href="api/v1/predictions.json">API v1 ↗</a></footer>
+  <script src="app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: fourth-down-forecast
+    runtime: static
+    staticPublishPath: ./web
+    buildCommand: python3 scripts/publish_ledger.py
+    headers:
+      - path: /api/v1/*
+        name: Cache-Control
+        value: public, max-age=60
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff

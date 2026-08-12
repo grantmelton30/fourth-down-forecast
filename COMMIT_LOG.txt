@@ -1,0 +1,1576 @@
+################ grant-claude ################
+3c6d6d0 2026-08-07
+
+Track the workspace-root docs
+
+These three files are the cross-repo record -- the gate registry, the session
+handoff and the inventory -- and until now they lived in no repository at
+all, so each edit silently overwrote the last with no history. NEXT_SESSION.md
+listed this as housekeeping; it is also a precondition for any Streamlit
+deploy.
+
+nfl-model/, ncaa-model/ and shared/ are ignored: each is its own repository
+and keeps its own history. This repo tracks only the documents that describe
+all three.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ .gitignore        |   7 +
+ GATES.md          | 115 +++++++++++++++
+ NEXT_SESSION.md   | 228 ++++++++++++++++++++++++++++++
+ REPO_INVENTORY.md | 408 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 758 insertions(+)
+
+
+################ nfl-model ################
+222b253 2026-08-07
+
+Use the linear projection for E[margin], keep the simulator for totals
+
+PATCH_03 §5.1 prescribed the L1/L2 split, NCAA adopted it, and NFL -- where
+the evidence was gathered -- never implemented it. Re-measured under the
+current 750/550 lambdas on 1,119 walk-forward games, both estimators on
+identical games, paired season-clustered bootstrap on squared errors:
+
+  market   simulator   linear    winner              95% CI
+  spread   13.668      13.196    linear, by 0.47     [+8.36, +16.98]  sig
+  total    13.445      13.630    simulator, by 0.19  [-8.44, -1.86]   sig
+
+So the split is per MARKET, not per sport, and the blanket rule "the
+simulator is never in the mean path" is right for spreads and wrong for
+totals -- it came from a margin measurement generalised without ever being
+tested on totals. Totals are left on the simulator.
+
+The simulator still produces the whole distribution; SimResult.recentered()
+shifts it onto the L1 mean so the key-number spikes survive and cover
+probabilities describe the game the model actually predicts. The projection
+block is in the backtest frame's hash, so flipping the knob rebuilds rather
+than serving a stale frame -- the cache bug class this repo keeps hitting.
+
+Fit is refit per season on strictly earlier seasons only. 2019-20 fall back
+to the simulator until 300 training games exist, recorded per row in
+model_spread_source.
+
+Rebuilt frame: spread RMSE 13.431 overall, 13.196 on linear rows, matching
+the offline measurement exactly. GATE_BEATS_ELO 13.763 -> 13.431 and
+GATE_SCALE's spread component 1.186 -> 0.983, now inside tolerance. No gate
+changed state; ratio 1.0557 is still above 1.0 so bets_allowed() stays False.
+t(b_model) moved from -0.67 to -1.18, i.e. further from significance.
+
+Do not port to ncaa-model: the same comparison on 3,472 college games found
+linear wins college totals. 42/42 tests pass.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ config/nfl.yaml | 30 +++++++++++++++++++++++++
+ src/backtest.py | 68 ++++++++++++++++++++++++++++++++++++++++++++++++++++++---
+ src/config.py   | 27 +++++++++++++++++++++++
+ 3 files changed, 122 insertions(+), 3 deletions(-)
+
+fca6eee 2026-08-07
+
+Add a snap-weighted injury adjustment to the NFL spread
+
+Personnel was invisible to the model outside the QB position: injuries were read only
+to demote QB1 to QB2 on the depth chart. This adds a team-level term.
+
+BURDEN IS PLAYING TIME, NOT HEADCOUNT. "Four players out" is meaningless on its own --
+four special-teamers and four starters are the same number and a different team. Each
+player listed Out or Doubtful is weighted by the share of snaps he had actually been
+taking, so one unit is roughly one full-time starter.
+
+Measured on 1,535 walk-forward games against the current model's residual:
+
+  snap-weighted burden differential   -0.518 pts of margin per unit   t = -2.15
+  raw count of players out            -0.303 pts per player           t = -2.04
+  both together                       neither survives (collinear)
+
+SPREAD ONLY. Against the total residual burden is -0.011 (t = -0.05): a depleted team
+scores less and concedes more, and those cancel. Capped at +/-2 points; the worst
+observed team-week is 9.8 starter-equivalents, far beyond what a t = -2.15 coefficient
+can be trusted to extrapolate.
+
+END-TO-END EFFECT IS SMALL AND THAT IS THE HONEST HEADLINE: spread RMSE 13.7869 ->
+13.7702, bias -0.123 -> -0.087. A 0.76-point adjustment cannot move much against a
+13.8-point residual. Real, measurable, and nearly irrelevant to accuracy -- kept because
+it is correct and because it names a factor in the per-game breakdown, not because it
+changes what the model concludes.
+
+THE AS-OF JOIN IS LOAD-BEARING. A player who is Out has no snap-count row that week, so
+joining on the exact week matches 0.1% of the report. Joining to his most recent earlier
+week gives 78%. The first measurement off the broken join produced a +14.127 coefficient
+at t = +1.87 -- entirely noise from a near-empty variable.
+
+No lookahead: snap shares are an expanding mean over strictly earlier weeks, and the
+report is published before kickoff, so this is usable prospectively.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ config/nfl.yaml |  12 ++++++
+ src/backtest.py |  14 ++++++-
+ src/config.py   |   2 +
+ src/context.py  |  16 +++++++-
+ src/ingest.py   |  20 ++++++++++
+ src/injuries.py | 120 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 182 insertions(+), 2 deletions(-)
+
+f23af15 2026-08-07
+
+Correct the dome claim; record temperature as a real unmodelled term
+
+The previous commit reported the dome bump as +3.16 at t = +5.37. That fit controls
+for wind but NOT for team strength, and dome teams are not a random sample of offenses
+-- it was partly crediting the roof for the Saints and the Lions. Against a weather-free
+model's residual the effect is +1.7 (t = +1.61, not significant) relative to a calm
+outdoor game, or ~+4.1 relative to an average-wind one. 3.16 is kept as a central
+estimate with the uncertainty written down.
+
+Wind, by contrast, survives every control: -0.277 (t = -3.16) with temperature alongside
+it, and wind/temp are uncorrelated here (r = -0.08), so the earlier worry that this was
+a cold-December effect in disguise is ruled out.
+
+Temperature is separately significant at +0.072 pts/degF (t = +2.69) and is not modelled.
+Recorded rather than implemented.
+
+Values unchanged; this commit is the claims catching up with the evidence.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ config/nfl.yaml | 26 +++++++++++++++++++++++---
+ 1 file changed, 23 insertions(+), 3 deletions(-)
+
+013a456 2026-08-07
+
+Measure the wind and dome adjustments; reject implausible readings
+
+WEATHER WAS NOT DEAD, contrary to NEXT_SESSION.md. `weather_for_game` reads
+nflverse's own temp/wind columns before it considers the network, and 1,794 of 1,968
+completed outdoor games carry them -- so the backtest has been applying wind and dome
+adjustments all along. What was genuinely missing is forecasts for UPCOMING games,
+where those columns are null; `project_game.py --weather` now fetches them.
+
+Both constants were guesses, and both were wrong.
+
+NOT A 15 MPH HINGE. Sweeping the threshold on 1,792 outdoor games, RMSE is minimised
+at 0 and the slope is strongly significant there (-0.3339 pts/mph, t = -5.03). The old
+15 mph hinge rested on 143 games and was not distinguishable from zero (t = -1.82).
+Wind costs points from the first mph. ncaa-model reached the same specification
+independently, which is some comfort that it is the shape and not the sample.
+
+CENTRED on the 8.17 mph league mean, because the totals projection is fit on games that
+already carry average wind -- only the deviation is new information.
+
+DOME BUMP WAS WRONG BY 6x: measured +3.16 (t = +5.37) controlling for wind, against a
+configured 0.50. Slightly more than the 2.73 the wind slope implies at zero wind; the
+remainder is everything else indoors buys.
+
+IMPLAUSIBLE READINGS ARE NOW REJECTED, not applied. nflverse records NYG@PIT 2016 wk13
+at 71 mph against a 99th percentile of 23, and with an uncapped linear term that single
+row moved the game's total by 19.6 points. Above 40 mph the reading is treated as
+missing -- never as calm.
+
+Effect over 1,535 walk-forward games: total RMSE 13.847 -> 13.628, total bias
++1.431 -> +0.444 (GATE_UNBIASED now passes; it would have failed), and t(b_model_total)
++0.79 -> +1.78. Still short of the |t| > 2.0 the blend needs, and the model remains
+less accurate than the market on both markets. No new edge -- a real bias removed.
+
+AND THE SAME STALE-CACHE BUG AS ncaa-model. walk_forward cached to a bare
+backtest_frame.parquet, so none of the above would have invalidated it: the gates would
+have graded a model that no longer existed. The path is now hashed on the config that
+produced it, exactly as ratings.walkforward_path does in the college repo.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ config/nfl.yaml            | 25 ++++++++++++++++++++++---
+ project_game.py            |  5 ++++-
+ src/backtest.py            | 41 +++++++++++++++++++++++++++++++++++++++--
+ src/config.py              |  5 +++--
+ src/context.py             | 29 ++++++++++++++++++++++++-----
+ tests/test_no_lookahead.py |  3 ++-
+ 6 files changed, 94 insertions(+), 14 deletions(-)
+
+ef08414 2026-08-07
+
+Remove the nfelo spread blend term; keep the QB valuation input
+
+nfelo had two integrations and only one was ever real.
+
+KEPT -- qb_elos.csv as a model input. It is a QB valuation model, not a game
+prediction model, it does not consume market data, and qb1_adj / qb2_adj are already
+the points-scale adjustment §12 needs. 1.0MB cached and feeding the QB adjustment.
+
+REMOVED -- nfelo's game spread as a third blend term. It was never populated:
+building the series needs the full nfelo model run locally, which the playbook flags
+as the most involved piece of the build and explicitly permits skipping.
+
+Leaving the scaffolding in place was not free. fit_blend_weights reported
+t_nfelo = +0.00 beside two genuinely measured t-statistics, so every gate readout --
+including the viewer's "no picks" banner -- claimed nfelo had been tested and found
+uninformative when it had never been tested at all. A measurement that never happened
+must not be reported as one. The gate now reads "t(b_model)=-0.73 (need |t| > 2.0)".
+
+Nothing about the model's conclusion changes: t_model = -0.73 over 1,535 walk-forward
+games is a real measurement and the gate still correctly emits zero bets.
+
+BlendWeights.load() now ignores unknown keys, so a blend_weights.json written before
+this commit still loads instead of raising on b_nfelo / se_nfelo / t_nfelo.
+
+GATE_VS_NFELO went with it -- it compared model RMSE against a series that does not
+exist and passed unconditionally.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ run_backtest.py     | 22 +++++-----------------
+ src/backtest.py     | 41 +++++------------------------------------
+ src/betting.py      |  5 +----
+ src/market.py       | 47 +++++++++++++----------------------------------
+ src/nfelo.py        | 48 ++++++++++++++++--------------------------------
+ tests/test_devig.py |  6 +++---
+ 6 files changed, 43 insertions(+), 126 deletions(-)
+
+0ab94a5 2026-08-06
+
+Repair config/nfl.yaml truncated by an iCloud sync race
+
+The blob committed in the previous commit stops at `kelly_fraction: 0.25` with no
+trailing newline, losing max_stake_pct_bankroll, bankroll, default_price, the
+output: block and the tuned: block. The working tree was always correct -- iCloud
+swapped the file while git was hashing it, the same failure c94c794 repaired.
+
+Verified after commit: every tracked file's committed blob now matches disk byte
+for byte.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ config/nfl.yaml | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+eb10a26 2026-08-06
+
+Lift the three sport-specific simulator constants into config
+
+shared/sim_core.py hardcoded endgame_second_drive_prob, the two-point chart and
+the chart follow rate, which meant ncaa-model inherited the NFL's values for all
+three. They now come off cfg.simulation, plus overtime_max_exchanges.
+
+The values here are EXACTLY what was hardcoded -- a lift-and-shift, not a retune.
+Output is bit-identical (the RNG draw order is unchanged) and 42/42 tests pass.
+
+Note drive_count_dist remains declared and never read; left alone rather than
+removed, but deliberately not replicated into ncaa-model's config.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ config/nfl.yaml | 21 +++++++++++----------
+ src/config.py   |  4 ++++
+ 2 files changed, 15 insertions(+), 10 deletions(-)
+
+6f40f4d 2026-08-05
+
+Fix corrupted drive cache, un-shrink pace, extract shared simulator
+
+ROOT CAUSE OF THE FIX/RE-BREAK CYCLE. drives_main.parquet was built before
+build_drive_table learned to skip kickoff rows and was reloaded ever after with a
+bare exists() check. Every drive model, field-position distribution and backtest in
+the repo's history was trained on drives starting at midfield (yardline_100 53)
+instead of a team's own 29 (71). It also predated the endgame layer, so it lacked
+start_qtr/start_gsr/start_score_diff and crashed 9 simulator tests. Added
+config.read_cached_frame(): a schema-drifted cache is treated as absent and rebuilt.
+
+Two more instances of the same bug family:
+  * walkforward_ratings_*.parquet did not encode the ridge lambdas in its cache key,
+    so --tune-lambdas wrote a new tuned: block and then silently reused ratings fit
+    with the OLD penalties. The grid search could never affect anything downstream.
+  * (ncaa-model, separate commit) load_drives had it too.
+
+Unvalidated constants, measured and corrected:
+  * league_mean_drives_per_team 11.4 -> 11.1 (actual). At 2.03 pts/drive this was
+    +1.22 points of bias in every simulated total.
+  * pace lambda 400 -> 10, chosen by walk-forward RMSE on realised drive counts.
+    Pace rating sd 0.032 -> 0.309; it had been regularized out of existence.
+  * ridge lambdas 220/260 -> 750/550 from the first grid search ever actually run.
+    Grid extended past its old 750 ceiling, which the optimum had pinned to.
+
+Simulator correctness (both found by measurement, not guessing):
+  * two-point attempts were drawn at random, independent of the scoreboard. The rate
+    was right (0.0925 measured vs 0.095 configured); the mechanism was not. Real
+    two-point decisions are caused by the margin, so they pull scores onto 3 and 7.
+    Now chart-driven on endgame drives.
+  * defensive/return TDs were a flat 7 points, so their extra points never missed --
+    and missed XPs are a large share of 6-point margins. Now draws the conversion.
+  * endgame table now applies to 1.34 drives/team (measured), not exactly 1.
+
+GATE_UNBIASED and GATE_SCALE implemented; both were specified by PATCH 02 and never
+built, so "all gates pass" was never a claim about nine gates. gate_scale carries a
+warning against "fixing" it by rescaling: this model's signal supports sd 2.07 on
+totals against a market 4.48, so passing it would mean doubling its overconfidence.
+
+Results: total bias +1.43 -> -0.34, spread RMSE 13.878 -> 13.763, worst calibration
+bin 20.5pp -> 14.8pp, key numbers 4.33pp -> 2.72pp. Still no edge over the market
+(b_model t = -0.67), which is the correct and expected outcome, not a defect.
+
+Simulator extracted to ../shared/sim_core.py so nfl-model and ncaa-model run the same
+code rather than two copies that drift. src/simulate.py is now a thin binding that
+resolves ratings into net_epa. All 42 tests pass.
+
+Adds project_game.py: projects one game and prints a score.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ .gitignore         |   4 +
+ config/nfl.yaml    |  11 +-
+ project_game.py    | 169 +++++++++++++++++++++
+ run_backtest.py    |   4 +-
+ src/_shared.py     |  21 +++
+ src/backtest.py    |  68 +++++++++
+ src/config.py      |  27 ++++
+ src/drive_model.py | 161 ++------------------
+ src/drives.py      | 104 +++----------
+ src/ratings.py     |  10 +-
+ src/simulate.py    | 425 ++++-------------------------------------------------
+ 11 files changed, 374 insertions(+), 630 deletions(-)
+
+9fdc876 2026-08-04
+
+Phase 0.5: integrity triage
+
+0.5A purge: 5 stale metric literals removed from source (report.py CLV
+0.7049/0.6923 baked into every workbook; betting.py and run_paper.py docstrings
+quoting drifted coefficients and the 'edge lives in the blend' rationalisation).
+1 retained as an annotated historical citation, 1 false positive.
+
+0.5B: ../GATES.md created. NCAA 12 gates named / 8 implemented / 5 never built.
+NFL 9 named / 7 implemented / 2 never built. Every 'all gates pass' claim
+corrected in both playbooks and in NFL run_backtest stdout.
+
+0.5C: three NCAA tests, previously zero -- spread sign (asserted against the raw
+CFBD payload, outcome correlation, and heavy-favorite win rate), no-lookahead on
+the walk-forward split, restricted universe pinned at 1,543. All 3 pass.
+
+0.5D: scope ledger in README -- seven specified-but-unbuilt modules with
+consequences (no baseline, no distribution, 5 missing gates).
+
+GATE RESULT: no gate run this phase; integrity triage only.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ CFBD_API_KEY=.txt | Bin 0 -> 132 bytes
+ NFL back test.txt | Bin 0 -> 134 bytes
+ NFL_PLAYBOOK.md   |   5 ++++-
+ run_backtest.py   |   5 ++++-
+ 4 files changed, 8 insertions(+), 2 deletions(-)
+
+c1a3163 2026-07-31
+
+Add app.py launcher for the shared viewer
+
+Two-line launcher pinning SPORT_MODEL=nfl and executing ../shared/view.py.
+Picks stay blocked: GATE_BLEND_INFORMATIVE fails on this model by design and
+the gate is enforced in shared/sport.py, not here.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ app.py | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+af45e32 2026-07-31
+
+NFL spread/total simulator: complete build, null result on spreads
+
+Walk-forward backtest over 1,535 games (2019-2025, weeks 4+) across three
+independent architectures. None carries information beyond the closing line:
+
+  ridge direct   b = -0.107 (t = -1.40)   RMSE 13.529
+  drive sim      b = -0.044 (t = -0.74)   RMSE 13.882
+  Elo            b = -0.018 (t = -0.20)   RMSE 13.208
+  market                                  RMSE 12.692
+
+Joint fit R^2 = 0.002. Held-out 2024-25 negative for all three. Totals also
+null once the +1.43pt level bias is removed. Bet sheet stays blocked behind
+GATE_BLEND_INFORMATIVE; no picks are emitted.
+
+Five bugs found, four of them in the spec and now patched into the playbook:
+  - HFA double-counted between the drive multinomial and context (~4.4 pts)
+  - "add one drive to the home team w.p. 0.5" gave home +0.5 possessions/game
+  - residual regression had no intercept, so level bias loaded onto the slope
+  - tuning objective was margin RMSE, which selects for a market clone
+  - drive start read off the kickoff row, putting mean start at midfield
+
+Transferable findings: the simulator contributes all 5.02 pts of excess
+dispersion in the mean path (hence the L1/L2 split), and an
+independent-possession simulator cannot reach the key-number spikes at any
+refinement -- two independent draws from the real score distribution give
+P(|margin|=3) = 6.4% against an actual 14.7%.
+
+42 tests passing.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ .gitignore                 |    6 +
+ CLAUDE.md                  |   63 +++
+ DATA_SOURCES.md            |  441 ++++++++++++++++
+ DECISIONS.md               |  231 +++++++++
+ NFL_PLAYBOOK.md            | 1188 ++++++++++++++++++++++++++++++++++++++++++++
+ PATCH_01_ARCHITECTURE.md   |  300 +++++++++++
+ PATCH_02_DIAGNOSTICS.md    |  237 +++++++++
+ PATCH_03_DECISION.md       |  153 ++++++
+ config/nfl.yaml            |   73 +++
+ requirements.txt           |   13 +
+ run_backtest.py            |  243 +++++++++
+ src/__init__.py            |    0
+ src/backtest.py            |  683 +++++++++++++++++++++++++
+ src/betting.py             |  222 +++++++++
+ src/config.py              |  202 ++++++++
+ src/context.py             |  279 +++++++++++
+ src/drive_model.py         |  273 ++++++++++
+ src/drives.py              |  214 ++++++++
+ src/elo.py                 |   72 +++
+ src/ingest.py              |  296 +++++++++++
+ src/market.py              |  385 ++++++++++++++
+ src/nfelo.py               |  117 +++++
+ src/qb.py                  |  222 +++++++++
+ src/ratings.py             |  571 +++++++++++++++++++++
+ src/simulate.py            |  435 ++++++++++++++++
+ src/stadiums.py            |  176 +++++++
+ src/weather.py             |  182 +++++++
+ tests/__init__.py          |    0
+ tests/test_devig.py        |  113 +++++
+ tests/test_no_lookahead.py |   79 +++
+ tests/test_ratings.py      |  172 +++++++
+ tests/test_simulate.py     |  209 ++++++++
+ 32 files changed, 7850 insertions(+)
+
+
+################ ncaa-model ################
+f8d0b4b 2026-08-08
+
+Discard the offseason prior; ratings develop from games played
+
+offseason_regression 0.42 -> 1.0, prior_weight_games 5.0 -> 8.0. A new season
+now starts every team at the league mean and differentiates them purely from
+games actually played.
+
+Both old values were cell #1 of the 12-cell pre-registered grid and both sat
+at the MINIMUM of their searched range (half_life 6/10/16, prior_weight
+5/10/16) -- the search wanted to shrink harder and the grid would not let it,
+the same boundary truncation as nfl-model's lambda ceiling.
+
+Spread RMSE 16.718 -> 16.563, totals 16.567 -> 16.519. The early-season window
+this most affects gains most: weeks 4-6 go 16.573 -> 16.348.
+
+Not dispersion collapse, which was the obvious way to fake it: RMSE has an
+interior optimum and worsens again at prior_weight 20 and 30. prior_weight 12
+scores 0.001 better but drags the SD ratio to a 0.142 deviation against
+GATE_SCALE's 0.15 tolerance; 8.0 keeps the deviation at 0.090.
+
+This CONTRADICTS a persistence measurement taken the same day: regressing each
+team's end-of-season rating on the prior season's gives 0.669 (CI [0.625,
+0.707], n=786), which argues for retaining ~0.66 rather than discarding
+everything. Both results are correct. Ratings do persist; the model cannot
+exploit that persistence better than the mean can, so the prior's real signal
+costs more variance than it returns. Recorded in the config so nobody reverts
+this on the persistence number alone.
+
+Selection is POST-HOC, outside the grid DECISIONS D3 exists to enforce.
+Mitigation: it holds on a pseudo-holdout -- fitted-window 2021-23 improves by
+0.161, unseen 2024-25 by 0.144 -- and the gradient is monotone rather than one
+lucky cell. Not a substitute for a pre-registered re-run.
+
+Changes no verdict: ratio against the close 1.0837 -> 1.0737, still above 1.0,
+GATE_RMSE fails and bets_allowed() stays False. 12/12 tests. 0 API calls.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ config/ncaa.yaml | 40 ++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 38 insertions(+), 2 deletions(-)
+
+ca67811 2026-08-08
+
+Ingest the in-progress season, with caches that can actually expire
+
+all_seasons stopped before `current`, so the repo was a 2019-2025 historical
+tool that could not see the season being played. Ingesting and grading are
+different questions and this answered both with one exclusive bound;
+graded_seasons keeps the exclusive bound, which is correct -- an unfinished
+season has no outcomes to grade. nfl-model has always drawn this distinction.
+
+Flipping that one bound alone would have been worse than leaving it. Every
+parquet here is keyed on a season RANGE and every raw payload is cached
+forever, which is right for immutable history and wrong for the live season:
+a plays_2019_2026.parquet written in week 0 would be served unchanged in week
+8, under a filename that looks perfectly correct. Same failure as the
+lambda-900 ratings artifact, except the input that changes is time.
+
+So:
+- ingest._split_live keeps history on the existing range-named artifacts (the
+  2019-2025 caches on disk stay valid; nothing was rebuilt) and fetches the
+  live season separately, never writing it into them.
+- BudgetedCFBD.call takes ttl_hours; None keeps permanence, so every
+  historical caller is untouched. api.live_refresh_hours = 12.
+- The live season is read off client.cfg rather than passed in, so no call
+  site can forget it and silently re-freeze the season.
+- ratings.live_tag puts the live season's completed-game count in the
+  walkforward key, so new results re-key the artifact. Readers that pass no
+  tag resolve to the newest matching build.
+
+_plays_frame now asks only for weeks with a completed game. The live schedule
+lists every future week, and requesting their plays returns an empty list
+while still spending a call -- ~16 empty requests twice a day, which alone
+would have exhausted the 900/month budget. Historical seasons lose nothing:
+all their weeks have completed games.
+
+2026 is live: 1,638 scheduled games, 0 completed, ratings therefore pure
+offseason-regressed priors until kickoff on 2026-08-27. Cost 3 API calls
+(121 -> 124). 12/12 tests, and nfl-model still 42/42.
+
+Note for whoever looks for week 0: CFBD does not use it. 2024, 2025 and 2026
+all start at week 1, and the late-August opening weekend is week 1.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ config/ncaa.yaml   |  14 ++++
+ src/cfbd_client.py |  29 +++++--
+ src/config.py      |  28 ++++++-
+ src/ingest.py      | 230 +++++++++++++++++++++++++++++++++++++++--------------
+ src/ratings.py     |  43 +++++++++-
+ 5 files changed, 274 insertions(+), 70 deletions(-)
+
+17b76ac 2026-08-07
+
+D4: measure sim-vs-linear on college data instead of assuming
+
+D4 justified "the simulator is never in the mean path" with an NFL margin
+measurement (13.529 vs 13.882). That number was generalised to totals
+without being tested there, and the NFL re-measurement found the simulator
+actually WINS NFL totals -- which raised the question of whether D4 was
+wrong here too.
+
+Measured it here rather than porting the NFL result: 3,472 college games
+(2020-2025), simulator run with this repo's own artifacts against
+model_total_pure, graded on the close. Linear 16.567 vs simulator 16.954 --
+linear wins totals by 0.39, significant (season-clustered CI [+4.65,
++25.88]), stable excluding 2020 and on 2022-25 alone. Spreads favour linear
+by 0.14, not significant.
+
+So D4 is CORRECT for this repo on both markets, and the two leagues
+genuinely diverge on totals. No code change. Best ratios against the close
+are 1.084 and 1.038, so GATE_RMSE fails either way.
+
+Records one open lead: the college simulator is under-dispersed on margins
+(sd 7.74 vs market 12.79, actual 19.79) while the linear projection sits at
+12.56. NFL's simulator is over-dispersed by comparison. Not Monte Carlo
+noise, which would add variance rather than remove it.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ DECISIONS.md | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+2ee480c 2026-08-06
+
+Encode the ratings hyperparameters in the walk-forward cache key
+
+build_walkforward cached to walkforward_ratings_{cache_key}.parquet with cache_key
+"default", so it returned whatever artifact was on disk regardless of what the config
+said. That is the failure this repo's own working rules name: a cache whose inputs are
+config-dependent must encode that config in its key.
+
+IT HAD ALREADY HAPPENED. pace.lambda was retuned 900 -> 15 and the artifact kept
+serving the lambda-900 fit for five days. The symptom surfaced only when the simulator
+was wired into the viewer: fitted pace spanned 0.14 drives of team-to-team variation
+against a real 4.4, so Army and Air Force -- the two slowest offenses in the sport, and
+correctly ranked as such (corr +0.958) -- were projected at league-average pace. Army @
+Air Force came out at a 64.2 total against a 49.5 line and a 37 actual.
+
+Regenerating under lambda 15 moved pace sd from 0.010 to 0.244 and drive swing from
+0.14 to 3.46, took totals RMSE 17.88 -> 17.44 over 90 priced games, cut spurious
+disagreement with the market by 22% (sd 5.77 -> 4.52), and brought that game to 54.4.
+The model is still less accurate than the market on totals, which is the expected and
+documented result; what is gone is the mechanical error.
+
+The fix mirrors nfl-model, which already tags its artifacts this way. Tagging rather
+than validating on read also lets two configurations coexist, which is what the sweep{i}
+keys want. Over-tagging costs an 8-second rebuild; under-tagging cost five days.
+
+Consumers now resolve the path through ratings.walkforward_path() instead of hardcoding
+the filename: project_game.py, analysis/measure_wind.py, tests/test_core.py.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ analysis/measure_wind.py |  4 ++--
+ project_game.py          |  2 +-
+ src/ratings.py           | 34 +++++++++++++++++++++++++++++++++-
+ tests/test_core.py       |  3 ++-
+ 4 files changed, 38 insertions(+), 5 deletions(-)
+
+ab1687e 2026-08-06
+
+Repair three files truncated by an iCloud sync race
+
+config/ncaa.yaml was committed cut off mid-word ("Re-measured at 1.50, selec"),
+losing the whole simulation: block, the wind constants and most of betting:.
+src/config.py and src/context.py lost their tails the same way. The working tree
+was always correct -- iCloud swapped the files while git hashed them, the same
+failure c94c794 repaired.
+
+Verified after commit: every tracked file's committed blob now matches disk byte
+for byte.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ config/ncaa.yaml | 42 +++++++++++++++++++++++++++++++++++++++++-
+ src/config.py    |  3 ++-
+ src/context.py   | 11 ++++++++++-
+ 3 files changed, 53 insertions(+), 3 deletions(-)
+
+945a1d2 2026-08-06
+
+Weather via Open-Meteo, venue coordinates via CFBD, and project_game.py
+
+Weather had never been fetched in EITHER repo. nfl-model's scaffolding was correct
+but every call site passed allow_network=False, so wind and dome adjustments have
+contributed exactly zero for the life of that repo. This makes it real on the
+college side.
+
+Open-Meteo: free, no key, no registration. Chosen over CFBD's weather endpoint
+because CFBD is metered against the same 900-call budget and weather is per-GAME --
+one backtest would cost more calls than everything else combined. It is also what
+nfl-model already uses, so both sports read the same source.
+
+Venue coordinates come from CFBD /venues: ONE call, permanently cached, 806 venues,
+100% coverage of FBS home games. ingest.load_games now keeps venueId (with a schema
+guard, since the existing parquet predates it).
+
+The reading is taken at kickoff in the VENUE'S LOCAL TIME, not UTC and not a daily
+mean. CFBD's timezone field is null for a long tail of venues, so venues.py falls
+back to longitude -- a Notre Dame home game at Aviva Stadium correctly resolves to
+Europe/Dublin. Domes short-circuit before any fetch. Units are set explicitly on
+every request; Open-Meteo defaults to Celsius and km/h.
+
+context.py supplies venue HFA and wind and nothing else. It deliberately does NOT
+add hfa_league_mean: the drive multinomial's is_home_offense term is the league
+baseline, and adding it here would double-count (Bug A on the NFL build).
+
+VENUE HFA IS MEASURED ON MARGIN RESIDUALS, NOT RAW MARGINS. Grouping raw home
+margins by venue credits the stadium with the team -- it gave Ohio Stadium a +14.5
+point "advantage" and pushed a projected spread 50 points past the market. Margin is
+now regressed on ratings-implied strength first and the venue effect read off the
+residuals, then re-centred on zero. Ohio Stadium gets +3.04; deviations are centred
+(mean -0.000, sd 2.35).
+
+WIND IS MEASURED, on 4,311 outdoor FBS-vs-FBS games: -0.1867 points of total per mph,
+linear from zero, t = -2.89. Two departures from nfl-model:
+
+  * No threshold. The NFL uses a 15 mph hinge; sweeping it on college data minimises
+    RMSE at 0, and the 15 mph version rests on 163 games. College barely plays in
+    wind (mean 7.0, p90 12.3), so a high threshold fits a thin tail.
+  * CENTRED on the 7.0 mph mean, and it must stay that way. The totals projection is
+    fit on games that already carry average wind, so only the deviation is new
+    information; the raw coefficient would drag every total down 1.31 points.
+
+dome_total_bump becomes 1.31, the calm end of that same line, replacing nfl-model's
+unexplained 0.5.
+
+measure_wind.py regresses the total on the model's own pace/efficiency predictors
+plus wind -- the physical question. Regressing the MARKET residual on wind answers a
+different question and must not be used to set this constant.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ analysis/measure_wind.py | 137 ++++++++++++++++++++++++++++++++
+ project_game.py          | 192 +++++++++++++++++++++++++++++++++++++++++++++
+ src/context.py           | 199 +++++++++++++++++++++++++++++++++++++++++++++++
+ src/ingest.py            |  11 ++-
+ src/venues.py            |  96 +++++++++++++++++++++++
+ src/weather.py           | 196 ++++++++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 830 insertions(+), 1 deletion(-)
+
+2aa7e99 2026-08-06
+
+Give NCAA the shared drive simulator: net_epa, drive model, binding
+
+net_epa / net_epa_vec / resolve_team_ratings move into ratings.py, and
+backtest.build_features now calls the shared version rather than inlining the
+same arithmetic -- verified behaviour-preserving, max |difference| exactly 0.0
+across 4,995 games.
+
+resolve_team_ratings exists because a plain ratings.loc[team] raises KeyError the
+first time anyone projects a week-one FBS-vs-FCS game. It prefers the ridge's own
+fitted __FCS__ bucket and falls back to config only if the bucket is unfitted.
+
+drive_model.py mirrors the NFL binding: walk-forward merge by (season, week, team)
+-- never an end-of-history snapshot, which would label a 2021 drive with a team's
+2025 strength -- plus a schema-guarded cache and an endgame wrapper.
+
+THE FCS BUCKET MATTERS MORE THAN EXPECTED. CFBD's drives endpoint is not filtered
+by division, so the raw table is 28.8% FCS-vs-FCS (correctly irrelevant) and 9.9%
+FBS-vs-FCS (very relevant). A plain inner join threw away both. Rewriting unrated
+teams to the bucket and keeping a drive when at least one side is FBS took training
+coverage from 61.3% to 71.3%.
+
+simulate.py is the ~80-line binding. The mean path deliberately does NOT go through
+it -- backtest projects E[margin] linearly off the ridge (DECISIONS D4). This
+produces a distribution, not a better mean.
+
+Validated by pooling 419 real 2024 matchups (1.68M simulated margins) against those
+games' actual results:
+
+  P(|margin|=3)   9.26% vs 8.59%      P(|margin|=14)  4.77% vs 4.53%
+  P(|margin|=7)   8.32% vs 8.83%      P(|margin|=17)  3.40% vs 3.10%
+
+Dispersion 15.0-15.8 against a measured 15.32 residual sd around the closing line.
+(Not against the 20.68 raw margin sd, which includes matchup variation a single-game
+sim does not have -- that comparison makes a correct simulator look broken.)
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ src/backtest.py    |  10 +--
+ src/drive_model.py | 184 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/ratings.py     |  58 +++++++++++++++++
+ src/simulate.py    |  82 ++++++++++++++++++++++++
+ 4 files changed, 330 insertions(+), 4 deletions(-)
+
+211fd58 2026-08-06
+
+Measure the NCAA simulation constants; do not inherit the NFL's
+
+Adds the simulation: block, SimulationCfg, and analysis/measure_simulation_constants.py
+which produces every number in it from the cached CFBD payloads (2019-2025 ex 2020).
+No API calls: the client is cache-first on raw JSON.
+
+The method is validated by reproducing nfl-model's three independently-derived
+conversion constants on the NFL drive table to within 0.002 (0.9405/0.0929/0.4729
+against 0.940/0.095/0.475). Only then were the college numbers trusted.
+
+TWO OF THE EXPECTED DIFFERENCES RUN BACKWARDS:
+
+  xp_make_prob            0.9732 vs NFL 0.9405 -- college kicks its PAT from the
+                          3-yard line and the NFL from the 15, so the college kick
+                          is a ~20-yarder. College kicking is NOT worse here.
+  two_point_attempt_rate  0.0696 vs NFL 0.0929 -- precisely BECAUSE that kick is
+                          nearly automatic. The OT rule forcing a try from the third
+                          overtime does not touch regulation; OT drives are excluded.
+
+Where college kicking really is worse is field goals: 8.8% of drives vs 14.9%.
+That lives in the drive multinomial, not here.
+
+The /plays endpoint returns no PAT plays (27 rows in 1.44M), so conversions are
+identified from touchdown-drive point totals (6/7/8) split by post-touchdown margin:
+the attempt rate swings by an order of magnitude across margins while kick and
+two-point success do not, which identifies all three by maximum likelihood.
+
+The lambdas come from /plays, NOT /drives. A kickoff is not a scrimmage drive, so
+counting driveResult values cannot see kickoff-return touchdowns at all -- 0.0201 of
+the true 0.0377, more than half the special-teams total.
+
+Also fixes _RESULT_MAP, which had only ever been validated on 2023. Five 2021-only
+label variants were unmapped and would have raised; END OF GAME TD and END OF HALF TD
+were mapped to TD when on all 16 the offense scored nothing and the DEFENSE scored
+6-7. Each settled by reading score deltas, not labels. The table now builds over all
+seven seasons: 196,378 drives.
+
+Pace was two unvalidated guesses of the kind that cost the NFL build 1.22 points:
+12.1 -> 11.65 drives (counted on the drive TABLE, and college pace is in secular
+decline), sd 2.1 -> 1.87 (between-GAME, since the simulator draws one count per game),
+lambda 900 -> 15 by walk-forward RMSE over 77 weeks. 900 shrank pace 60x too hard.
+
+fcs_off/def_rating were -0.155/0.170, off the scale the ridge produces: -0.155 sat
+below EVERY fitted off_rating in 2019-2025. Corrected to the bucket's own fitted
+-0.021/0.080.
+
+Adds read_cached_frame, the schema guard this repo was missing.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ analysis/measure_simulation_constants.py | 377 +++++++++++++++++++++++++++++++
+ config/ncaa.yaml                         | 160 +++++++++----
+ src/config.py                            |  56 ++++-
+ src/drives.py                            |  24 +-
+ 4 files changed, 567 insertions(+), 50 deletions(-)
+
+b05a0c4 2026-08-05
+
+Build the NCAA drive table for the shared simulator
+
+First half of giving NCAA the same simulator as NFL. ncaa-model had no simulator at
+all -- no drive model, no Monte Carlo, no n_sims -- despite being described as one; it
+computed model_total analytically, and its own betting.py records that its totals
+result was an errors-in-variables artifact.
+
+src/drives.py maps the CFBD drives payload into the schema ../shared/sim_core.py
+expects. CFBD is already drive-level, so unlike the NFL side there is no play-by-play
+to aggregate and no kickoff-row trap: startYardsToGoal is exactly the NFL's
+start_yardline_100. All 26 observed driveResult values are mapped explicitly and
+anything unmapped raises rather than silently becoming NO_SCORE. Return touchdowns are
+split the way the NFL map splits them: defensive returns are a TURNOVER for the
+offense (points via defensive_td_lambda), kicking-play returns are NO_SCORE (points
+via special_teams_td_lambda).
+
+Validated on 2023 (33,535 drives): mean drive start 69.3 vs the NFL's 71.1, result mix
+26.8% TD / 8.7% FG against the NFL's 22.1% / 14.9% -- more touchdowns and worse
+kicking, which is real college football rather than a mapping error. The endgame
+signal the key numbers depend on is present and stronger than the NFL's: tied late, a
+drive ends in a field goal 19.8% of the time against an 8.7% baseline. Late drives per
+team are 1.46 vs the NFL's 1.34, so NCAA will need its own endgame rate.
+
+load_drives had the same stale-cache bug that poisoned nfl-model: extending its `keep`
+list would have kept serving the old narrower parquet forever. Schema guard added, and
+the score/clock fields the endgame layer needs are now retained.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ src/_shared.py |  21 ++++++++
+ src/drives.py  | 160 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/ingest.py  |  10 +++-
+ 3 files changed, 190 insertions(+), 1 deletion(-)
+
+c94c794 2026-08-05
+
+Repair two files truncated by an iCloud sync race in 97739a7
+
+src/betting.py and src/report.py were committed mid-expression and do not
+parse. The Desktop is iCloud-synced; the same race produced "short read while
+indexing run_paper.py" on the first commit attempt. That error was visible and
+retried, but git silently accepted SHORT READS on two other files, so the
+retry succeeded while committing partial contents.
+
+Working-tree copies were correct throughout — only the committed blobs were
+damaged, so no analysis result is affected.
+
+Guard added: verify committed blobs against the worktree before trusting a
+commit on this filesystem.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ src/betting.py | 11 ++++++++++-
+ src/report.py  |  6 +++++-
+ 2 files changed, 15 insertions(+), 2 deletions(-)
+
+97739a7 2026-08-05
+
+Phase 0: power arithmetic, RMSE gate, CLV control failure, pure projection
+
+Gate results:
+  GATE_RMSE          FAIL  totals 1.035, spreads 1.104 (close-anchored)
+  GATE_CLV_CONTROL   FAIL  0.5846 raw / 0.5607 side-adjusted, 200 seeds
+  full-FBS close-anchored b = -0.0040, t = -0.07, 93.2% power -> NULL
+
+0A analysis/power.py — MDE, required_b, power, required_n, and a difference
+   test with its own power calculation. Reproduces both Appendix A anchors
+   exactly (close +0.0762/+0.89, opener +0.1952/+2.23). 9 tests.
+
+   Finding: the restricted-universe null was never adequately powered (64.9%
+   against the reference effect). The full FBS window declared in D2a, on the
+   corrected anchor, carries 93.2% power and reads b = -0.0040. The NCAA
+   totals null is now evidence of absence rather than absence of evidence.
+
+0B PREREG.md — every decision D1-D8 flagged true/partial/false/outcome-blind.
+   D2a and D6d/D6e flagged false. Rule recorded: a decision made after seeing
+   its own outcome may kill a positive result but may not support one.
+
+0C GATE_CLV_CONTROL fails; CLV is DELETED, not reported with a caveat.
+
+   Appendix A Test 2 is invalid. Its control was `total_close + noise`, and
+   since side = sign(model - total_open) while CLV grades
+   sign(total_close - total_open), that control was handed the quantity it is
+   graded against. It scores 0.82 — higher than the model's 0.7049 — because
+   it had lookahead, not because CLV is meaningless.
+
+   The valid opener-anchored control still fails at 0.5846: totals lines drift
+   down ~1 pt, the cover_prob filter admits 63% UNDER picks, and UNDERs
+   collect CLV free when lines drop. One post-hoc repair (side baselines) was
+   attempted, reached only 0.5607, and was abandoned rather than iterated.
+
+0D src/backtest.py::rmse_gate — absolute accuracy as a hard promotion
+   precondition, close-anchored, wired into run_backtest.py. RMSE is the
+   metric an errors-in-variables artifact cannot fake, which is why it gates
+   rather than another significance test.
+
+0E model_total_pure / model_spread_pure persisted; three opener-injection
+   points documented in DECISIONS.md D8.
+
+   Finding: the opener-anchored gain and week-bias corrections do not merely
+   contaminate the measurement, they destroy the projection. Stripping them
+   moves b from -0.0040 to +0.0802 on the adequately powered window. Still a
+   null at the reference effect of 0.20; a true effect near 0.08 would need
+   n ~ 7,000 and remains untested.
+
+Appendix A Test 1 is untouched and still carries the null on its own.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ DECISIONS.md            |  41 ++++++
+ PREREG.md               |  90 ++++++++++++
+ analysis/__init__.py    |   5 +
+ analysis/clv_control.py | 240 ++++++++++++++++++++++++++++++++
+ analysis/power.py       | 360 ++++++++++++++++++++++++++++++++++++++++++++++++
+ config/ncaa.yaml        |   4 +
+ run_backtest.py         |   8 ++
+ src/backtest.py         |  63 +++++++++
+ src/betting.py          |  11 +-
+ src/config.py           |   4 +
+ src/report.py           |   6 +-
+ tests/test_power.py     | 226 ++++++++++++++++++++++++++++++
+ 12 files changed, 1043 insertions(+), 15 deletions(-)
+
+8c267f9 2026-08-04
+
+Phase 0.5: integrity triage
+
+0.5A purge: 5 stale metric literals removed from source (report.py CLV
+0.7049/0.6923 baked into every workbook; betting.py and run_paper.py docstrings
+quoting drifted coefficients and the 'edge lives in the blend' rationalisation).
+1 retained as an annotated historical citation, 1 false positive.
+
+0.5B: ../GATES.md created. NCAA 12 gates named / 8 implemented / 5 never built.
+NFL 9 named / 7 implemented / 2 never built. Every 'all gates pass' claim
+corrected in both playbooks and in NFL run_backtest stdout.
+
+0.5C: three NCAA tests, previously zero -- spread sign (asserted against the raw
+CFBD payload, outcome correlation, and heavy-favorite win rate), no-lookahead on
+the walk-forward split, restricted universe pinned at 1,543. All 3 pass.
+
+0.5D: scope ledger in README -- seven specified-but-unbuilt modules with
+consequences (no baseline, no distribution, 5 missing gates).
+
+GATE RESULT: no gate run this phase; integrity triage only.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ NCAA_PLAYBOOK.md   |   9 +++-
+ README.md          |  26 +++++++++
+ run_paper.py       |   9 ++--
+ src/backtest.py    |   3 +-
+ src/betting.py     |  24 +++++----
+ src/report.py      |   6 ++-
+ tests/test_core.py | 152 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 7 files changed, 210 insertions(+), 19 deletions(-)
+
+b7fd1c3 2026-08-04
+
+NULL: NCAA totals edge was an opener-anchoring artifact
+
+Decisive test, changing nothing but the anchor:
+
+  opener (as shipped)  b=+0.195  t=+2.23  n=1543
+  close   (decisive)   b=+0.076  t=+0.89  n=1543
+
+Close-anchored by season: +0.82, +0.38, -0.99, +0.90, +0.64. No season clears
+2.0. On the capped historical pick set, b=-0.090 (t=-0.32).
+
+Zero-skill control, now a permanent harness fixture: a projection defined as
+close + gaussian noise, carrying no information, produces CLV 0.6923 on 65
+movable lines -- identical to the model's capped 0.6923 and effectively equal
+to its uncapped 0.7049. CLV measured against an opener-anchored projection
+reads line noise, not skill.
+
+Mechanism: the opener's error enters both the regressor (model-open) and the
+response (actual-open), correlating them mechanically, while the close moves
+toward the disagreement because it is the better estimate.
+
+Recorded as Appendix A in NCAA_PLAYBOOK.md in the same form as the NFL null.
+README headed with a DO NOT TRADE banner. No tuning performed.
+
+What survives: the provider fix (consensus carries 0.0% openers), the
+within-season drift diagnosis, the simulator-out-of-the-mean-path finding, and
+the free intercept / GATE_UNBIASED_BY_WEEK / zero-skill control harness
+additions.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ NCAA_PLAYBOOK.md   | 81 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ README.md          | 18 ++++++++----
+ run_clv_history.py | 20 +++++++++++++-
+ src/backtest.py    | 30 ++++++++++++++++++++
+ 4 files changed, 143 insertions(+), 6 deletions(-)
+
+99381f0 2026-08-04
+
+Historical CLV, concentration caps, Excel export, README
+
+Historical CLV measured across the full walk-forward backtest rather than
+waiting on live weeks -- CFBD carries the opener alongside the close for every
+graded game. Blend and L3 fit on strictly earlier seasons for every pick.
+
+  uncapped  68 picks  CLV 0.7049  (61 movable lines, binomial p=0.0019)
+  capped    42 picks  CLV 0.6923  (39 movable lines, p=0.0237)
+  by season 2023 0.675 / 2024 0.700 / 2025 0.818
+
+Record over the same picks 32-36, which is the expected pattern when the edge
+is in the blend rather than in absolute prediction.
+
+Concentration: no team exceeds the 15% cap (Sam Houston highest at 13.2%), so
+the 4-of-13 seen in the first paper period was a small-sample artifact. Four
+conferences exceed 25%, which is structural to a G5-restricted universe. Caps
+enforced greedily on descending edge, default ON so they cannot be skipped.
+Edge survives them.
+
+Adds src/report.py (Excel: Bets / All Games / Diagnostics, no stake column)
+and README documenting the NFL null, the NCAA result, every exclusion and what
+decided it, and the standing rule that stakes go live only on positive CLV.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ DECISIONS.md       |  19 +++++
+ README.md          | 169 ++++++++++++++++++++++++++++++++++++++++
+ config/ncaa.yaml   |   5 ++
+ run_backtest.py    |   8 +-
+ run_clv_history.py | 220 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ run_paper.py       |   3 +
+ src/betting.py     |  49 +++++++++++-
+ src/config.py      |   2 +
+ src/report.py      | 103 +++++++++++++++++++++++++
+ 9 files changed, 575 insertions(+), 3 deletions(-)
+
+379acdb 2026-08-03
+
+Time-varying intercept, by-week bias gate, mechanistic week exclusion
+
+Retracts the week-13 partition claim. Testing the difference directly gives
+t = 1.53 (diff +0.388, se 0.254) and a 90% CI on late-season b of
+[-0.533, +0.241] containing the early estimate. At n=254 detection needs
+b >= 0.471, so that partition was underpowered by construction -- an
+underpowered subsample read after a bad outcome.
+
+The level bias is the real defect and is sufficient alone: at +1.74 points by
+week 13 the constant offset exceeded the selection floor, so every game cleared
+on the OVER side and the picks carried no game-specific information. 7/7 OVER
+was the filter measuring a constant.
+
+Mechanism measured, not assumed. Pace inflation, relaxing shrinkage and the
+garbage filter are all eliminated (pace_sd 0.0147->0.0153, off_sd flat at
+0.0239). The cause is amplification: eff_sum drifts 0.003 PPA/play across a
+season against a ~250x fitted coefficient, worth ~0.8 points, while the opener
+stays flat.
+
+Correction: per-week intercept fit on earlier seasons, shrunk n/(n+40),
+subtracted before the blend. GATE_UNBIASED_BY_WEEK added -- the full-sample
+gate passed at +0.219 while a +0.62 -> +7.68 drift sat underneath it. Totals
+drift wk13 falls +1.74 -> +0.82.
+
+Residual is invariant to shrinkage (wk13 +0.82 at k=40 vs +0.74 at k=0), so it
+is year-specific and not learnable. Weeks 10/13/14 excluded on the gate, plus
+15/16 as untestable. Decided before the paper re-run.
+
+Threshold re-derived on the de-biased projection: 1.5 = median market
+open-close move, selecting 10.8% of the slate against the expected 8-15%.
+
+Paper period on the pre-declared weeks 4-16: 13 picks, CLV 0.8182 (9 of 11
+movable lines), mean move +1.91 pts toward. Record 5-8. No stakes sized.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ DECISIONS.md     | 75 +++++++++++++++++++++++++++++++++++++++++---
+ config/ncaa.yaml | 14 ++++++++-
+ run_backtest.py  | 11 +++----
+ run_paper.py     |  8 +++--
+ src/backtest.py  | 95 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/betting.py   |  4 +++
+ src/config.py    |  1 +
+ 7 files changed, 194 insertions(+), 14 deletions(-)
+
+20d505f 2026-08-03
+
+GATE_SCALE fix, L3 calibration, totals paper period
+
+Gain correction: least squares attenuates by construction (sd(pred) = R*sd(y)),
+so the totals projection ran at a 0.787 SD ratio and under-flagged the slate.
+Fit walk-forward on earlier seasons, applied about the projection's own mean.
+GATE_SCALE now 1.018 and all seven gates pass. Cost is real and logged: totals
+t went 2.844 -> 2.285.
+
+min_edge_points_total was inert, not selective: at b=0.24 a 3.5-point blended
+edge needs a 14.5-point raw disagreement, and the largest in the sample is
+12.07. Re-derived as a 1.0-point robustness floor with min_cover_prob (0.545 vs
+a 0.5238 breakeven) as the real filter. Pre-committed in DECISIONS D6c before
+any CLV number was computed.
+
+L3: rank-preserving quantile map onto the empirical conditional total
+distribution, built strictly from prior seasons.
+
+Paper period 2025 wk13-16: 7 picks, CLV 0.5000, record 1-6. Stakes stay off.
+The window turns out to be a no-signal partition -- b is +0.242 (t=+2.56) in
+weeks <13 and -0.146 (t=-0.62) in weeks >=13, with model bias rising from
++0.62 in wk4 to +5.05 by wk15.
+
+Viewer: NCAAAdapter ignored NCAA_MODEL_CACHE_DIR and globbed the wrong
+directory, so Ratings rendered empty against a built repo. Now honours it and
+prefers the shipped artifact over sweep variants.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ DECISIONS.md     | 125 ++++++++++++++++++++++++++++++++++++++++++++
+ config/ncaa.yaml |   6 ++-
+ run_paper.py     | 139 +++++++++++++++++++++++++++++++++++++++++++++++++
+ src/backtest.py  |  44 +++++++++++++++-
+ src/betting.py   | 138 ++++++++++++++++++++++++++++++++++++++++++++++++
+ src/calibrate.py | 156 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 606 insertions(+), 2 deletions(-)
+
+7990e34 2026-08-01
+
+NCAA build: ingest, ratings, L1 mean layer, blend, gates
+
+Graded against OPENING lines (CFBD spread_open/over_under_open) -- the test the
+NFL build could not run. 120 API calls for a cold build, 780 remaining.
+
+Pre-flight (PATCH 04 Step 0) failed as specified at 16.8% coverage, because
+the playbook put `consensus` first in provider_priority and consensus carries
+no opener at all (0.0% of 1,503 games). With Bovada first, coverage is ~100%
+from 2021 and mean |open-close| is 1.40. Logged as a spec bug in DECISIONS D1.
+
+Opener coverage is all-or-nothing by season: 2019-20 zero, 2021-25 ~100%. The
+pre-committed missing-at-random test therefore compares eras, not games, and
+failed all four checks -- 2019-20 excluded (DECISIONS D2).
+
+Architecture per the NFL null: the simulator is NOT in the mean path. L1 is a
+direct linear projection off the ridge ratings, spreads and totals fit
+separately. Residual blend carries a free intercept throughout.
+
+Results, restricted universe vs opener:
+  totals  b=+0.262  t=+2.84  (n=1543, 2021-2025)
+  spreads b=+0.048  t=+0.87
+  held-out 2024-25 totals t ranges +2.20 to +3.12 across all 12 pre-registered
+  grid cells -- a broad plateau, not an isolated spike
+
+Six of seven gates pass; GATE_SCALE fails (totals SD ratio 0.79, under-
+dispersed).
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ .env.example        |   2 +
+ .gitignore          |   9 +
+ 00_START_HERE.md    | 181 ++++++++++++
+ DATA_SOURCES.md     | 441 +++++++++++++++++++++++++++++
+ DECISIONS.md        | 137 +++++++++
+ NCAA_PLAYBOOK.md    | 798 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ PATCH_04_NCAA_GO.md | 119 ++++++++
+ app.py              |  27 ++
+ config/ncaa.yaml    |  82 ++++++
+ run_backtest.py     | 226 +++++++++++++++
+ src/__init__.py     |   0
+ src/backtest.py     | 255 +++++++++++++++++
+ src/cfbd_client.py  | 107 +++++++
+ src/config.py       | 208 ++++++++++++++
+ src/ingest.py       | 284 +++++++++++++++++++
+ src/market.py       | 178 ++++++++++++
+ src/ratings.py      | 292 +++++++++++++++++++
+ tests/__init__.py   |   0
+ 18 files changed, 3346 insertions(+)
+
+
+################ shared ################
+363edfa 2026-08-10
+
+Put the internals behind a click; lead with the numbers
+
+The page opened on a full-width warning quoting GATE_BLEND_INFORMATIVE and a
+t-statistic, above two stacked H1s, above a sidebar leading with a repo
+directory name and a --sport CLI hint. All of it true, none of it what a
+reader needs first.
+
+- Gate banner -> a one-line status strip ("Projections only · NFL · graded
+  against the closing line") with a collapsed "Why this model does not publish
+  picks" carrying the plain-English reason and the gate text beneath it.
+- Dropped the duplicate H1: shared/app.py already prints the product title, so
+  view.py only prints its own when run standalone by the per-repo launchers.
+- Sidebar leads with the Season/Week selectors; sport, market basis and source
+  repo move into a collapsed "Model details". Removed the --sport CLI hint.
+- Ratings caption shortened to one line, with the def_rating sign explanation
+  behind "How to read these columns".
+- The two in-page disclaimers became quiet inline text instead of full-width
+  info panels repeating what the status strip already says.
+- Hid the redundant "Sport" label above the NFL/NCAA switch.
+
+SUBSTANCE UNCHANGED, deliberately. Picks are still gated on bets_allowed(),
+the page still states plainly that it does not publish selections, and cover
+probabilities still carry a "not recommendations" line. Gate identifiers moved
+to where someone looking for them will find them -- the expander and the
+Diagnostics tab -- rather than being the first thing on screen. Nothing here
+touches a model quantity.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ app.py  |   5 ++-
+ view.py | 116 +++++++++++++++++++++++++++++++++++++++++++++++-----------------
+ 2 files changed, 90 insertions(+), 31 deletions(-)
+
+8f4eacd 2026-08-08
+
+Add a Team tab: one team, whole season, every opponent
+
+The week-by-week tabs answer "what is on this slate". Neither answered "what
+does this team's year look like", which needed clicking through eighteen
+weeks.
+
+Presentation only -- the same ratings() and games() the other tabs read,
+sliced by team instead of by week. No adapter change, no model quantity
+computed, no simulation run.
+
+- Searchable team picker, with that team's four ratings and their rank.
+- Net rating across the whole season as a line, so a team's trajectory is one
+  glance rather than eighteen selections.
+- Full schedule: week, date, home/away, opponent, market line, total, final
+  margin and W/L, plus record and average margin. Line and margin are flipped
+  to THIS team's perspective for away games -- both are quoted home-side in
+  the source, and a schedule that silently mixes conventions is worse than no
+  schedule.
+- CSV download.
+
+Formats the numeric columns to strings rather than using Styler.format(
+na_rep=...): Streamlit does not honour na_rep through st.dataframe, so every
+unplayed game rendered a literal "None". Found in the browser, not by reading
+the code.
+
+Verified on NFL 2026 (all games unplayed, so every cell is the em-dash path).
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ view.py | 124 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 122 insertions(+), 2 deletions(-)
+
+f28ca6d 2026-08-07
+
+Make the viewer read like a scoreboard, not a spreadsheet
+
+Presentation only. No adapter call, no model quantity and no calculation
+changes -- every number rendered here was already being rendered; this
+changes how it looks.
+
+- Projected score as a scoreboard card instead of four undifferentiated
+  metric tiles. The two halves come from the identity the simulator already
+  uses: home = (total + margin)/2, away = (total - margin)/2.
+- Win probability as a labelled stacked bar. A two-colour bar does not say
+  which colour is which team, so the teams are named in text above it.
+- Key numbers shaded amber in the margin histogram. Those spikes at 3 and 7
+  are the entire reason this model simulates drives rather than sampling a
+  normal, and they were invisible in a flat blue histogram.
+- Cover probabilities as bars rather than a table.
+- Market lines moved into each metric's delta slot, so model and market sit
+  together instead of in two separate rows.
+- CSS for metric cards, tabs and headings. No fixed background or text
+  colour: Streamlit ships light and dark themes and hardcoding either makes
+  the other unreadable, so fills are rgba over whatever the theme provides.
+
+Verified in the browser against the real NFL frame. Two rendering bugs found
+and fixed that way rather than by inspection: the 50% rule was painted over
+the cover-probability labels (48.3% read as 8.3%) because the last layer
+wins z-order, and the histogram legend sat on top of the tallest key-number
+spikes.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ view.py | 249 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 223 insertions(+), 26 deletions(-)
+
+78d66d6 2026-08-07
+
+Block picks when the model is less accurate than the market
+
+bets_allowed() tested only the blend t-statistics. On a fresh 2026-08-07 run that let
+ncaa-model show a green "picks are permitted" banner while its own GATE_RMSE was failing
+on BOTH markets -- total 16.794 against the market's 16.223, spread 17.132 against
+15.514. The gate config calls rmse_max_ratio "a hard precondition ... a model less
+accurate than the line it bets against is not promoted". Nothing enforced it.
+
+Why the t-statistic passed at all is worth recording. ncaa-model grades against the
+OPENER. Re-measured on the uncontaminated `*_pure` projection against the CLOSE -- which
+backtest.py names as the only honest test -- totals fall from t = +2.23 to +1.63 and
+spreads sit at +1.87. Beating the opener but not the close is capturing the market's own
+move between the two, not information. Both sports now report bets_allowed = False.
+
+TWO BUGS FIXED ON THE WAY:
+
+  * `all(r <= RMSE_MAX_RATIO for r in ratios.values())` is True for an empty dict, so an
+    unmeasurable precondition read as a satisfied one. It now fails closed.
+
+  * NCAAAdapter.backtest_frame looked for "backtest_frame.parquet"; ncaa-model has only
+    ever written "backtest_frame_default.parquet". It returned None every time, which is
+    why the accuracy check found nothing to measure -- and why the Diagnostics tab has
+    been empty against a fully built repo.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ sport.py | 78 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 74 insertions(+), 4 deletions(-)
+
+ecca6f8 2026-08-07
+
+Resolve the NFL backtest frame through backtest_frame_path
+
+nfl-model now tags that artifact with a hash of the config that produced it, so the
+hardcoded backtest_frame.parquet no longer exists there. NFLAdapter asks the repo for
+the path and falls back to the newest tagged file; its in-process cache is unchanged.
+
+NCAAAdapter is deliberately untouched -- ncaa-model still writes an untagged frame. An
+earlier version of this change patched the college adapter by mistake, because the two
+method bodies differ only in that the NFL one memoises.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ sport.py | 20 +++++++++++++++++---
+ 1 file changed, 17 insertions(+), 3 deletions(-)
+
+cda8fb9 2026-08-07
+
+Drop t_nfelo from the gate banner and Excel export
+
+nfl-model no longer fits an nfelo blend term, so t_nfelo is not a number any more.
+The viewer's "no picks shown" banner listed it alongside two real t-statistics,
+which read as a tested-and-null result for a component that was never populated.
+
+Both readers already used w.get(k, 0.0), so an older blend_weights.json still
+renders -- the key is simply no longer displayed.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ export.py | 2 +-
+ sport.py  | 9 ++++-----
+ 2 files changed, 5 insertions(+), 6 deletions(-)
+
+fe4ea3a 2026-08-06
+
+Resolve the NCAA ratings artifact through walkforward_path
+
+_wf_path hardcoded walkforward_ratings_default.parquet, which no longer exists now that
+ncaa-model tags its artifacts with the hyperparameters that produced them. It asks the
+repo for the path when the config can be imported, and otherwise falls back to the
+newest artifact on disk -- preferring "default" keys over "sweep" ones, which are
+hyperparameter experiments rather than the shipped ratings.
+
+The old fallback took the last filename alphabetically, which with tagged names could
+have picked a sweep artifact over the real one.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ sport.py | 21 ++++++++++++++++-----
+ 1 file changed, 16 insertions(+), 5 deletions(-)
+
+aeb9749 2026-08-06
+
+Only rebuild module state when the sport actually changes
+
+app.py purged `view` and `sport` from sys.modules on every rerun, which defeated
+view.get_adapter's st.cache_resource: each interaction built a fresh adapter and
+refit the NCAA drive model on ~120k drives. The purge is only needed when the
+active sport changes, which is the only time `src` can resolve to the wrong repo.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ app.py | 22 ++++++++++++++--------
+ 1 file changed, 14 insertions(+), 8 deletions(-)
+
+41d8fed 2026-08-06
+
+Wire the NCAA simulator into the viewer's Game explorer
+
+NCAAAdapter.simulate() was a hardcoded `return None` from when ncaa-model had no
+simulator, so the Game explorer showed "The simulator is not available for this
+game" even after src/simulate.py landed. It now mirrors the NFL adapter: drive
+model, endgame table and field-position distribution fit once per season and held
+on the adapter (which view.get_adapter keeps behind st.cache_resource -- the
+multinomial is fit on ~120k drives). First call ~4s, subsequent games ~0.5s.
+
+Context comes from the new src/context.py with allow_network=False: a live
+Open-Meteo call per game would make the tab feel broken, but readings already in
+weather.parquet are used.
+
+games() now sorts priced games first. A college week carries a long tail of
+FCS-vs-FCS games with no line, and they sorted to the top alphabetically -- the tab
+opened on Merrimack @ Robert Morris with NaN spread and total, i.e. nothing to
+compare the model against, which is the entire point of the tab. 49 of 103 games in
+2024 week 10 carry a line.
+
+The Game explorer also now shows TOTAL disagreement alongside spread disagreement.
+Showing only the spread hid the number that matters: on Army/Navy the spread agrees
+to within a point (+3.46 model vs +4.5 market) while the total is out by twenty
+(57.07 model vs 37.5 market, 33 actual).
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ sport.py | 139 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ view.py  |   6 ++-
+ 2 files changed, 141 insertions(+), 4 deletions(-)
+
+d63467a 2026-08-06
+
+Build the combined viewer: both sports on one page
+
+VIEWER_SPEC.md §3 specified shared/app.py as a single entrypoint with a sport
+toggle. It was never built, so each repo's app.py launched one sport via
+$SPORT_MODEL and there was no way to see both.
+
+THE REASON IT IS MORE THAN A RADIO BUTTON. Both repos have a top-level package
+called `src`. Python caches modules by name, so once `src.config` is imported from
+one repo, importing it from the other silently returns the FIRST repo's module --
+the viewer would have labelled NFL numbers as college ones with no error. _activate()
+drops every `src*` module and re-points sys.path on each switch. Verified in both
+load orders, and live: NCAA renders market basis "opening" and season 2025 wk16
+against NFL's "closing" and 2026 wk4.
+
+Both cache dirs are set before either config imports, since each reads its own at
+import time and the repo-local default is a stale partial copy.
+
+view.py gains two guards so it still works standalone: it skips set_page_config and
+its bottom-of-module main() call when VIEWER_EMBEDDED=1.
+
+MOBILE. The ratings tab opened with three st.metric cards, which stack on a narrow
+screen -- so a phone showed a card reading "Ohio State" and nothing else, with every
+control hidden behind the sidebar hamburger. The table now comes first with a team
+filter above it, the metric cards moved below, and the sport toggle lives in the main
+body rather than the sidebar.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ app.py  | 110 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ view.py |  39 ++++++++++++++++-------
+ 2 files changed, 137 insertions(+), 12 deletions(-)
+
+97cafc8 2026-08-06
+
+Make endgame rate, two-point chart and OT length sport-configurable
+
+sim_core hardcoded three constants at the NFL's measured values and so silently
+imposed them on college. All three were then measured on CFBD data and all three
+differ:
+
+  endgame_second_drive_prob  0.34  -> 0.4243   (1.3408 vs 1.4243 endgame drives)
+  two_point_chart            [-10,-5,-2,1,5] -> [-18,-12,-5,-2,5,12,19]
+  chart_follow_rate          0.80  -> 0.4722
+  overtime_max_exchanges     3     -> 25
+
+Only three of the NFL's five two-point chart entries survive into college, which
+adds a two-score ladder the NFL chart has no entries for. College also has NO
+ties -- overtime repeats until somebody wins -- and the NFL's 3 exchanges left
+0.63% of simulated college games tied against a measured 0.00%, stealing mass
+from the small margins the key-number check cares about.
+
+The endgame figure only reproduces under the right conditioning: it is the mean
+number of last-5:00 drives among team-games that HAD one, because the simulator
+gives every team a final drive by construction. Measured unconditionally the NFL
+reads 1.165 rather than its documented 1.3408, which is how the error was caught.
+
+NFL keeps its exact previous values and the RNG draw order is unchanged, so its
+output is bit-identical. 42/42 tests pass.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KFMet2iHwGmHrRwR8K4nGZ
+
+ sim_core.py | 88 +++++++++++++++++++++++++++++++++++++++----------------------
+ 1 file changed, 56 insertions(+), 32 deletions(-)
+
+7521b9f 2026-08-05
+
+Add sim_core: the one drive-level Monte Carlo, shared by both sports
+
+Extracted verbatim from nfl-model so NFL and NCAA cannot drift apart. The whole reason
+this codebase spent weeks fixing errors and re-creating them was duplicated state
+getting out of step with the code that produced it; two hand-maintained copies of a
+700-line simulator would guarantee the same failure at a larger scale.
+
+Made sport-agnostic by two changes only:
+  * simulate_game takes net_home/net_away/pace_home/pace_away as plain floats instead
+    of a ratings table, so each sport owns its own ratings and net_epa formula (college
+    needs conference shrinkage and an FCS bucket; the NFL does not).
+  * fit_endgame_table takes an explicit cache_path and train_start instead of reaching
+    for a repo-specific CACHE_DIR.
+
+cfg stays duck-typed: it must expose cfg.simulation (n_sims, seed, xp_make_prob,
+two_point_*, defensive_td_lambda, special_teams_td_lambda, safety_lambda) and cfg.pace
+(league_mean_drives_per_team, drives_sd). Both repos' Config already satisfy this.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ sim_core.py | 758 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 758 insertions(+)
+
+51ce5fa 2026-08-05
+
+Combined viewer build spec
+
+One local page, both sports, sport toggle. A projected-score-and-why explorer,
+not a pick engine: model score vs Vegas score, the divergence, and the top-5
+factors that drove it. Operator decides the bet.
+
+Locked: nfl-model for the numbers with the terminal's odds ingest lifted;
+full numbers + DO NOT TRADE banner, no stake sizing; local first, deploy
+later; Odds API for NFL, CFBD for NCAA.
+
+Records that ODDS_API_KEY is NOT on this machine - only TURSO_* are in
+nfl-spread-terminal/.env. It lives in the Render dashboard and must be copied
+to nfl-model/.env before any live NFL line can be pulled.
+
+Written to disk because the previous build spec existed only in a chat window
+and was lost when that session ended.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ VIEWER_SPEC.md | 250 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 250 insertions(+)
+
+ecb95b3 2026-08-03
+
+Fix NCAA adapter cache resolution and slate rendering
+
+_cache_dir ignored NCAA_MODEL_CACHE_DIR and globbed repo/data/cache, so the
+viewer found zero rating periods against a fully built repo. Now resolves via
+the repo's own src.config.CACHE_DIR, prefers walkforward_ratings_default over
+the sweep variants, renders the slate from market.parquet, and opens on the
+most recent priced week.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ sport.py | 66 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 64 insertions(+), 2 deletions(-)
+
+66ab7b1 2026-07-31
+
+Shared viewer and Excel export, sport passed as a config argument
+
+view.py (Streamlit) and export.py (xlsxwriter) serve both repos. sport.py holds
+the adapter seam: the viewer knows nothing about nflverse, CFBD or ridge
+internals, it asks an adapter for ratings, games, a simulated distribution and
+gate status. Adding a sport is one adapter, not a viewer change.
+
+Tabs: Ratings, Game explorer, Diagnostics.
+
+The bet gate lives in sport.py::bets_allowed(), computed from the stored blend
+artifact rather than passed in by a caller, so no UI or export path can decide
+on its own to show picks. NFL returns False -- the workbook writes a "No Bets"
+sheet explaining why, and the viewer shows distributions and cover
+probabilities while explicitly labelling them as not recommendations.
+
+The NCAA adapter degrades rather than raising, because the amended build order
+puts the viewer third: Ratings lights up when ratings.py lands, Game explorer
+stays dark until the simulator exists.
+
+Verified against NFL via streamlit.testing AppTest: 0 exceptions, all three
+tabs render, opens on 2026 wk4 (model -2.73 / 39.41 vs market -2.5 / 40.5).
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+ .gitignore |   2 +
+ export.py  | 304 ++++++++++++++++++++++++++++++++++++
+ sport.py   | 507 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ view.py    | 455 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 1268 insertions(+)
+
+
