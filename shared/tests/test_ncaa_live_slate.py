@@ -98,3 +98,21 @@ def test_ncaa_schedule_falls_back_to_cached_live_payload_without_api_key(tmp_pat
 
     assert games.loc[0, "game_id"] == 2
     assert games.loc[0, "kickoff"] == pd.Timestamp("2026-08-29T23:00:00Z")
+
+
+def test_ncaa_raw_books_remain_distinct_consensus_inputs(tmp_path):
+    adapter = _adapter(tmp_path)
+    cache = adapter._cache_dir()
+    cache.mkdir()
+    path = cache / "lines_2026.json"
+    path.write_text(json.dumps([{
+        "id": 2, "season": 2026, "week": 1,
+        "lines": [
+            {"provider": "Bovada", "spreadOpen": -4.5, "overUnderOpen": 51.5},
+            {"provider": "DraftKings", "spreadOpen": -3.5, "overUnderOpen": 52.5},
+        ],
+    }]))
+    rows = adapter.market_snapshots()
+    assert list(rows.provider) == ["Bovada", "DraftKings"]
+    assert list(rows.spread) == [4.5, 3.5]
+    assert rows.observed_at.notna().all()

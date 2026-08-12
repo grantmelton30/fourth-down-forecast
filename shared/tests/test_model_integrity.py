@@ -26,10 +26,11 @@ class Sim:
         return float(self.weights @ self.totals)
 
     def recentered(self, margin):
-        self.weights = np.array([.02, .08, .10, .30, .50])
+        self._margin_target = float(margin)
         return self
 
     def retotaled(self, total):
+        self._total_target = float(total)
         return self
 
 
@@ -38,7 +39,9 @@ def test_validated_mean_replaces_simulation_mean_without_destroying_distribution
     raw_mean = sim.mean_margin
     forecast = forecast_from_projection(sim, spread=9.0, total=49.0)
     assert raw_mean != pytest.approx(9.0)
-    assert forecast.spread == pytest.approx(sim.mean_margin)
+    assert forecast.spread == pytest.approx(9.0)
+    assert sim._margin_target == 9.0
+    assert sim._total_target == 49.0
     assert forecast.source == "validated football mean + drive simulation"
     assert forecast.interval_80_low is not None
 

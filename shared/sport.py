@@ -642,6 +642,33 @@ class NCAAAdapter(SportAdapter):
         m = self._market()
         return _select_default_period(m, "spread_open") or super().default_period()
 
+    def market_snapshots(self) -> pd.DataFrame:
+        """Every cached NCAA book observation, retained separately for consensus."""
+        season = int(self._cfg().seasons.current)
+        path = self._cache_dir() / f"lines_{season}.json"
+        columns = ["league", "game_id", "provider", "spread", "total", "observed_at"]
+        if not path.exists():
+            return pd.DataFrame(columns=columns)
+        try:
+            payload = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            return pd.DataFrame(columns=columns)
+        observed = pd.Timestamp(path.stat().st_mtime, unit="s", tz="UTC")
+        rows = []
+        for game in payload:
+            for line in game.get("lines") or []:
+                spread = pd.to_numeric(line.get("spreadOpen"), errors="coerce")
+                total = pd.to_numeric(line.get("overUnderOpen"), errors="coerce")
+                if pd.isna(spread) and pd.isna(total):
+                    continue
+                rows.append({
+                    "league": "ncaa", "game_id": str(game.get("id")),
+                    "provider": str(line.get("provider") or "unknown"),
+                    "spread": -spread if pd.notna(spread) else float("nan"),
+                    "total": total, "observed_at": observed,
+                })
+        return pd.DataFrame(rows, columns=columns)
+
     def _live_market_from_raw_cache(self) -> pd.DataFrame:
         """Build the current NCAA market slate from the two cache-first CFBD payloads.
 

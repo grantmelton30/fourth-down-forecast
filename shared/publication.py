@@ -1,10 +1,61 @@
 """Transform immutable model/market inputs into the public four-output contract."""
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from prediction_contract import (Forecast, MarketEvidence, PredictionRecord,
                                  build_prediction_record)
+
+
+@dataclass(frozen=True)
+class QualityAssessment:
+    label: str
+    reasons: tuple[str, ...]
+    warnings: tuple[str, ...]
+    pick_eligible: bool
+    out_of_distribution: bool
+
+
+def assess_quality(
+    *, league: str, week: int, home_games_observed: int, away_games_observed: int,
+    unavailable_features: tuple[str, ...], market_evidence: MarketEvidence | None,
+    spread_difference: float | None, calibration_status: dict[str, bool],
+    bets_allowed: bool,
+) -> QualityAssessment:
+    reasons = list(unavailable_features)
+    warnings: list[str] = []
+    observed = min(int(home_games_observed), int(away_games_observed))
+    if unavailable_features:
+        label = "incomplete"
+    elif league == "ncaa" and (int(week) <= 1 or observed == 0):
+        label = "preseason"
+    elif league == "ncaa" and (int(week) <= 3 or observed <= 2):
+        label = "early-season"
+    elif league == "ncaa" and (int(week) <= 5 or observed <= 4):
+        label = "developing"
+    else:
+        label = "established"
+    if market_evidence is None:
+        reasons.append("no market reference")
+    elif not market_evidence.is_consensus:
+        reasons.append("market is not a three-source consensus")
+    for market in ("spread", "total"):
+        if not calibration_status.get(market, False):
+            reasons.append(f"{market} calibration is not validated")
+    difference = abs(float(spread_difference)) if spread_difference is not None else 0.0
+    out_of_distribution = difference >= 14.0
+    if out_of_distribution:
+        warnings.append("Extreme model/market disagreement; pick suppressed")
+    elif difference >= 10.0:
+        warnings.append("Large model/market disagreement; review inputs")
+    pick_eligible = bool(
+        bets_allowed and label == "established" and not reasons
+        and not out_of_distribution and all(calibration_status.values())
+    )
+    return QualityAssessment(label, tuple(dict.fromkeys(reasons)), tuple(warnings),
+                             pick_eligible, out_of_distribution)
 
 
 def calibrated_forecast(
@@ -43,17 +94,25 @@ def build_public_record(
     calibrated: Forecast | None, model_version: str, data_cutoff: str,
     unavailable_features: tuple[str, ...] = (), bets_allowed: bool = False,
     generated_at: str | None = None,
+    confidence: str | None = None, quality_reasons: tuple[str, ...] = (),
+    warnings: tuple[str, ...] = (), pick_eligible: bool = False,
+    out_of_distribution: bool = False,
+    calibration_status: dict[str, bool] | None = None,
+    games_observed: dict[str, int] | None = None,
 ) -> PredictionRecord:
     return build_prediction_record(
         league=league, game_id=game_id, season=season, week=week, kickoff=kickoff,
         home_team=home_team, away_team=away_team, independent=independent,
         market=market, calibrated=calibrated, model_version=model_version,
         data_cutoff=data_cutoff, generated_at=generated_at,
-        confidence=confidence_label(
+        confidence=confidence or confidence_label(
             unavailable_features=unavailable_features, market_evidence=market_evidence,
             calibrated=calibrated, bets_allowed=bets_allowed,
         ),
         unavailable_features=unavailable_features, market_evidence=market_evidence,
+        quality_reasons=quality_reasons, warnings=warnings,
+        pick_eligible=pick_eligible, out_of_distribution=out_of_distribution,
+        calibration_status=calibration_status, games_observed=games_observed,
     )
 
 
@@ -66,5 +125,5 @@ def weighted_quantile(values, weights, probability: float) -> float:
     return float(values[np.searchsorted(cumulative, probability, side="left")])
 
 
-__all__ = ["build_public_record", "calibrated_forecast", "confidence_label",
-           "weighted_quantile"]
+__all__ = ["QualityAssessment", "assess_quality", "build_public_record",
+           "calibrated_forecast", "confidence_label", "weighted_quantile"]

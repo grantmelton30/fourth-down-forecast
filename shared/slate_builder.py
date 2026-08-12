@@ -46,7 +46,10 @@ def market_for_game(
         consensus = aggregate_market_consensus(lines).iloc[0]
         if pd.notna(consensus["spread"]) and pd.notna(consensus["total"]):
             evidence = MarketEvidence(
-                label=("multi-book median" if consensus["is_consensus"]
+                label=("multi-book median" if consensus["is_consensus"] else
+                       "two-book reference" if max(
+                           int(consensus["book_count_spread"]),
+                           int(consensus["book_count_total"])) == 2
                        else "submitted line baseline"),
                 is_consensus=bool(consensus["is_consensus"]),
                 book_count_spread=int(consensus["book_count_spread"]),
@@ -81,20 +84,68 @@ def forecast_from_sim(sim) -> Forecast:
     )
 
 
+def forecast_from_projection(sim, *, spread: float, total: float) -> Forecast:
+    """Use a validated mean while preserving the simulator's discrete score lattice."""
+    calibrated = sim.recentered(float(spread)).retotaled(float(total))
+    weights = np.asarray(calibrated.weights, dtype=float)
+    weights = weights / weights.sum()
+    margins = np.asarray(calibrated.margins, dtype=float)
+    return Forecast.from_spread_total(
+        float(spread), float(total), float(weights[margins > 0].sum()),
+        "validated football mean + drive simulation",
+        interval_80_low=weighted_quantile(margins, weights, .10),
+        interval_80_high=weighted_quantile(margins, weights, .90),
+    )
+
+
+def calibration_permissions(weights: dict, league: str) -> dict[str, bool]:
+    """Promote spread and total independently; anti-predictive slopes fail closed."""
+    if not weights:
+        return {"spread": False, "total": False}
+    spread_key = "b_model" if league == "nfl" else "b_model_spread"
+    spread_raw = weights.get(
+        "b_model_raw" if league == "nfl" else "b_model_spread_raw",
+        weights.get(spread_key),
+    )
+    total_raw = weights.get("b_model_total_raw", weights.get("b_model_total"))
+    return {
+        "spread": bool(
+            spread_raw is not None and float(spread_raw) > 0
+            and float(weights.get("t_model" if league == "nfl" else "t_model_spread", 0)) > 2
+            and float(weights.get(spread_key, 0)) > 0
+        ),
+        "total": bool(
+            total_raw is not None and float(total_raw) > 0
+            and float(weights.get("t_model_total", 0)) > 2
+            and float(weights.get("b_model_total", 0)) > 0
+        ),
+    }
+
+
 def calibration_from_weights(independent: Forecast, market: Forecast | None,
                              weights: dict, league: str) -> Forecast | None:
     if market is None or not weights:
         return None
+    permissions = calibration_permissions(weights, league)
     spread_weight = weights.get("b_model" if league == "nfl" else "b_model_spread")
     total_weight = weights.get("b_model_total")
-    if spread_weight is None or total_weight is None:
+    if not any(permissions.values()):
         return None
+    spread_weight = float(spread_weight) if permissions["spread"] else 0.0
+    total_weight = float(total_weight) if permissions["total"] else 0.0
+    source_parts = [
+        "validated spread blend" if permissions["spread"] else "spread market baseline",
+        "validated total blend" if permissions["total"] else "total market baseline",
+    ]
     return calibrated_forecast(
-        independent, market, spread_intercept=weights.get("a_spread", 0),
-        spread_weight=spread_weight, total_intercept=weights.get("a_total", 0),
-        total_weight=total_weight,
+        independent, market,
+        spread_intercept=weights.get("a_spread", 0) if permissions["spread"] else 0,
+        spread_weight=spread_weight,
+        total_intercept=weights.get("a_total", 0) if permissions["total"] else 0,
+        total_weight=total_weight, source="; ".join(source_parts),
     )
 
 
-__all__ = ["calibration_from_weights", "forecast_from_sim", "market_for_game",
+__all__ = ["calibration_from_weights", "calibration_permissions",
+           "forecast_from_projection", "forecast_from_sim", "market_for_game",
            "source_digest"]

@@ -18,6 +18,59 @@ PRESEASON_FEATURES = (
 )
 
 
+def maturity_phase(week: int) -> str:
+    """Stable evidence phases used for validation and public quality labels."""
+    week = int(week)
+    if week <= 1:
+        return "preseason"
+    if week <= 3:
+        return "early"
+    if week <= 5:
+        return "developing"
+    return "established"
+
+
+def add_preseason_matchup_features(
+    games: pd.DataFrame, preseason: "pd.DataFrame | None",
+) -> pd.DataFrame:
+    """Attach team-season priors and phase interactions to a matchup frame."""
+    out = games.copy()
+    home_col = "home_team" if "home_team" in out else "homeTeam"
+    away_col = "away_team" if "away_team" in out else "awayTeam"
+    if preseason is None or preseason.empty:
+        for feature in PRESEASON_FEATURES:
+            out[f"{feature}_diff"] = np.nan
+            out[f"{feature}_sum"] = np.nan
+    else:
+        priors = preseason.drop_duplicates(["season", "team"], keep="last")
+        for feature in PRESEASON_FEATURES:
+            if feature not in priors:
+                priors[feature] = np.nan
+        for side, team_col in (("home", home_col), ("away", away_col)):
+            team = priors.rename(columns={
+                "team": team_col,
+                **{feature: f"{side}_{feature}" for feature in PRESEASON_FEATURES},
+            })
+            keep = ["season", team_col, *[
+                f"{side}_{feature}" for feature in PRESEASON_FEATURES
+            ]]
+            out = out.merge(team[keep], on=["season", team_col], how="left")
+        for feature in PRESEASON_FEATURES:
+            out[f"{feature}_diff"] = (
+                out[f"home_{feature}"] - out[f"away_{feature}"]
+            )
+            out[f"{feature}_sum"] = (
+                out[f"home_{feature}"] + out[f"away_{feature}"]
+            )
+    phases = out["week"].map(maturity_phase)
+    for feature in PRESEASON_FEATURES:
+        for kind in ("diff", "sum"):
+            base = f"{feature}_{kind}"
+            for phase in ("preseason", "early", "developing", "established"):
+                out[f"{base}_{phase}"] = out[base].where(phases.eq(phase))
+    return out
+
+
 def build_team_game_features(plays: pd.DataFrame) -> pd.DataFrame:
     required = {"game_id", "season", "week", "offense", "defense", "playType",
                 "yardsGained", "yardsToGoal", "ppa"}
@@ -240,6 +293,6 @@ def load_free_preseason(client, seasons: list[int]) -> dict[str, pd.DataFrame]:
             for name, frames in result.items()}
 
 
-__all__ = ["PLAY_FEATURES", "PRESEASON_FEATURES", "build_team_game_features",
-           "game_uncertainty_multiplier", "load_free_preseason",
+__all__ = ["PLAY_FEATURES", "PRESEASON_FEATURES", "add_preseason_matchup_features",
+           "build_team_game_features", "game_uncertainty_multiplier", "load_free_preseason",
            "matchup_feature_table", "normalize_preseason_sources", "rolling_team_features"]

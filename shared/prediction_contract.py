@@ -100,6 +100,12 @@ class PredictionRecord:
     confidence: str
     unavailable_features: tuple[str, ...]
     market_evidence: MarketEvidence | None = None
+    quality_reasons: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
+    pick_eligible: bool = False
+    out_of_distribution: bool = False
+    calibration_status: dict[str, bool] | None = None
+    games_observed: dict[str, int] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -120,6 +126,8 @@ class PredictionRecord:
             evidence["providers"] = tuple(evidence.get("providers", ()))
             data["market_evidence"] = MarketEvidence(**evidence)
         data["unavailable_features"] = tuple(data.get("unavailable_features", ()))
+        data["quality_reasons"] = tuple(data.get("quality_reasons", ()))
+        data["warnings"] = tuple(data.get("warnings", ()))
         return cls(**data)
 
 
@@ -130,6 +138,10 @@ def build_prediction_record(
     data_cutoff: str, generated_at: str | None = None, confidence: str = "unrated",
     unavailable_features: tuple[str, ...] = (),
     market_evidence: MarketEvidence | None = None,
+    quality_reasons: tuple[str, ...] = (), warnings: tuple[str, ...] = (),
+    pick_eligible: bool = False, out_of_distribution: bool = False,
+    calibration_status: dict[str, bool] | None = None,
+    games_observed: dict[str, int] | None = None,
 ) -> PredictionRecord:
     kickoff, data_cutoff = _iso(kickoff), _iso(data_cutoff)
     generated_at = _iso(generated_at or datetime.now(timezone.utc))
@@ -159,6 +171,11 @@ def build_prediction_record(
         data_cutoff=data_cutoff, generated_at=generated_at, confidence=str(confidence),
         unavailable_features=tuple(sorted(set(unavailable_features))),
         market_evidence=market_evidence,
+        quality_reasons=tuple(quality_reasons), warnings=tuple(warnings),
+        pick_eligible=bool(pick_eligible),
+        out_of_distribution=bool(out_of_distribution),
+        calibration_status=calibration_status,
+        games_observed=games_observed,
     )
 
 

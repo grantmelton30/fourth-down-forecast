@@ -40,7 +40,8 @@ def test_calibration_remains_separate():
     market, _ = market_for_game(game, pd.DataFrame(), league="nfl")
     calibrated = calibration_from_weights(
         model, market, {"a_spread": 0, "b_model": .25, "a_total": 0,
-                        "b_model_total": .5}, "nfl")
+                        "b_model_total": .5, "t_model": 2.5,
+                        "t_model_total": 2.5}, "nfl")
     assert calibrated.spread != model.spread
     assert model.spread == pytest.approx(5.2)
 
@@ -58,3 +59,19 @@ def test_market_snapshot_drops_observations_after_cutoff():
         game, lines, league="nfl", as_of="2026-09-01T12:00:00Z")
     assert market.spread == 2
     assert evidence.providers == ("early",)
+
+
+def test_two_sources_are_a_reference_but_not_consensus():
+    game = pd.Series({"game_id": "g", "spread_line": 1, "total_line": 40})
+    lines = pd.DataFrame([
+        {"league": "ncaa", "game_id": "g", "provider": "a", "spread": 2,
+         "total": 44, "observed_at": "2026-08-01T10:00:00Z"},
+        {"league": "ncaa", "game_id": "g", "provider": "b", "spread": 4,
+         "total": 46, "observed_at": "2026-08-01T10:01:00Z"},
+    ])
+    market, evidence = market_for_game(
+        game, lines, league="ncaa", as_of="2026-08-02T00:00:00Z")
+    assert market.spread == 3
+    assert evidence.book_count_spread == 2
+    assert evidence.is_consensus is False
+    assert evidence.label == "two-book reference"

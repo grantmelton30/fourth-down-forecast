@@ -101,3 +101,20 @@ def test_data_cutoff_must_precede_kickoff():
             independent=_forecast(2.0, 44.0, "football-model"), market=None,
             calibrated=None, model_version="v1", data_cutoff="2026-09-10T01:00:00Z",
         )
+
+
+def test_quality_evidence_round_trips_in_public_record():
+    record = build_prediction_record(
+        league="ncaa", game_id="q", season=2026, week=1,
+        kickoff="2026-08-29T16:00:00Z", home_team="H", away_team="A",
+        independent=_forecast(2, 50, "model"), market=_forecast(18, 52, "market"),
+        calibrated=None, model_version="v", data_cutoff="2026-08-28T18:00:00Z",
+        confidence="incomplete", quality_reasons=("missing returning production",),
+        warnings=("Extreme model/market disagreement; pick suppressed",),
+        pick_eligible=False, out_of_distribution=True,
+        calibration_status={"spread": False, "total": True},
+    )
+    restored = PredictionRecord.from_dict(record.to_dict())
+    assert restored.quality_reasons == ("missing returning production",)
+    assert restored.out_of_distribution is True
+    assert restored.calibration_status == {"spread": False, "total": True}
