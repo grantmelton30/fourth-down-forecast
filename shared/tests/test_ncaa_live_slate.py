@@ -71,3 +71,30 @@ def test_ncaa_schedule_requests_configured_live_season(tmp_path):
     adapter._games_with_venues()
 
     assert seen["seasons"][-1] == 2026
+
+
+def test_ncaa_schedule_falls_back_to_cached_live_payload_without_api_key(tmp_path):
+    adapter = _adapter(tmp_path)
+    cache = adapter._cache_dir()
+    cache.mkdir()
+    (cache / "games_2026.json").write_text(json.dumps([{
+        "id": 2, "season": 2026, "week": 1, "startDate": "2026-08-29T23:00:00Z",
+        "completed": False, "neutralSite": False, "homeTeam": "Home",
+        "awayTeam": "Away", "homeConference": "ACC", "awayConference": "Sun Belt",
+        "homeClassification": "fbs", "awayClassification": "fbs",
+        "homePoints": None, "awayPoints": None, "venueId": 10,
+    }]))
+    adapter._module = lambda name: (
+        SimpleNamespace(load_games=lambda client, seasons: (_ for _ in ()).throw(
+            RuntimeError("CFBD_API_KEY not found")))
+        if name == "ingest" else
+        SimpleNamespace(load_venues=lambda client: pd.DataFrame(),
+                        attach_venues=lambda games, venues: games)
+        if name == "venues" else
+        SimpleNamespace(BudgetedCFBD=lambda cfg: object())
+    )
+
+    games = adapter._games_with_venues()
+
+    assert games.loc[0, "game_id"] == 2
+    assert games.loc[0, "kickoff"] == pd.Timestamp("2026-08-29T23:00:00Z")

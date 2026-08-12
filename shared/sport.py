@@ -642,12 +642,127 @@ class NCAAAdapter(SportAdapter):
         m = self._market()
         return _select_default_period(m, "spread_open") or super().default_period()
 
+    def _live_market_from_raw_cache(self) -> pd.DataFrame:
+        """Build the current NCAA market slate from the two cache-first CFBD payloads.
+
+        ``market.parquet`` is a historical/backtest artifact and may legitimately predate
+        the live season.  The schedule and line JSON files are the refreshable source of
+        truth for publication.  Reading them here keeps a slate build free and offline
+        when those payloads are already cached, while preserving the same provider and
+        spread-sign rules as NCAA ingest.
+        """
+        cfg = self._cfg()
+        season = int(cfg.seasons.current)
+        games_path = self._cache_dir() / f"games_{season}.json"
+        lines_path = self._cache_dir() / f"lines_{season}.json"
+        if not games_path.exists() or not lines_path.exists():
+            return pd.DataFrame()
+        try:
+            games_raw = json.loads(games_path.read_text())
+            lines_raw = json.loads(lines_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            return pd.DataFrame()
+        if not games_raw or not lines_raw:
+            return pd.DataFrame()
+
+        games = pd.json_normalize(games_raw).rename(columns={"id": "game_id"})
+        games["kickoff"] = pd.to_datetime(
+            games.get("startDate"), utc=True, errors="coerce"
+        )
+        priority = list(cfg.market.provider_priority)
+        rows = []
+        for game in lines_raw:
+            offered = game.get("lines") or []
+            by_provider = {str(line.get("provider")): line for line in offered}
+            chosen = next(
+                (
+                    by_provider[name]
+                    for name in priority
+                    if name in by_provider
+                    and by_provider[name].get("spreadOpen") is not None
+                    and by_provider[name].get("overUnderOpen") is not None
+                ),
+                None,
+            )
+            if chosen is None:
+                chosen = next(
+                    (
+                        by_provider[name]
+                        for name in priority
+                        if name in by_provider
+                        and by_provider[name].get("spreadOpen") is not None
+                    ),
+                    None,
+                )
+            if chosen is None:
+                chosen = next(
+                    (by_provider[name] for name in priority if name in by_provider),
+                    offered[0] if offered else {},
+                )
+            rows.append({
+                "game_id": game.get("id"), "season": game.get("season"),
+                "week": game.get("week"), "home_team": game.get("homeTeam"),
+                "away_team": game.get("awayTeam"),
+                "home_conference": game.get("homeConference"),
+                "away_conference": game.get("awayConference"),
+                "home_classification": game.get("homeClassification"),
+                "away_classification": game.get("awayClassification"),
+                "home_points": game.get("homeScore"),
+                "away_points": game.get("awayScore"),
+                "provider": chosen.get("provider"),
+                # CFBD is negative when the home team is favored; the model contract is
+                # positive, matching NFL. Normalize exactly once at this boundary.
+                "spread_close": -pd.to_numeric(chosen.get("spread"), errors="coerce"),
+                "spread_open": -pd.to_numeric(chosen.get("spreadOpen"), errors="coerce"),
+                "total_close": pd.to_numeric(chosen.get("overUnder"), errors="coerce"),
+                "total_open": pd.to_numeric(chosen.get("overUnderOpen"), errors="coerce"),
+            })
+        lines = pd.DataFrame(rows)
+        if lines.empty:
+            return lines
+        schedule = games[[
+            c for c in ("game_id", "kickoff", "neutralSite", "completed")
+            if c in games
+        ]]
+        market = lines.merge(schedule, on="game_id", how="left")
+        market["home_p5"] = [
+            cfg.is_p5(c, t)
+            for c, t in zip(market["home_conference"], market["home_team"])
+        ]
+        market["away_p5"] = [
+            cfg.is_p5(c, t)
+            for c, t in zip(market["away_conference"], market["away_team"])
+        ]
+        market["fbs_only"] = (
+            market["home_classification"].eq("fbs")
+            & market["away_classification"].eq("fbs")
+        )
+        market["restricted"] = (
+            market["fbs_only"] & ~(market["home_p5"] & market["away_p5"])
+        )
+        market["cross_tier"] = market["home_p5"] != market["away_p5"]
+        home = pd.to_numeric(market["home_points"], errors="coerce")
+        away = pd.to_numeric(market["away_points"], errors="coerce")
+        market["actual_margin"], market["actual_total"] = home - away, home + away
+        market["has_opener"] = (
+            market["spread_open"].notna() & market["total_open"].notna()
+        )
+        return market
+
     def _market(self):
         path = self._cache_dir() / "market.parquet"
         if "market" not in self._cache:
-            self._cache["market"] = (
-                pd.read_parquet(path) if path.exists() else pd.DataFrame()
-            )
+            historical = pd.read_parquet(path) if path.exists() else pd.DataFrame()
+            live = self._live_market_from_raw_cache()
+            if not live.empty:
+                season = int(self._cfg().seasons.current)
+                if "season" in historical:
+                    historical = historical[historical["season"].ne(season)]
+                self._cache["market"] = pd.concat(
+                    [historical, live], ignore_index=True, sort=False
+                )
+            else:
+                self._cache["market"] = historical
         return self._cache["market"]
 
     def games(self, season: int, week: int) -> pd.DataFrame:
@@ -715,9 +830,42 @@ class NCAAAdapter(SportAdapter):
 
             cfg = self._cfg()
             client = BudgetedCFBD(cfg)
-            seasons = list(range(cfg.seasons.train_start, cfg.seasons.current))
-            g = ingest.load_games(client, seasons)
-            self._cache["gv"] = venues.attach_venues(g, venues.load_venues(client))
+            seasons = list(cfg.all_seasons)
+            try:
+                g = ingest.load_games(client, seasons)
+            except RuntimeError as exc:
+                # A scheduled publication may run after the live cache TTL without a
+                # configured CFBD key.  Existing raw payloads remain valid evidence; use
+                # the last snapshot and disclose its age rather than dropping every NCAA
+                # projection.  Network/auth failures other than a missing key still fail.
+                if "CFBD_API_KEY not found" not in str(exc):
+                    raise
+                frames = []
+                for season in seasons:
+                    path = self._cache_dir() / f"games_{season}.json"
+                    if not path.exists():
+                        continue
+                    try:
+                        raw = json.loads(path.read_text())
+                    except (json.JSONDecodeError, OSError):
+                        continue
+                    if not raw:
+                        continue
+                    frame = pd.json_normalize(raw).rename(columns={"id": "game_id"})
+                    frame["kickoff"] = pd.to_datetime(
+                        frame.get("startDate"), utc=True, errors="coerce"
+                    )
+                    frames.append(frame)
+                if not frames:
+                    raise
+                g = pd.concat(frames, ignore_index=True, sort=False)
+            try:
+                venue_table = venues.load_venues(client)
+                self._cache["gv"] = venues.attach_venues(g, venue_table)
+            except RuntimeError as exc:
+                if "CFBD_API_KEY not found" not in str(exc):
+                    raise
+                self._cache["gv"] = g
         return self._cache["gv"]
 
     def _drive_table(self) -> pd.DataFrame:
