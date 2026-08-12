@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -20,7 +20,11 @@ jobs:
   web-smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: python3 -m http.server 8765 --directory web >/tmp/web.log 2>&1 &
-      - run: curl --fail --retry 5 http://127.0.0.1:8765/ >/dev/null
-      - run: curl --fail http://127.0.0.1:8765/api/v1/predictions.json | python3 -m json.tool >/dev/null
+      - uses: actions/checkout@v5
+      - name: Serve and smoke-test static site
+        run: |
+          python3 -m http.server 8765 --directory web >/tmp/web.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          curl --fail --retry 5 --retry-connrefused http://127.0.0.1:8765/ >/dev/null
+          curl --fail http://127.0.0.1:8765/api/v1/predictions.json | python3 -m json.tool >/dev/null
