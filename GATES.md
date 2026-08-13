@@ -10,7 +10,62 @@ describing a different codebase entirely.
 
 ---
 
-## Current status: NO GATE HAS A CURRENT READING
+## Current status — measured 2026-08-13 (NCAA), NFL still unmeasured
+
+A cold NCAA build ran on 2026-08-13 (173 CFBD calls against a 250 cap) and produced the
+first reproducible gate artifact this repository has ever had. `bets_allowed` is **False**,
+and it is now False for the right reason:
+
+| gate | reading |
+|---|---|
+| `GATE_OPENER_COVERAGE` | **PASS** — 99.7% coverage, mean \|open−close\| 1.40 |
+| `GATE_NO_LOOKAHEAD` | **PASS** — 0 of 200 sampled rows use ratings dated after kickoff |
+| `GATE_GARBAGE_FILTER` | **PASS** — 9.6% of plays dropped |
+| `GATE_UNBIASED` | **PASS** — largest \|a\| 0.214 |
+| `GATE_BLEND_INFORMATIVE` | **PASS** — best positive t(b) 3.01 (total), vs the opener |
+| `GATE_API_BUDGET` | **PASS** — 173 calls |
+| `GATE_UNBIASED_BY_WEEK` | **FAIL** — worst \|a\| 3.401 (spread wk4, n=167) |
+| `GATE_SCALE` | **FAIL** — worst SD-ratio deviation 0.245 (total) |
+| `GATE_RMSE_TOTAL` | **FAIL** — 16.665 vs market 16.223 (ratio 1.027, n=1543) |
+| `GATE_RMSE_SPREAD` | **FAIL** — 16.932 vs market 15.514 (ratio 1.091, n=1543) |
+| `GATE_CALIBRATED`, `GATE_KEY_NUMBERS` | **NOT PRODUCED** — required for promotion, so recorded `passed: null` and blocking |
+
+These reproduce the previously reported figures closely (spread 16.89/15.43, total
+16.73/15.98), which is itself a useful consistency check across a full rebuild.
+
+**Read the blend gate carefully.** `GATE_BLEND_INFORMATIVE` passes at t = 3.01 on totals
+*against the opener*, while `GATE_RMSE_TOTAL` fails at 1.027 *against the close*. That is
+the NCAA totals false positive, behaving exactly as documented: the apparent signal is
+against the opening number and does not survive the closing one. It is a diagnostic, not
+an edge.
+
+**NFL has no reading.** Its artifacts are still absent (`data/evidence/manifest.json`);
+a cold NFL build has not been run since the availability fix changed its model version.
+
+### The verification path was broken until 2026-08-13
+
+`bets_allowed()` had been returning False for a reason nobody could see. `run_backtest.py`
+stamped the artifact with a model version hashed from its **in-memory** frame, while the
+adapter recomputed the version from the **persisted parquet**. `walk_forward` returns a
+working copy whose dtypes differ from the parquet it caches, so the two never matched and
+every artifact either script wrote was silently repudiated on read.
+
+Fail-closed made this invisible: a broken verification path and an honestly failing gate
+both produce "no picks". Both backtests now hash the persisted evidence, and
+`refresh_publication.py` warns loudly when an artifact exists but the adapter refuses it.
+
+### Open: the Appendix A null no longer reproduces exactly
+
+`test_power.py::test_full_fbs_close_anchored_null_is_adequately_powered` fails on the
+refreshed data: b = **+0.0911** (se 0.0631, t 1.44, n 2,985) against a recorded anchor of
+b ≈ 0 with a ±0.05 band. The null itself still holds — the 95% CI spans roughly
+[−0.03, +0.22] and includes zero, and 0.091 is far below the 0.2 reference effect — but
+the point estimate has drifted, and drifted **positive**. The tolerance has deliberately
+not been widened: doing so would dismantle the guard that keeps the NCAA totals false
+positive out. Both affected tests are `@pytest.mark.integration` and excluded from CI.
+This needs a decision, not a tolerance change.
+
+## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of
 2026-08-13 it reports, for both leagues:
