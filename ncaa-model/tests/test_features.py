@@ -103,6 +103,54 @@ def test_optional_preseason_endpoint_rate_limit_stays_missing_instead_of_blockin
     assert sources["coaching"].empty
 
 
+def _coaches_payload():
+    """CFBD's real shape: team and year live inside a nested `seasons` array.
+
+    Nothing identifies a team at the top level, so a normalizer looking for flat
+    `team`/`school` columns finds nothing and yields all-NaN. That is why head-coach
+    continuity has never once been computed despite the data downloading correctly --
+    138 coaches for 2026 sat on disk and were discarded every run.
+    """
+    return pd.DataFrame([
+        {"firstName": "Ada", "lastName": "Lovelace", "hireDate": "2023-12-01",
+         "seasons": [{"school": "A", "year": 2025}, {"school": "A", "year": 2026}]},
+        {"firstName": "Alan", "lastName": "Turing", "hireDate": "2025-12-10",
+         "seasons": [{"school": "B", "year": 2026}]},
+        {"firstName": "Grace", "lastName": "Hopper", "hireDate": "2019-01-01",
+         "seasons": [{"school": "B", "year": 2025}]},
+    ])
+
+
+def test_head_coach_continuity_is_read_from_the_nested_coaches_schema():
+    out = normalize_preseason_sources(coaching=_coaches_payload())
+    by_team = out[out["season"] == 2026].set_index("team")["head_coach_continuity"]
+
+    # A kept her job from 2025 into 2026; B replaced Hopper with Turing.
+    assert by_team.loc["A"] == 1.0
+    assert by_team.loc["B"] == 0.0
+
+
+def test_a_first_observed_season_has_unknown_continuity_not_zero():
+    """With no prior year on record we do not know whether the coach changed."""
+    out = normalize_preseason_sources(coaching=_coaches_payload())
+    first = out[(out["season"] == 2025) & (out["team"] == "A")]
+    assert first["head_coach_continuity"].isna().all()
+
+
+def test_coaching_features_without_a_free_source_stay_absent():
+    """CFBD's coaches endpoint returns head coaches only.
+
+    Coordinator continuity has no free source, so it must remain missing rather than
+    being silently defaulted -- a fabricated 'coordinators unchanged' would be worse
+    than an honest gap.
+    """
+    out = normalize_preseason_sources(coaching=_coaches_payload())
+    for column in ("offensive_coordinator_continuity",
+                   "defensive_coordinator_continuity"):
+        assert column in out
+        assert out[column].isna().all()
+
+
 def test_preseason_normalization_drops_rows_without_team_keys():
     returning = pd.DataFrame([{"year": 2026, "team": "A", "percentPPA": .60}])
     changed_portal_schema = pd.DataFrame([{"season": 2026, "unexpected": "value"}])
