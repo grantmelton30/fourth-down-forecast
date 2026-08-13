@@ -306,11 +306,14 @@ def game_uncertainty_multiplier(
     early = max(0, 5 - int(week)) * 0.08
     returning = share(returning_production)
     quarterback = share(qb_continuity)
+    # Roster uncertainty is a preseason prior, not a permanent label.  Fade it linearly
+    # through Week 5 as current-team games replace offseason inference.
+    preseason_share = max(0.0, min(1.0, (6 - int(week)) / 5.0))
     roster = 0.0
     if returning is not None:
-        roster += 0.20 * max(0.0, 0.55 - returning) / 0.55
+        roster += preseason_share * 0.20 * max(0.0, 0.55 - returning) / 0.55
     if quarterback is not None:
-        roster += 0.12 * max(0.0, 0.50 - quarterback) / 0.50
+        roster += preseason_share * 0.12 * max(0.0, 0.50 - quarterback) / 0.50
     return float(1.0 + early + (0.12 if not preseason_available else 0.0)
                  + (0.18 if cross_tier else 0.0) + roster)
 
