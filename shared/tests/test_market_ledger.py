@@ -71,6 +71,38 @@ def test_an_earlier_quote_is_never_overwritten(tmp_path):
     assert [r.spread for r in ledger.records()] == [-7.5, -9.5]
 
 
+def test_an_unchanged_price_seen_again_is_not_re_recorded(tmp_path):
+    """Polling daily must not write "still -7.5" hundreds of thousands of times."""
+    ledger = MarketQuoteLedger(tmp_path / "quotes.jsonl")
+    assert ledger.append_if_changed(_quote(observed_at="2026-08-13T18:00:00Z")) is True
+    assert ledger.append_if_changed(_quote(observed_at="2026-08-14T18:00:00Z")) is False
+    assert len(ledger.records()) == 1
+
+
+def test_a_price_that_returns_to_an_earlier_value_is_recorded(tmp_path):
+    """Comparison is against the LAST quote for that game and provider, not all history.
+
+    Hashing on price alone would silently discard a line that moved away and came back,
+    which is precisely the movement a closing-line study cares about.
+    """
+    ledger = MarketQuoteLedger(tmp_path / "quotes.jsonl")
+    ledger.append_if_changed(_quote(spread=-7.5, observed_at="2026-08-13T18:00:00Z"))
+    ledger.append_if_changed(_quote(spread=-8.0, observed_at="2026-08-14T18:00:00Z"))
+    ledger.append_if_changed(_quote(spread=-7.5, observed_at="2026-08-15T18:00:00Z"))
+
+    assert [r.spread for r in ledger.records()] == [-7.5, -8.0, -7.5]
+
+
+def test_change_detection_is_per_provider_and_per_phase(tmp_path):
+    ledger = MarketQuoteLedger(tmp_path / "quotes.jsonl")
+    ledger.append_if_changed(_quote(provider="Bovada", spread=-7.5))
+    # A different book showing the same number is a separate observation.
+    assert ledger.append_if_changed(_quote(provider="Pinnacle", spread=-7.5)) is True
+    # As is the opener, which is a different claim from the current price.
+    assert ledger.append_if_changed(
+        _quote(provider="Bovada", spread=-7.5, quote_phase=QuotePhase.OPENING)) is True
+
+
 # -- partial quotes ----------------------------------------------------------------------
 
 def test_a_spread_only_quote_is_retained(tmp_path):
