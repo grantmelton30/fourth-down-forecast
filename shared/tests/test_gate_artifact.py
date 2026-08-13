@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+import numpy as np
 import pytest
 
 from gate_artifact import GateArtifactError, load_gate_artifact, write_gate_artifact
@@ -60,3 +61,24 @@ def test_artifact_from_different_model_version_fails_closed(tmp_path):
             expected_league="nfl",
             expected_model_version="nfl-new",
         )
+
+
+def test_numpy_gate_scalars_are_normalized_to_portable_json(tmp_path):
+    path = write_gate_artifact(
+        tmp_path,
+        league="nfl",
+        model_version="portable",
+        data_cutoff="2025-12-31",
+        gates=[{
+            "name": "GATE_BLEND_INFORMATIVE",
+            "passed": np.bool_(False),
+            "n": np.int64(1535),
+            "estimate": np.float64(-.0918),
+        }],
+        promotion_names={"GATE_BLEND_INFORMATIVE"},
+    )
+    payload = json.loads(path.read_text())
+    row = next(g for g in payload["gates"] if g["name"] == "GATE_BLEND_INFORMATIVE")
+    assert row["passed"] is False
+    assert row["n"] == 1535
+    assert row["estimate"] == pytest.approx(-.0918)
