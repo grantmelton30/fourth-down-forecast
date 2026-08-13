@@ -101,3 +101,16 @@ def test_optional_preseason_endpoint_rate_limit_stays_missing_instead_of_blockin
     sources = load_free_preseason(Client(), [2026])
     assert len(sources["returning"]) == 1
     assert sources["coaching"].empty
+
+
+def test_preseason_normalization_drops_rows_without_team_keys():
+    returning = pd.DataFrame([{"year": 2026, "team": "A", "percentPPA": .60}])
+    changed_portal_schema = pd.DataFrame([{"season": 2026, "unexpected": "value"}])
+    changed_talent_schema = pd.DataFrame([{"year": 2026, "talent": 800.0}])
+    out = normalize_preseason_sources(
+        returning=returning, portal=changed_portal_schema,
+        talent=changed_talent_schema,
+    )
+    assert out["team"].tolist() == ["A"]
+    assert out.iloc[0]["returning_production"] == pytest.approx(.60)
+    assert pd.isna(out.iloc[0]["portal_net_rating"])
