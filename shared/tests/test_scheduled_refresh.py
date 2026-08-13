@@ -16,6 +16,7 @@ def test_scheduled_refresh_rebuilds_models_and_publishes_only_after_validation()
     assert "scripts/validate_publication.py" in workflow
     assert "concurrency:" in workflow
     assert "scripts/publish_ledger.py" not in workflow
+    assert 'pytest -q -m "not integration" tests' in workflow
 
 
 def test_refresh_workflow_keeps_manual_and_twice_weekly_triggers():
