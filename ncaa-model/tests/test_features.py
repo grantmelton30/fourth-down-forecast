@@ -66,6 +66,15 @@ def test_significant_turnover_increases_uncertainty_without_inventing_a_point_pe
     )
     assert high_turnover > stable
     assert high_turnover - stable >= .15
+    mature_stable = game_uncertainty_multiplier(
+        8, preseason_available=True, cross_tier=False,
+        returning_production=.82, qb_continuity=.90,
+    )
+    mature_turnover = game_uncertainty_multiplier(
+        8, preseason_available=True, cross_tier=False,
+        returning_production=.28, qb_continuity=.10,
+    )
+    assert mature_turnover == mature_stable
 
 
 def test_matchup_feature_is_strictly_prior():
