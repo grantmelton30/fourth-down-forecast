@@ -140,3 +140,11 @@ def test_ncaa_public_market_uses_latest_quote_not_stale_opener(tmp_path):
     assert game.total_line == 49.5
     assert game.spread_open == 14.5
     assert game.total_open == 51.5
+
+
+def test_missing_projection_row_has_consistent_uncertainty_disclosure_shape(tmp_path):
+    adapter = _adapter(tmp_path)
+    adapter._live_features = lambda: pd.DataFrame({"game_id": []})
+    assert adapter.projection_uncertainty("missing") == {
+        "multiplier": 1.0, "reasons": (),
+    }

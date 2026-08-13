@@ -10,6 +10,9 @@ def test_scheduled_refresh_rebuilds_models_and_publishes_only_after_validation()
     assert "if: always()" in workflow
     assert "CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}" in workflow
     assert "scripts/refresh_publication.py" in workflow
+    assert "scripts/refresh_market_data.py" in (
+        ROOT / "scripts/refresh_publication.py"
+    ).read_text()
     assert "scripts/validate_publication.py" in workflow
     assert "concurrency:" in workflow
     assert "scripts/publish_ledger.py" not in workflow
