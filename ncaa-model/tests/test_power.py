@@ -177,6 +177,7 @@ def test_week_partition_claim_stays_retracted():
 # 4. The Appendix A coefficients must not drift
 # --------------------------------------------------------------------------------------
 
+@pytest.mark.integration
 def test_appendix_a_anchor_coefficients_hold():
     """Pins the two numbers the standing conclusion rests on.
 
@@ -203,6 +204,7 @@ def test_appendix_a_anchor_coefficients_hold():
     assert not close.adequately_powered
 
 
+@pytest.mark.integration
 def test_full_fbs_close_anchored_null_is_adequately_powered():
     """The properly powered close-anchored test — the one that settles the null.
 
