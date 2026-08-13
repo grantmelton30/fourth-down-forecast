@@ -67,10 +67,14 @@ def test_ncaa_calibration_permissions_are_market_specific_and_positive_only():
     assert permissions == {"spread": False, "total": True}
     model = Forecast.from_spread_total(14, 55, None, "model")
     market = Forecast.from_spread_total(35, 58, None, "market")
-    calibrated = calibration_from_weights(model, market, weights, "ncaa")
-    assert calibrated.spread == market.spread
-    assert calibrated.total != market.total
-    assert "spread market baseline" in calibrated.source
+
+    # Permissions stay market-specific -- the total cleared its evidence threshold and
+    # the spread did not. What changed is what gets PUBLISHED when they disagree.
+    # This previously asserted `calibrated.spread == market.spread` with the source
+    # "spread market baseline": the market re-emitted under a column that claims
+    # validation. That is the substitution the contract forbids, so a partially
+    # supported calibration is now published as null rather than half-copied.
+    assert calibration_from_weights(model, market, weights, "ncaa") is None
 
 
 def test_negative_significant_slope_never_enables_calibration():

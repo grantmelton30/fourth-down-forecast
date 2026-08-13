@@ -46,6 +46,48 @@ def test_calibration_remains_separate():
     assert model.spread == pytest.approx(5.2)
 
 
+def _weights(**overrides):
+    base = {"a_spread": 0, "b_model": .25, "a_total": 0, "b_model_total": .5,
+            "t_model": 2.5, "t_model_total": 2.5}
+    base.update(overrides)
+    return base
+
+
+def _calibrate(**overrides):
+    model = forecast_from_sim(Sim())
+    game = pd.Series({"game_id": "g", "spread_line": 2, "total_line": 44})
+    market, _ = market_for_game(game, pd.DataFrame(), league="nfl")
+    return calibration_from_weights(model, market, _weights(**overrides), "nfl"), market
+
+
+def test_unvalidated_spread_yields_no_calibrated_forecast_at_all():
+    """A market copy wearing a "calibrated" label is the thing to avoid.
+
+    Weighting an unvalidated market at zero silently republishes the market under a
+    column that claims validation. `Forecast` also derives both scores from spread AND
+    total, so a half-calibrated object cannot even be internally coherent. Absent
+    evidence for either market, there is no calibrated projection -- publish null.
+    """
+    calibrated, _ = _calibrate(t_model=0.4)  # spread fails the evidence threshold
+    assert calibrated is None, "an unvalidated spread must not be filled from the market"
+
+
+def test_unvalidated_total_yields_no_calibrated_forecast_at_all():
+    calibrated, _ = _calibrate(t_model_total=0.4)
+    assert calibrated is None
+
+
+def test_anti_predictive_spread_never_produces_a_calibrated_number():
+    calibrated, _ = _calibrate(b_model=-0.3, b_model_raw=-0.3)
+    assert calibrated is None
+
+
+def test_both_markets_validated_still_produces_a_blend():
+    calibrated, market = _calibrate()
+    assert calibrated is not None
+    assert calibrated.spread != market.spread
+
+
 def test_market_snapshot_drops_observations_after_cutoff():
     game = pd.Series({"game_id": "g", "spread_line": 1, "total_line": 40,
                       "kickoff": "2026-09-02T00:00:00Z"})
