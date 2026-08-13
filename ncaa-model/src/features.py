@@ -321,6 +321,8 @@ def game_uncertainty_multiplier(
 
 def load_free_preseason(client, seasons: list[int]) -> dict[str, pd.DataFrame]:
     """Budget-visible CFBD pulls: five calls per season, then permanent cache."""
+    from .cfbd_client import APIBudgetExceeded
+
     result = {name: [] for name in ("returning", "portal", "recruiting", "talent")}
     endpoints = {
         "returning": "player/returning", "portal": "player/portal",
@@ -331,8 +333,18 @@ def load_free_preseason(client, seasons: list[int]) -> dict[str, pd.DataFrame]:
             result[name].append(client.frame(endpoint, f"{name}_{season}", year=season))
     # Coaches is not naturally a one-row-per-year endpoint; requesting by year keeps the
     # call bounded and the raw response cached even when it is empty.
-    result["coaching"] = [client.frame("coaches", f"coaches_{season}", year=season)
-                           for season in seasons]
+    result["coaching"] = []
+    for season in seasons:
+        try:
+            result["coaching"].append(
+                client.frame("coaches", f"coaches_{season}", year=season)
+            )
+        except APIBudgetExceeded:
+            # Coaching continuity is valuable but not safe to fabricate and not required
+            # to produce an independent score. Preserve it as missing so publication
+            # quality fails closed for that feature while cached football/roster inputs
+            # remain usable on CFBD's free tier.
+            break
     return {name: pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
             for name, frames in result.items()}
 
