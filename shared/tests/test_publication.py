@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 
 from prediction_contract import Forecast, MarketEvidence
-from publication import build_public_record, calibrated_forecast, confidence_label
+from publication import (assess_quality, build_public_record, calibrated_forecast,
+                         confidence_label)
 
 
 def _forecast(spread, total, source):
@@ -39,6 +40,36 @@ def test_record_has_all_four_views_and_honest_consensus_label():
     assert record.calibrated.spread == 4
     assert record.model_market_difference.spread == 4
     assert record.market_evidence.is_consensus
+
+
+def _assess(**overrides):
+    kwargs = dict(
+        league="ncaa", week=8, home_games_observed=7, away_games_observed=7,
+        unavailable_features=(),
+        market_evidence=MarketEvidence("3-book median", True, 3, 3, ("A", "B", "C")),
+        spread_difference=1.5, calibration_status={"spread": False, "total": False},
+        bets_allowed=False,
+    )
+    kwargs.update(overrides)
+    return assess_quality(**kwargs)
+
+
+def test_unvalidated_calibration_discloses_why_the_evidence_was_refused():
+    """"Not validated" and "we threw the evidence out" are different facts to a reader."""
+    silent = _assess()
+    assert any("calibration is not validated" in r for r in silent.reasons)
+
+    disclosed = _assess(
+        calibration_block_reason="calibration evidence was fitted by a different model build")
+    assert "calibration evidence was fitted by a different model build" in disclosed.reasons
+
+
+def test_calibration_block_reason_is_dropped_once_calibration_is_validated():
+    quality = _assess(
+        calibration_status={"spread": True, "total": True},
+        calibration_block_reason=None,
+    )
+    assert not any("calibration" in r for r in quality.reasons)
 
 
 def test_single_line_is_never_called_consensus():
