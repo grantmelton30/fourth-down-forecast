@@ -55,3 +55,10 @@ NCAA: 16 passed, 6 skipped
 The skipped tests require external historical cache artifacts; the scheduled workflow
 creates and persists those artifacts before publication. Production implementation was
 committed in `2b0216b`, `5bf0fdb`, and `456d315`.
+
+Hosted portability/schema follow-ups added RED tests before their fixes in `96c275f`,
+`c24b71e`, and `87c2b7e`. The final GitHub Actions run `31659924859` passed every
+isolated suite, refreshed both sources/models, validated the staged feed and explorer,
+saved the free-tier caches, and promoted commit `24cf90d` in 2m38s. The promoted feed
+contained 115 forecasts and zero pick-eligible records because the betting evidence gates
+remain closed.
