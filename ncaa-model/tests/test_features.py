@@ -3,7 +3,9 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+from src.cfbd_client import APIBudgetExceeded
 from src.features import (build_team_game_features, game_uncertainty_multiplier,
+                          load_free_preseason,
                           matchup_feature_table, normalize_preseason_sources,
                           rolling_team_features)
 
@@ -87,3 +89,15 @@ def test_matchup_feature_is_strictly_prior():
     ])
     row = matchup_feature_table(_plays(), games).query("game_id == 2").iloc[0]
     assert row.home_success_rate == 1.0
+
+
+def test_optional_preseason_endpoint_rate_limit_stays_missing_instead_of_blocking_refresh():
+    class Client:
+        def frame(self, endpoint, cache_key, **params):
+            if endpoint == "coaches":
+                raise APIBudgetExceeded("free tier rate limited")
+            return pd.DataFrame([{"year": params["year"], "team": "A"}])
+
+    sources = load_free_preseason(Client(), [2026])
+    assert len(sources["returning"]) == 1
+    assert sources["coaching"].empty
