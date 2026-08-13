@@ -9,12 +9,19 @@ REQUIRED_PROMOTION_GATES={
  "nfl":frozenset({"GATE_KEY_NUMBERS","GATE_NO_LOOKAHEAD","GATE_BEATS_ELO","GATE_BLEND_INFORMATIVE","GATE_CALIBRATED","GATE_RMSE_SPREAD","GATE_RMSE_TOTAL","GATE_UNBIASED"}),
  "ncaa":frozenset({"GATE_OPENER_COVERAGE","GATE_NO_LOOKAHEAD","GATE_GARBAGE_FILTER","GATE_UNBIASED","GATE_UNBIASED_BY_WEEK","GATE_BLEND_INFORMATIVE","GATE_RMSE_TOTAL","GATE_RMSE_SPREAD","GATE_KEY_NUMBERS","GATE_CALIBRATED"})}
 class GateArtifactError(ValueError): pass
+def _scalar(value):
+    """Convert NumPy/pandas scalar values to JSON-native Python values."""
+    if hasattr(value,"item"):
+        try: return value.item()
+        except (TypeError,ValueError): pass
+    return value
 def _row(gate):
     raw=dict(gate) if isinstance(gate,Mapping) else {k:getattr(gate,k,"" if k in ("observed","detail") else None) for k in ("name","passed","observed","detail")}
     if not raw.get("name"): raise GateArtifactError("gate record has no name")
-    if raw.get("passed") not in (True,False,None): raise GateArtifactError("passed must be true, false, or null")
-    out={"name":str(raw["name"]),"passed":raw.get("passed"),"observed":str(raw.get("observed","")),"detail":str(raw.get("detail",""))}
-    for k in ("market","evaluation_line","n","estimate","ci_low","ci_high","threshold","operator"): out[k]=raw.get(k)
+    passed=_scalar(raw.get("passed"))
+    if passed not in (True,False,None): raise GateArtifactError("passed must be true, false, or null")
+    out={"name":str(raw["name"]),"passed":passed,"observed":str(raw.get("observed","")),"detail":str(raw.get("detail",""))}
+    for k in ("market","evaluation_line","n","estimate","ci_low","ci_high","threshold","operator"): out[k]=_scalar(raw.get(k))
     out["promotion"]=bool(raw.get("promotion",False)); return out
 def write_gate_artifact(cache_dir:Path,*,league:str,model_version:str,data_cutoff:str|None,gates:Iterable[object],promotion_names:Iterable[str]):
     league=league.lower(); promote=set(REQUIRED_PROMOTION_GATES.get(league,()))|set(promotion_names); rows=[]; seen=set()
