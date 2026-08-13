@@ -314,7 +314,8 @@ def game_uncertainty_multiplier(
         roster += preseason_share * 0.20 * max(0.0, 0.55 - returning) / 0.55
     if quarterback is not None:
         roster += preseason_share * 0.12 * max(0.0, 0.50 - quarterback) / 0.50
-    return float(1.0 + early + (0.12 if not preseason_available else 0.0)
+    missing_preseason = 0.12 * preseason_share if not preseason_available else 0.0
+    return float(1.0 + early + missing_preseason
                  + (0.18 if cross_tier else 0.0) + roster)
 
 

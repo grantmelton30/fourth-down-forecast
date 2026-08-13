@@ -39,6 +39,7 @@ jobs:
       - name: Validate promoted publication
         run: uv run python scripts/validate_publication.py
       - name: Save refreshed caches
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: |
