@@ -75,6 +75,9 @@ def test_significant_turnover_increases_uncertainty_without_inventing_a_point_pe
         returning_production=.28, qb_continuity=.10,
     )
     assert mature_turnover == mature_stable
+    assert game_uncertainty_multiplier(
+        8, preseason_available=False, cross_tier=False,
+    ) == 1.0
 
 
 def test_matchup_feature_is_strictly_prior():

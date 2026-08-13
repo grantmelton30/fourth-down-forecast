@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_scheduled_refresh_rebuilds_models_and_publishes_only_after_validation():
     workflow = (ROOT / ".github/workflows/publish.yml").read_text()
     assert "actions/cache" in workflow
+    assert "if: always()" in workflow
     assert "CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}" in workflow
     assert "scripts/refresh_publication.py" in workflow
     assert "scripts/validate_publication.py" in workflow
