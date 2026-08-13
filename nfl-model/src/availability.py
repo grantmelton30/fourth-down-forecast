@@ -70,15 +70,33 @@ def build_availability_features(
     snaps["k"] = snaps["player"].map(_norm)
     snaps["play_pct"] = snaps[["offense_pct", "defense_pct"]].max(axis=1)
     snaps = snaps.sort_values(["season", "team", "k", "week"])
+    # Share through and including each played week. The report is then joined to the
+    # latest week STRICTLY before it (allow_exact_matches=False), which keeps the prior
+    # out-of-sample without requiring a snap row in the report week itself -- a player
+    # who is ruled out has no such row, which is exactly when the burden is wanted.
     snaps["prior_pct"] = snaps.groupby(["season", "team", "k"])["play_pct"].transform(
-        lambda values: values.shift(1).expanding().mean()
+        lambda values: values.expanding().mean()
     )
     prior = snaps[["season", "team", "k", "week", "prior_pct"]].dropna().sort_values(
         ["week"]
     )
+    # Last season's average share, offered to the following season. Without it the
+    # within-season prior is undefined in Week 1 -- every burden came out exactly 0.0
+    # across all 283 historical Week 1 team-weeks, and stayed understated until Week 4,
+    # leaving the model blind to availability in the weeks it has least other evidence.
+    # Keyed by team as well as player: a starter who changed clubs has no established
+    # role on the new one, so he is treated as unknown rather than assumed to keep it.
+    carry = snaps.groupby(["season", "team", "k"], as_index=False)["play_pct"].mean()
+    carry["season"] = carry["season"] + 1
+    carry = carry.rename(columns={"play_pct": "carry_pct"})
+
     rep = rep.sort_values("week")
     joined = pd.merge_asof(rep, prior, on="week", by=["season", "team", "k"],
-                           direction="backward")
+                           direction="backward", allow_exact_matches=False)
+    joined = joined.merge(carry, on=["season", "team", "k"], how="left")
+    # Current-season evidence governs the moment it exists; the carry-forward is only
+    # a prior for the gap before it.
+    joined["prior_pct"] = joined["prior_pct"].combine_first(joined["carry_pct"])
     status = joined["report_status"].astype(str).str.strip().str.lower()
     joined["status_weight"] = np.select(
         [status.isin(UNAVAILABLE), status.isin(QUESTIONABLE)],
