@@ -116,3 +116,27 @@ def test_ncaa_raw_books_remain_distinct_consensus_inputs(tmp_path):
     assert list(rows.provider) == ["Bovada", "DraftKings"]
     assert list(rows.spread) == [4.5, 3.5]
     assert rows.observed_at.notna().all()
+
+
+def test_ncaa_public_market_uses_latest_quote_not_stale_opener(tmp_path):
+    adapter = _adapter(tmp_path)
+    cache = adapter._cache_dir()
+    cache.mkdir()
+    (cache / "games_2026.json").write_text(json.dumps([{
+        "id": 2, "season": 2026, "week": 1, "startDate": "2026-08-29T23:00:00Z",
+        "completed": False, "neutralSite": False, "homeTeam": "Home",
+        "awayTeam": "Away", "homeConference": "ACC", "awayConference": "Sun Belt",
+        "homeClassification": "fbs", "awayClassification": "fbs",
+    }]))
+    (cache / "lines_2026.json").write_text(json.dumps([{
+        "id": 2, "season": 2026, "week": 1, "homeTeam": "Home", "awayTeam": "Away",
+        "homeConference": "ACC", "awayConference": "Sun Belt",
+        "homeClassification": "fbs", "awayClassification": "fbs",
+        "lines": [{"provider": "Bovada", "spreadOpen": -14.5, "spread": -11.5,
+                   "overUnderOpen": 51.5, "overUnder": 49.5}],
+    }]))
+    game = adapter.games(2026, 1).iloc[0]
+    assert game.spread_line == 11.5
+    assert game.total_line == 49.5
+    assert game.spread_open == 14.5
+    assert game.total_open == 51.5

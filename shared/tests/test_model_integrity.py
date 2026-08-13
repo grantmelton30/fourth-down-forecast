@@ -96,6 +96,23 @@ def test_game_specific_quality_and_disagreement_fail_closed():
     assert any("spread calibration" in reason for reason in quality.reasons)
 
 
+def test_only_extreme_disagreement_gets_warning_icon_policy():
+    evidence = MarketEvidence("two-book reference", False, 2, 1, ("a", "b"))
+    review = assess_quality(
+        league="ncaa", week=1, home_games_observed=0, away_games_observed=0,
+        unavailable_features=(), market_evidence=evidence, spread_difference=14.1,
+        calibration_status={"spread": False, "total": False}, bets_allowed=False,
+    )
+    extreme = assess_quality(
+        league="ncaa", week=1, home_games_observed=0, away_games_observed=0,
+        unavailable_features=(), market_evidence=evidence, spread_difference=20.1,
+        calibration_status={"spread": False, "total": False}, bets_allowed=False,
+    )
+    assert review.out_of_distribution is False
+    assert review.warnings == ()
+    assert any("Extreme" in warning for warning in extreme.warnings)
+
+
 @pytest.mark.parametrize("week,observed,label", [
     (1, 0, "preseason"), (2, 1, "early-season"),
     (4, 3, "developing"), (7, 6, "established"),

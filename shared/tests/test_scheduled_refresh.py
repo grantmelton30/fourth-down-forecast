@@ -19,3 +19,11 @@ def test_refresh_workflow_keeps_manual_and_twice_weekly_triggers():
     workflow = (ROOT / ".github/workflows/publish.yml").read_text()
     assert "workflow_dispatch:" in workflow
     assert 'cron: "17 11 * * 2,5"' in workflow
+    assert 'cron: "17 13 * * *"' in workflow
+
+
+def test_ui_reserves_warning_icon_for_extreme_disagreement_and_labels_missing_market():
+    app = (ROOT / "web/app.js").read_text()
+    assert "r.out_of_distribution?'" in app
+    assert "No line posted yet" in app
+    assert "r.warnings?.length?'" not in app
