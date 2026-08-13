@@ -56,9 +56,13 @@ jobs:
           key: football-model-${{ runner.os }}-${{ github.run_id }}
       - name: Commit changed static artifact
         run: |
-          if git diff --quiet -- data/predictions.jsonl web/api/v1; then exit 0; fi
+          if git diff --quiet -- data/predictions.jsonl data/evidence web/api/v1; then
+            exit 0
+          fi
           git config user.name "fourth-down-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/predictions.jsonl web/api/v1/predictions.json web/api/v1/explorer.json
+          # The evidence goes in the same commit as the claim it authorized.
+          git add data/predictions.jsonl data/evidence \
+            web/api/v1/predictions.json web/api/v1/explorer.json
           git commit -m "refresh model projections"
           git push

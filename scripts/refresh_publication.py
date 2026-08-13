@@ -11,6 +11,9 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "shared"))
+
+from evidence_snapshot import snapshot_evidence  # noqa: E402
 
 
 def checked(*args: str) -> None:
@@ -54,6 +57,22 @@ def main() -> int:
         for source, target in targets.items():
             target.parent.mkdir(parents=True, exist_ok=True)
             os.replace(source, target)
+
+    # Commit the evidence that authorized what was just published, so the claim and the
+    # measurement behind it travel together in history rather than in a cache that
+    # expires.  Runs on market-only passes too: those republish under evidence they did
+    # not regenerate, which is exactly the case worth having on record.
+    manifest = snapshot_evidence(ROOT / "data/evidence", [
+        ("nfl", ROOT / "nfl-model/data/cache"),
+        ("ncaa", ROOT / "ncaa-model/data/cache"),
+    ])
+    for league, entry in sorted(manifest["leagues"].items()):
+        missing = [name for name, a in entry["artifacts"].items() if not a["present"]]
+        if missing:
+            print(f"{league}: no validation evidence for {', '.join(sorted(missing))}")
+    if manifest["inconsistent_leagues"]:
+        print("WARNING: gate results and calibration weights disagree on the model "
+              f"version for: {', '.join(manifest['inconsistent_leagues'])}")
     print("source refresh and fail-closed publication completed")
     return 0
 
