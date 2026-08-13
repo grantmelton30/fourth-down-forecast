@@ -134,22 +134,22 @@ def calibration_from_weights(independent: Forecast, market: Forecast | None,
     if market is None or not weights:
         return None
     permissions = calibration_permissions(weights, league)
+    # Both markets or nothing. Weighting an unvalidated market at zero republishes the
+    # market itself under a column that claims validation, which is the one substitution
+    # the contract forbids -- an unsupported calibration must read null, not "the market
+    # again". A Forecast also derives both scores from spread AND total, so there is no
+    # coherent half-calibrated object to publish even if it were permitted.
+    if not all(permissions.values()):
+        return None
     spread_weight = weights.get("b_model" if league == "nfl" else "b_model_spread")
     total_weight = weights.get("b_model_total")
-    if not any(permissions.values()):
-        return None
-    spread_weight = float(spread_weight) if permissions["spread"] else 0.0
-    total_weight = float(total_weight) if permissions["total"] else 0.0
-    source_parts = [
-        "validated spread blend" if permissions["spread"] else "spread market baseline",
-        "validated total blend" if permissions["total"] else "total market baseline",
-    ]
     return calibrated_forecast(
         independent, market,
-        spread_intercept=weights.get("a_spread", 0) if permissions["spread"] else 0,
-        spread_weight=spread_weight,
-        total_intercept=weights.get("a_total", 0) if permissions["total"] else 0,
-        total_weight=total_weight, source="; ".join(source_parts),
+        spread_intercept=weights.get("a_spread", 0),
+        spread_weight=float(spread_weight),
+        total_intercept=weights.get("a_total", 0),
+        total_weight=float(total_weight),
+        source="validated spread and total blend",
     )
 
 
