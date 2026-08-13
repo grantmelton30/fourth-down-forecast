@@ -73,6 +73,9 @@ def main() -> int:
             )
         weights = adapter.blend_weights()
         permissions = calibration_permissions(weights, league)
+        calibration_block = adapter.calibration_block_reason()
+        if calibration_block:
+            print(f"{league}: calibration closed -- {calibration_block}")
         for _, game in games.iterrows():
             kickoff = pd.to_datetime(game.get("kickoff"), utc=True, errors="coerce")
             if pd.isna(kickoff) or kickoff.to_pydatetime() <= now:
@@ -118,6 +121,7 @@ def main() -> int:
                 unavailable_features=unavailable, market_evidence=evidence,
                 spread_difference=spread_difference,
                 calibration_status=permissions, bets_allowed=adapter.bets_allowed(),
+                calibration_block_reason=calibration_block,
             )
             record = build_public_record(
                 league=league, game_id=str(game["game_id"]), season=season, week=week,

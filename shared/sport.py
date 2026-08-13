@@ -23,6 +23,9 @@ from pathlib import Path
 
 import pandas as pd
 
+from calibration_evidence import FILENAME as CALIBRATION_FILENAME
+from calibration_evidence import (CalibrationEvidenceError,
+                                  load_calibration_evidence)
 from gate_artifact import FILENAME as GATE_FILENAME
 from gate_artifact import GateArtifactError, load_gate_artifact
 from model_identity import build_model_version
@@ -183,16 +186,27 @@ class SportAdapter:
             })
         return pd.DataFrame(rows)
 
+    def model_version(self) -> str:
+        """Identity of this exact build: configuration, source, and backtest evidence.
+
+        Both the betting decision and the calibration decision are bound to it, so an
+        artifact fitted by any other build is repudiated rather than reused.
+        """
+        frame = self.backtest_frame()
+        if frame is None or frame.empty:
+            raise ValueError("no backtest evidence is available for this build")
+        config_path = self.profile.repo / "config" / f"{self.profile.key}.yaml"
+        return build_model_version(
+            self.profile.key, self.profile.repo, config_path, frame
+        )
+
     def gate_artifact(self) -> "dict | None":
         """Authoritative decision from the last backtest, or None on any ambiguity."""
         try:
-            config_path = self.profile.repo / "config" / f"{self.profile.key}.yaml"
             frame = self.backtest_frame()
             if frame is None or frame.empty:
                 return None
-            model_version = build_model_version(
-                self.profile.key, self.profile.repo, config_path, frame
-            )
+            model_version = self.model_version()
             payload = load_gate_artifact(
                 self._cache_dir() / GATE_FILENAME,
                 expected_league=self.profile.key,
@@ -212,14 +226,38 @@ class SportAdapter:
         except (GateArtifactError, OSError, ValueError):
             return None
 
+    def _calibration_evidence(self) -> dict:
+        """Load the blend weights bound to this build, or raise with the reason why not."""
+        return load_calibration_evidence(
+            self._cache_dir() / CALIBRATION_FILENAME,
+            expected_league=self.profile.key,
+            expected_model_version=self.model_version(),
+        )
+
     def blend_weights(self) -> dict:
-        path = self._cache_dir() / "blend_weights.json"
-        if not path.exists():
-            return {}
+        """Weights this build is entitled to use. Empty means calibration stays closed."""
         try:
-            return json.loads(path.read_text())
-        except Exception:  # noqa: BLE001 - a corrupt artifact must not open the gate
+            return self._calibration_evidence()["weights"]
+        except (CalibrationEvidenceError, OSError, ValueError):
             return {}
+
+    def calibration_block_reason(self) -> "str | None":
+        """Why calibration is unavailable, or None when the evidence is usable.
+
+        A cache miss and a repudiated artifact both close the gate, but they are not the
+        same event -- one is an ordinary un-validated build, the other means something
+        restored weights that do not belong to this model.  Publication discloses the
+        difference instead of showing an unexplained absence.
+        """
+        try:
+            self._calibration_evidence()
+            return None
+        except CalibrationEvidenceError as exc:
+            return exc.reason
+        except (OSError, ValueError):
+            # Most often "no backtest evidence": the identity cannot even be computed,
+            # so nothing could have been verified against it.
+            return "calibration evidence could not be verified for this build"
 
     # -- the gate -----------------------------------------------------------------------
 

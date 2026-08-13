@@ -22,7 +22,7 @@ def assess_quality(
     *, league: str, week: int, home_games_observed: int, away_games_observed: int,
     unavailable_features: tuple[str, ...], market_evidence: MarketEvidence | None,
     spread_difference: float | None, calibration_status: dict[str, bool],
-    bets_allowed: bool,
+    bets_allowed: bool, calibration_block_reason: str | None = None,
 ) -> QualityAssessment:
     reasons = list(unavailable_features)
     warnings: list[str] = []
@@ -41,9 +41,14 @@ def assess_quality(
         reasons.append("no market reference")
     elif not market_evidence.is_consensus:
         reasons.append("market is not a three-source consensus")
-    for market in ("spread", "total"):
-        if not calibration_status.get(market, False):
-            reasons.append(f"{market} calibration is not validated")
+    unvalidated = [m for m in ("spread", "total") if not calibration_status.get(m, False)]
+    for market in unvalidated:
+        reasons.append(f"{market} calibration is not validated")
+    # Say why the evidence was refused, not merely that the label is absent. A build
+    # that never fitted weights and a build whose weights were repudiated as belonging
+    # to a different model both show no calibration; only one of them is routine.
+    if unvalidated and calibration_block_reason:
+        reasons.append(str(calibration_block_reason))
     difference = abs(float(spread_difference)) if spread_difference is not None else 0.0
     # A warning icon is an interruption, not a generic uncertainty badge.  Reserve it
     # for truly exceptional disagreement; ordinary Week 1 model/market differences are

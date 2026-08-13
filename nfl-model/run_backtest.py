@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import asdict
 
 import pandas as pd
 
@@ -32,6 +33,7 @@ from src.backtest import (
 )
 from src.config import CACHE_DIR, load_config, write_tuned_block
 from src._shared import SHARED_DIR  # noqa: F401  (adds shared/ to sys.path)
+from calibration_evidence import write_calibration_evidence
 from gate_artifact import load_gate_artifact, write_gate_artifact
 from model_identity import build_model_version
 from src.market import fit_blend_weights
@@ -109,7 +111,9 @@ def main() -> int:
     # --- blend -----------------------------------------------------------------------
     print("\n--- §7c blend (residual form) ---")
     weights = fit_blend_weights(frame, cfg)
-    weights.save()
+    # Persisted further down, once the model version exists to bind them to. Weights
+    # without that binding cannot be proven to belong to this build, and the calibration
+    # gate refuses them.
     print(f"  spread a = {weights.a_spread:+.4f} "
           f"(se {weights.se_a_spread:.4f}, t = {weights.t_a_spread:.2f})")
     print(f"  spread b = {weights.b_model_raw:+.4f} raw / {weights.b_model:.4f} applied "
@@ -243,6 +247,13 @@ def main() -> int:
             "GATE_RMSE_TOTAL",
             "GATE_UNBIASED",
         },
+    )
+    write_calibration_evidence(
+        CACHE_DIR,
+        league="nfl",
+        model_version=model_version,
+        data_cutoff=data_cutoff,
+        weights=asdict(weights),
     )
 
     print("\n" + RULE)

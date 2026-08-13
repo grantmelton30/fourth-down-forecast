@@ -18,6 +18,8 @@ from __future__ import annotations
 import argparse
 import sys
 
+from dataclasses import asdict
+
 import pandas as pd
 
 from src import ingest
@@ -25,10 +27,13 @@ from src.backtest import select_window, walk_forward
 from src.betting import build_totals_sheet, clv_summary
 from src.calibrate import build_conditional, validate
 from src.cfbd_client import BudgetedCFBD
-from src.config import OUTPUT_DIR, load_config
+from src.config import CACHE_DIR, OUTPUT_DIR, load_config
 from src.market import fit_blend,residual_fit,season_week_groups
 from src.report import write_workbook
 from src.ratings import build_walkforward
+from src._shared import SHARED_DIR  # noqa: F401  (adds shared/ to sys.path)
+from calibration_evidence import write_calibration_evidence
+from model_identity import build_model_version
 
 RULE = "=" * 96
 
@@ -65,7 +70,18 @@ def main() -> int:
 
     train, paper = graded[~is_paper], graded[is_paper]
     weights = fit_blend(train, cfg, window=f"pre-{last_season}wk{paper_weeks[0]}")
-    weights.save()
+    # Bind the weights to the evidence they were fitted against. The adapter recomputes
+    # this identity from the persisted backtest frame, so weights fitted on a different
+    # walk-forward than the one being published are repudiated rather than reused.
+    cutoff = pd.to_datetime(train["kickoff"], errors="coerce").max() \
+        if "kickoff" in train else pd.NaT
+    write_calibration_evidence(
+        CACHE_DIR,
+        league="ncaa",
+        model_version=build_model_version("ncaa", cfg.path.parent.parent, cfg.path, frame),
+        data_cutoff=None if pd.isna(cutoff) else str(cutoff.date()),
+        weights=asdict(weights),
+    )
 
     print(RULE)
     print(f"PAPER PERIOD -- {last_season} weeks {paper_weeks[0]}-{paper_weeks[-1]}, "
