@@ -202,6 +202,40 @@ def _column(frame: pd.DataFrame, *names: str) -> pd.Series:
     return pd.Series(np.nan, index=frame.index)
 
 
+def _coach_seasons(coaching: pd.DataFrame) -> pd.DataFrame:
+    """Flatten CFBD's coaches payload to one row per coach-team-season.
+
+    The endpoint returns a coach, not a team-season: identity is at the top level and
+    the tenure sits in a nested `seasons` array holding `school` and `year`. Reading it
+    with the flat accessors this module uses elsewhere finds no team column at all and
+    silently produces NaN for every row, which is why head-coach continuity had never
+    been computed even though 138 coaches for 2026 were already cached on disk.
+
+    The flat shape is still accepted, so a differently-shaped free source keeps working.
+    """
+    d = coaching.copy()
+    if "seasons" in d.columns:
+        name = (_column(d, "firstName", "first_name").fillna("").astype(str) + " "
+                + _column(d, "lastName", "last_name").fillna("").astype(str)).str.strip()
+        exploded = d.assign(_coach=name).explode("seasons").reset_index(drop=True)
+        entries = exploded["seasons"].apply(
+            lambda value: value if isinstance(value, dict) else {})
+        out = pd.DataFrame({
+            "season": pd.to_numeric(entries.apply(lambda e: e.get("year")),
+                                    errors="coerce"),
+            "team": entries.apply(lambda e: e.get("school")),
+            "coach": exploded["_coach"],
+        })
+    else:
+        out = pd.DataFrame({
+            "season": pd.to_numeric(_column(d, "season", "year"), errors="coerce"),
+            "team": _column(d, "team", "school"),
+            "coach": _column(d, "headCoach", "head_coach", "coach").astype(str),
+        })
+    out = out.dropna(subset=["season", "team"])
+    return out[out["coach"].astype(str).str.strip().ne("")]
+
+
 def normalize_preseason_sources(
     *, returning: pd.DataFrame | None = None, portal: pd.DataFrame | None = None,
     recruiting: pd.DataFrame | None = None, talent: pd.DataFrame | None = None,
@@ -247,15 +281,17 @@ def normalize_preseason_sources(
                 output: pd.to_numeric(_column(d, *value_aliases), errors="coerce"),
             }))
     if coaching is not None and len(coaching):
-        d = coaching.copy()
-        season = pd.to_numeric(_column(d, "season", "year"), errors="coerce")
-        team = _column(d, "team", "school")
-        coach = (_column(d, "headCoach", "head_coach", "coach").astype(str))
-        c = pd.DataFrame({"season": season, "team": team, "coach": coach}).sort_values(
-            ["team", "season"])
-        c["head_coach_continuity"] = c.groupby("team")["coach"].transform(
-            lambda values: values.eq(values.shift(1)).astype(float))
-        parts.append(c.drop(columns="coach"))
+        c = _coach_seasons(coaching)
+        if len(c):
+            c = c.sort_values(["team", "season"]).drop_duplicates(
+                ["team", "season"], keep="last")
+            prior = c.groupby("team")["coach"].shift(1)
+            # No prior season on record means we do not know whether the coach changed.
+            # Scoring that as 0.0 would assert a coaching change that may not have
+            # happened, which is exactly the fabrication the missing-data policy forbids.
+            c["head_coach_continuity"] = np.where(
+                prior.isna(), np.nan, c["coach"].eq(prior).astype(float))
+            parts.append(c.drop(columns="coach"))
     if manual is not None and len(manual):
         required = {"season", "team", "observed_at", "source"}
         missing = required - set(manual.columns)
