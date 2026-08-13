@@ -122,6 +122,10 @@ def run_sweep(cfg, market, games, game_off):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sweep", action="store_true", help="run the pre-registered grid")
+    ap.add_argument(
+        "--diagnostic-exit-zero", action="store_true",
+        help="return success after a valid build even when betting gates remain closed",
+    )
     args = ap.parse_args()
 
     cfg = load_config()
@@ -246,7 +250,7 @@ def main() -> int:
     print(f"   VERDICT: {label}")
     print(f"   authoritative decision: {artifact_path}")
     print(RULE)
-    return 0 if verdict else 2
+    return 0 if args.diagnostic_exit_zero else (0 if verdict else 2)
 
 
 if __name__ == "__main__":

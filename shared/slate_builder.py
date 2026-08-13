@@ -84,17 +84,24 @@ def forecast_from_sim(sim) -> Forecast:
     )
 
 
-def forecast_from_projection(sim, *, spread: float, total: float) -> Forecast:
+def forecast_from_projection(
+    sim, *, spread: float, total: float, interval_multiplier: float = 1.0,
+) -> Forecast:
     """Use a validated mean while preserving the simulator's discrete score lattice."""
+    if float(interval_multiplier) < 1.0:
+        raise ValueError("interval_multiplier cannot narrow validated uncertainty")
     calibrated = sim.recentered(float(spread)).retotaled(float(total))
     weights = np.asarray(calibrated.weights, dtype=float)
     weights = weights / weights.sum()
     margins = np.asarray(calibrated.margins, dtype=float)
+    low = weighted_quantile(margins, weights, .10)
+    high = weighted_quantile(margins, weights, .90)
+    multiplier = float(interval_multiplier)
     return Forecast.from_spread_total(
         float(spread), float(total), float(weights[margins > 0].sum()),
         "validated football mean + drive simulation",
-        interval_80_low=weighted_quantile(margins, weights, .10),
-        interval_80_high=weighted_quantile(margins, weights, .90),
+        interval_80_low=float(spread) + (low - float(spread)) * multiplier,
+        interval_80_high=float(spread) + (high - float(spread)) * multiplier,
     )
 
 

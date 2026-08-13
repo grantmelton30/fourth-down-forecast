@@ -285,12 +285,34 @@ def normalize_preseason_sources(
 
 def game_uncertainty_multiplier(
     week: int, *, preseason_available: bool, cross_tier: bool,
+    returning_production: float | None = None,
+    qb_continuity: float | None = None,
 ) -> float:
-    """Conservative widening; never changes the point estimate."""
+    """Conservative widening; never changes the point estimate.
+
+    Returning-production and quarterback-continuity inputs are used only to acknowledge
+    that an early-season distribution is less certain when last year's roster is mostly
+    gone.  They are deliberately not converted into point adjustments here: the live mean
+    model may use those features only after its prior-season validation promotes them.
+    """
+    def share(value: float | None) -> float | None:
+        if value is None or pd.isna(value):
+            return None
+        value = float(value)
+        if 1.0 < value <= 100.0:
+            value /= 100.0
+        return float(np.clip(value, 0.0, 1.0))
+
     early = max(0, 5 - int(week)) * 0.08
-    return 1.0 + early + (0.12 if not preseason_available else 0.0) + (
-        0.18 if cross_tier else 0.0
-    )
+    returning = share(returning_production)
+    quarterback = share(qb_continuity)
+    roster = 0.0
+    if returning is not None:
+        roster += 0.20 * max(0.0, 0.55 - returning) / 0.55
+    if quarterback is not None:
+        roster += 0.12 * max(0.0, 0.50 - quarterback) / 0.50
+    return float(1.0 + early + (0.12 if not preseason_available else 0.0)
+                 + (0.18 if cross_tier else 0.0) + roster)
 
 
 def load_free_preseason(client, seasons: list[int]) -> dict[str, pd.DataFrame]:

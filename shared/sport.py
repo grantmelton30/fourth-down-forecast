@@ -939,6 +939,36 @@ class NCAAAdapter(SportAdapter):
             "total_preseason_promoted": model.total.challenger_promoted,
         }
 
+    def projection_uncertainty(self, game_id: str) -> dict:
+        """Game-level preseason uncertainty, separate from the validated mean."""
+        frame = self._live_features()
+        match = frame[frame["game_id"].astype(str).eq(str(game_id))]
+        if match.empty:
+            return {"multiplier": 1.0, "warnings": ()}
+        row = match.iloc[0]
+
+        def minimum(*columns):
+            values = [pd.to_numeric(row.get(column), errors="coerce") for column in columns]
+            values = [float(value) for value in values if pd.notna(value)]
+            return min(values) if values else None
+
+        returning = minimum("home_returning_production", "away_returning_production")
+        quarterback = minimum("home_qb_continuity", "away_qb_continuity")
+        available = returning is not None and quarterback is not None
+        multiplier = self._module("features").game_uncertainty_multiplier(
+            int(row.get("week", 1)), preseason_available=available,
+            cross_tier=bool(row.get("cross_tier", False)),
+            returning_production=returning, qb_continuity=quarterback,
+        )
+        warnings = ()
+        if ((returning is not None and returning < .45)
+                or (quarterback is not None and quarterback < .35)):
+            warnings = (
+                "Significant roster/QB turnover widens the forecast range; "
+                "the point estimate is not manually penalized",
+            )
+        return {"multiplier": multiplier, "warnings": warnings}
+
     def games_observed(self, game_id: str) -> dict[str, int]:
         games = self._games_with_venues()
         row = games[games["game_id"].astype(str).eq(str(game_id))]

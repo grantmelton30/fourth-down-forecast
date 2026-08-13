@@ -2,24 +2,55 @@ name: publish-ledger
 on:
   workflow_dispatch:
   schedule:
-    # Free GitHub-hosted scheduler. Source refresh stays manual until required secrets
-    # and live data availability have been explicitly verified.
+    # Tuesday after the weekend is graded; Friday catches late lines/injury context.
     - cron: "17 11 * * 2,5"
 permissions:
   contents: write
+concurrency:
+  group: scheduled-model-publication
+  cancel-in-progress: false
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --frozen --dev
-      - run: uv run python scripts/publish_ledger.py
+      - name: Restore source and model caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            nfl-model/data/cache
+            ncaa-model/data/cache
+            ncaa-model/data/api_budget.json
+          key: football-model-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: football-model-${{ runner.os }}-
+      - name: Verify shared, NFL, and NCAA suites in isolated processes
+        run: |
+          uv run pytest -q shared/tests
+          (cd nfl-model && uv run pytest -q tests)
+          (cd ncaa-model && uv run pytest -q tests)
+      - name: Refresh sources, rebuild models, and stage publication
+        run: uv run python scripts/refresh_publication.py
+      - name: Validate promoted publication
+        run: uv run python scripts/validate_publication.py
+      - name: Save refreshed caches
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            nfl-model/data/cache
+            ncaa-model/data/cache
+            ncaa-model/data/api_budget.json
+          key: football-model-${{ runner.os }}-${{ github.run_id }}
       - name: Commit changed static artifact
         run: |
-          if git diff --quiet -- web/api/v1/predictions.json; then exit 0; fi
+          if git diff --quiet -- data/predictions.jsonl web/api/v1; then exit 0; fi
           git config user.name "fourth-down-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add web/api/v1/predictions.json
-          git commit -m "publish prediction ledger"
+          git add data/predictions.jsonl web/api/v1/predictions.json web/api/v1/explorer.json
+          git commit -m "refresh model projections"
           git push

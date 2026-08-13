@@ -86,9 +86,15 @@ def main() -> int:
                 adapter.projection_mean(str(game["game_id"]))
                 if league == "ncaa" and hasattr(adapter, "projection_mean") else None
             )
+            uncertainty = (
+                adapter.projection_uncertainty(str(game["game_id"]))
+                if league == "ncaa" and hasattr(adapter, "projection_uncertainty")
+                else {"multiplier": 1.0, "warnings": ()}
+            )
             independent = (
                 forecast_from_projection(
-                    sim, spread=mean["spread"], total=mean["total"]
+                    sim, spread=mean["spread"], total=mean["total"],
+                    interval_multiplier=uncertainty["multiplier"],
                 )
                 if mean is not None else forecast_from_sim(sim)
             )
@@ -122,7 +128,8 @@ def main() -> int:
                 data_cutoff=now.isoformat(), unavailable_features=unavailable,
                 bets_allowed=adapter.bets_allowed(), generated_at=now.isoformat(),
                 confidence=quality.label, quality_reasons=quality.reasons,
-                warnings=quality.warnings, pick_eligible=quality.pick_eligible,
+                warnings=tuple((*quality.warnings, *uncertainty["warnings"])),
+                pick_eligible=quality.pick_eligible,
                 out_of_distribution=quality.out_of_distribution,
                 calibration_status=permissions, games_observed=observed,
             )

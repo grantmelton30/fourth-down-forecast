@@ -48,6 +48,10 @@ def main() -> int:
     ap.add_argument("--n-sims", type=int, default=None, help="simulations per game")
     ap.add_argument("--no-cache", action="store_true", help="recompute the backtest frame")
     ap.add_argument("--validation-games", type=int, default=400)
+    ap.add_argument(
+        "--diagnostic-exit-zero", action="store_true",
+        help="return success after a valid build even when betting gates remain closed",
+    )
     args = ap.parse_args()
 
     cfg = load_config()
@@ -265,7 +269,7 @@ def main() -> int:
         print("Non-promotion diagnostics failed: " + ", ".join(diagnostic_failed))
     print(f"Authoritative betting decision: {artifact_path}")
     print(RULE)
-    return 1 if failed else 0
+    return 0 if args.diagnostic_exit_zero else (1 if failed else 0)
 
 
 def _blend_reading(w) -> str:
