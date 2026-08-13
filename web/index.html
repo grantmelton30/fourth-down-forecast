@@ -48,6 +48,14 @@
             <option value="confidence">Data quality</option>
           </select>
         </label>
+        <label>Conference / division
+          <select id="group-filter"><option value="all">All conferences & divisions</option></select>
+        </label>
+        <label>Find a team
+          <input id="team-filter" type="search" list="projection-teams" placeholder="Type a team name" autocomplete="off">
+          <datalist id="projection-teams"></datalist>
+        </label>
+        <button id="clear-filters" class="clear-filters" type="button">Clear filters</button>
       </div>
     </section>
 

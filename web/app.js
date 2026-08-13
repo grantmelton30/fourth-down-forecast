@@ -1,16 +1,25 @@
-const state={records:[],explorer:null,league:'all',week:'all',sort:'kickoff',view:'projections',explorerLeague:'nfl',teamLeague:'nfl',team:null};
+const state={records:[],explorer:null,league:'all',week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',explorerLeague:'nfl',teamLeague:'nfl',team:null};
 const $=selector=>document.querySelector(selector);
 const $$=selector=>[...document.querySelectorAll(selector)];
-const list=$('#game-list'),empty=$('#empty-state'),weekFilter=$('#week-filter'),sortFilter=$('#sort-filter'),dialog=$('#detail-dialog');
+const list=$('#game-list'),empty=$('#empty-state'),weekFilter=$('#week-filter'),sortFilter=$('#sort-filter'),groupFilter=$('#group-filter'),teamFilter=$('#team-filter'),dialog=$('#detail-dialog');
 const signed=n=>n==null?'—':`${n>=0?'+':''}${Number(n).toFixed(1)}`;
 const number=n=>n==null?'—':Number(n).toFixed(1);
 const date=s=>s?new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(s)):'TBD';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const forecast=(f,kind='')=>f?`<div class="forecast ${kind}"><strong>${signed(f.spread)} · ${number(f.total)}</strong><span>${number(f.away_score)}–${number(f.home_score)} score</span></div>`:`<div class="forecast"><strong>—</strong><span>not available</span></div>`;
 const leagueData=league=>state.explorer?.leagues?.[league]||{ratings:[],schedule:[],summary:{}};
+const normalize=value=>String(value||'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const ratingFor=(league,team)=>leagueData(league).ratings.find(r=>r.team===team);
+const groupFor=(league,team)=>ratingFor(league,team)?.group||null;
 
 function filtered(){
-  let rows=state.records.filter(r=>(state.league==='all'||r.league===state.league)&&(state.week==='all'||String(r.week)===state.week));
+  const query=normalize(state.teamQuery.trim());
+  let rows=state.records.filter(r=>
+    (state.league==='all'||r.league===state.league)
+    &&(state.week==='all'||String(r.week)===state.week)
+    &&(state.group==='all'||groupFor(r.league,r.home_team)===state.group||groupFor(r.league,r.away_team)===state.group)
+    &&(!query||normalize(r.home_team).includes(query)||normalize(r.away_team).includes(query))
+  );
   if(state.sort==='difference')rows.sort((a,b)=>Math.abs(b.model_market_difference?.spread||0)-Math.abs(a.model_market_difference?.spread||0));
   else if(state.sort==='confidence')rows.sort((a,b)=>(a.quality_reasons?.length||0)-(b.quality_reasons?.length||0));
   else rows.sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff));
@@ -18,12 +27,24 @@ function filtered(){
 }
 function renderProjections(){
   const rows=filtered();list.replaceChildren();empty.hidden=rows.length>0;
+  empty.querySelector('h2').textContent=state.records.length?'No projections match these filters.':'No published slate yet.';
+  empty.querySelector('p:last-child').textContent=state.records.length?'Try a different team, conference/division, league, or week.':'The site is ready, but it will not invent picks. Run the prospective model refresh to append evidence to the ledger; this page then updates from the versioned JSON artifact.';
   rows.forEach(r=>{
     const button=document.createElement('button');button.className=`game-row ${r.out_of_distribution?'flagged':''}`;
     const warning=r.warnings?.length?'<span class="warning-mark" aria-label="Review warning">!</span>':'';
     button.innerHTML=`<div class="matchup-id"><span class="league-tag">${r.league.toUpperCase()}</span><div class="teams"><strong>${esc(r.away_team)} at ${esc(r.home_team)} ${warning}</strong><small>W${r.week} · ${date(r.kickoff)}</small><span class="quality ${r.confidence}">${esc(r.confidence)}</span></div></div>${forecast(r.independent)}${forecast(r.market)}${forecast(r.calibrated)}<div class="forecast diff"><strong>${signed(r.model_market_difference?.spread)} · ${signed(r.model_market_difference?.total)}</strong><span>spread · total</span></div>`;
     button.addEventListener('click',()=>openDetail(r));list.append(button);
   });
+}
+function populateProjectionFilters(){
+  const leagues=state.league==='all'?['nfl','ncaa']:[state.league];
+  const ratings=leagues.flatMap(league=>leagueData(league).ratings.map(r=>({...r,league})));
+  const groups=[...new Set(ratings.map(r=>r.group).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const currentGroup=groups.includes(state.group)?state.group:'all';state.group=currentGroup;
+  groupFilter.replaceChildren(new Option('All conferences & divisions','all'),...groups.map(group=>new Option(group,group,false,group===currentGroup)));
+  groupFilter.value=currentGroup;
+  const names=[...new Set(ratings.map(r=>r.team))].sort((a,b)=>a.localeCompare(b));
+  $('#projection-teams').replaceChildren(...names.map(name=>{const option=document.createElement('option');option.value=name;return option}));
 }
 function openDetail(r){
   const ev=r.market_evidence,unavailable=r.unavailable_features?.length?r.unavailable_features.join(', '):'None reported';
@@ -77,12 +98,15 @@ function renderTeam(){
 $('.dialog-close').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 $$('[data-view]').forEach(button=>button.addEventListener('click',()=>showView(button.dataset.view)));
-$$('[data-league]').forEach(button=>button.addEventListener('click',()=>{setButtonGroup('[data-league]',button.dataset.league,'league');state.league=button.dataset.league;renderProjections()}));
+$$('[data-league]').forEach(button=>button.addEventListener('click',()=>{setButtonGroup('[data-league]',button.dataset.league,'league');state.league=button.dataset.league;populateProjectionFilters();renderProjections()}));
 $$('[data-explorer-league]').forEach(button=>button.addEventListener('click',()=>{state.explorerLeague=button.dataset.explorerLeague;setButtonGroup('[data-explorer-league]',state.explorerLeague,'explorerLeague');renderLeague()}));
 $$('[data-team-league]').forEach(button=>button.addEventListener('click',()=>{state.teamLeague=button.dataset.teamLeague;state.team=null;renderTeam()}));
 $('#team-select').addEventListener('change',e=>{state.team=e.target.value;renderTeam()});
 weekFilter.addEventListener('change',()=>{state.week=weekFilter.value;renderProjections()});
 sortFilter.addEventListener('change',()=>{state.sort=sortFilter.value;renderProjections()});
+groupFilter.addEventListener('change',()=>{state.group=groupFilter.value;renderProjections()});
+teamFilter.addEventListener('input',()=>{state.teamQuery=teamFilter.value;renderProjections()});
+$('#clear-filters').addEventListener('click',()=>{state.league='all';state.week='all';state.group='all';state.teamQuery='';teamFilter.value='';weekFilter.value='all';setButtonGroup('[data-league]','all','league');populateProjectionFilters();renderProjections()});
 
 Promise.all([
   fetch('api/v1/predictions.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`predictions HTTP ${r.status}`);return r.json()}),
@@ -92,5 +116,5 @@ Promise.all([
   state.records=feed.records||[];state.explorer=explorer;
   [...new Set(state.records.map(r=>r.week))].sort((a,b)=>a-b).forEach(w=>weekFilter.add(new Option(`Week ${w}`,w)));
   $('#data-status').textContent=feed.generated_at?`Updated ${date(feed.generated_at)}`:'Awaiting first slate';
-  renderProjections();renderLeague();renderTeam();
+  populateProjectionFilters();renderProjections();renderLeague();renderTeam();
 }).catch(error=>{$('#data-status').textContent='Data unavailable';empty.hidden=false;empty.querySelector('p:last-child').textContent=`The publication artifacts could not be loaded (${error.message}).`;});

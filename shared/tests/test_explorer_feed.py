@@ -40,7 +40,13 @@ def test_explorer_feed_contains_rankings_and_team_schedule():
     feed = MODULE.build_league(Adapter())
     assert feed["season"] == 2026
     assert feed["ratings"][0]["team"] == "Alpha"
+    assert feed["ratings"][0]["group"] == "A"
     assert feed["ratings"][0]["net_rank"] == 1
     assert feed["schedule"][0]["home_team"] == "Alpha"
     assert feed["summary"]["rated_teams"] == 2
     assert all(row["team"] != "__FCS__" for row in feed["ratings"])
+
+
+def test_nfl_team_alignment_exposes_division_for_projection_filters():
+    assert MODULE.competition_group("nfl", "DAL", None) == "NFC East"
+    assert MODULE.competition_group("nfl", "BUF", None) == "AFC East"

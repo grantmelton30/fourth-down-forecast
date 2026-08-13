@@ -16,6 +16,28 @@ sys.path.insert(0, str(ROOT / "shared"))
 from sport import load_adapter  # noqa: E402
 
 
+NFL_DIVISIONS = {
+    "AFC East": ("BUF", "MIA", "NE", "NYJ"),
+    "AFC North": ("BAL", "CIN", "CLE", "PIT"),
+    "AFC South": ("HOU", "IND", "JAX", "TEN"),
+    "AFC West": ("DEN", "KC", "LAC", "LV"),
+    "NFC East": ("DAL", "NYG", "PHI", "WAS"),
+    "NFC North": ("CHI", "DET", "GB", "MIN"),
+    "NFC South": ("ATL", "CAR", "NO", "TB"),
+    "NFC West": ("ARI", "LA", "SEA", "SF"),
+}
+NFL_TEAM_DIVISION = {
+    team: division for division, teams in NFL_DIVISIONS.items() for team in teams
+}
+
+
+def competition_group(league: str, team: str, conference) -> str | None:
+    """Public conference/division label used for browsing, never model fitting."""
+    if league == "nfl":
+        return NFL_TEAM_DIVISION.get(str(team))
+    return None if pd.isna(conference) else str(conference)
+
+
 def _json_value(value):
     if pd.isna(value):
         return None
@@ -37,9 +59,16 @@ def build_league(adapter) -> dict:
     # they are not teams and must never appear in the public selector/rankings.
     if "team" in ratings:
         ratings = ratings[~ratings["team"].astype(str).str.match(r"^__.*__$")].copy()
+        league = str(adapter.profile.key).lower()
+        ratings["group"] = [
+            competition_group(league, team, conference)
+            for team, conference in zip(
+                ratings["team"], ratings.get("conference", pd.Series(None, index=ratings.index))
+            )
+        ]
     rating_columns = [
         column for column in (
-            "team", "conference", "off_rating", "def_rating", "pace_rating",
+            "team", "conference", "group", "off_rating", "def_rating", "pace_rating",
             "net_rating", "off_rank", "def_rank", "net_rank", "pace_rank",
             "net_change", "n_games",
         ) if column in ratings
