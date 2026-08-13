@@ -269,6 +269,20 @@ def normalize_preseason_sources(
         parts.append(d[keep])
     if not parts:
         return pd.DataFrame(columns=["season", "team", *PRESEASON_FEATURES])
+    normalized = []
+    for part in parts:
+        part = part.copy()
+        part["season"] = pd.to_numeric(part["season"], errors="coerce")
+        part["team"] = part["team"].astype("string").str.strip()
+        part = part.dropna(subset=["season", "team"])
+        part = part[part["team"].ne("")]
+        part["season"] = part["season"].astype(int)
+        part["team"] = part["team"].astype(str)
+        if len(part):
+            normalized.append(part)
+    parts = normalized
+    if not parts:
+        return pd.DataFrame(columns=["season", "team", *PRESEASON_FEATURES])
     out = parts[0]
     for part in parts[1:]:
         out = out.merge(part, on=["season", "team"], how="outer", suffixes=("", "_new"))
