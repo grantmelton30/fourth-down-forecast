@@ -4,6 +4,8 @@ on:
   schedule:
     # Tuesday after the weekend is graded; Friday catches late lines/injury context.
     - cron: "17 11 * * 2,5"
+    # A lightweight daily pass republishes newly posted free market quotes from cache.
+    - cron: "17 13 * * *"
 permissions:
   contents: write
 concurrency:
@@ -35,7 +37,12 @@ jobs:
           (cd nfl-model && uv run pytest -q tests)
           (cd ncaa-model && uv run pytest -q tests)
       - name: Refresh sources, rebuild models, and stage publication
-        run: uv run python scripts/refresh_publication.py
+        run: |
+          if [ "${{ github.event.schedule }}" = "17 13 * * *" ]; then
+            uv run python scripts/refresh_publication.py --market-only
+          else
+            uv run python scripts/refresh_publication.py
+          fi
       - name: Validate promoted publication
         run: uv run python scripts/validate_publication.py
       - name: Save refreshed caches

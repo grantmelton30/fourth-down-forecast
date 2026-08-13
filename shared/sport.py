@@ -667,8 +667,14 @@ class NCAAAdapter(SportAdapter):
         rows = []
         for game in payload:
             for line in game.get("lines") or []:
-                spread = pd.to_numeric(line.get("spreadOpen"), errors="coerce")
-                total = pd.to_numeric(line.get("overUnderOpen"), errors="coerce")
+                spread = pd.to_numeric(
+                    line.get("spread") if line.get("spread") is not None
+                    else line.get("spreadOpen"), errors="coerce"
+                )
+                total = pd.to_numeric(
+                    line.get("overUnder") if line.get("overUnder") is not None
+                    else line.get("overUnderOpen"), errors="coerce"
+                )
                 if pd.isna(spread) and pd.isna(total):
                     continue
                 rows.append({
@@ -803,20 +809,20 @@ class NCAAAdapter(SportAdapter):
         return self._cache["market"]
 
     def games(self, season: int, week: int) -> pd.DataFrame:
-        """The slate, with both the opener (what we grade against) and the close."""
+        """The slate with latest public quotes and separately retained openers."""
         m = self._market()
         if m is None or m.empty:
             return pd.DataFrame()
         sel = m[(m["season"] == season) & (m["week"] == week)].copy()
         if sel.empty:
             return pd.DataFrame()
-        sel = sel.rename(columns={
-            "spread_open": "spread_line", "total_open": "total_line",
-            "actual_margin": "result", "actual_total": "total",
-        })
+        sel["spread_line"] = sel["spread_close"].combine_first(sel["spread_open"])
+        sel["total_line"] = sel["total_close"].combine_first(sel["total_open"])
+        sel = sel.rename(columns={"actual_margin": "result", "actual_total": "total"})
         cols = [
             "game_id", "kickoff", "away_team", "home_team", "spread_line", "total_line",
-            "spread_close", "total_close", "result", "total", "restricted",
+            "spread_open", "total_open", "spread_close", "total_close",
+            "result", "total", "restricted",
             "cross_tier", "provider",
         ]
         out = sel[[c for c in cols if c in sel.columns]].reset_index(drop=True)
@@ -944,7 +950,7 @@ class NCAAAdapter(SportAdapter):
         frame = self._live_features()
         match = frame[frame["game_id"].astype(str).eq(str(game_id))]
         if match.empty:
-            return {"multiplier": 1.0, "warnings": ()}
+            return {"multiplier": 1.0, "reasons": ()}
         row = match.iloc[0]
 
         def minimum(*columns):
@@ -960,14 +966,14 @@ class NCAAAdapter(SportAdapter):
             cross_tier=bool(row.get("cross_tier", False)),
             returning_production=returning, qb_continuity=quarterback,
         )
-        warnings = ()
+        reasons = ()
         if ((returning is not None and returning < .45)
                 or (quarterback is not None and quarterback < .35)):
-            warnings = (
+            reasons = (
                 "Significant roster/QB turnover widens the forecast range; "
                 "the point estimate is not manually penalized",
             )
-        return {"multiplier": multiplier, "warnings": warnings}
+        return {"multiplier": multiplier, "reasons": reasons}
 
     def games_observed(self, game_id: str) -> dict[str, int]:
         games = self._games_with_venues()

@@ -6,7 +6,7 @@ const signed=n=>n==null?'—':`${n>=0?'+':''}${Number(n).toFixed(1)}`;
 const number=n=>n==null?'—':Number(n).toFixed(1);
 const date=s=>s?new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(s)):'TBD';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-const forecast=(f,kind='')=>f?`<div class="forecast ${kind}"><strong>${signed(f.spread)} · ${number(f.total)}</strong><span>${number(f.away_score)}–${number(f.home_score)} score</span></div>`:`<div class="forecast"><strong>—</strong><span>not available</span></div>`;
+const forecast=(f,kind='',missing='not available')=>f?`<div class="forecast ${kind}"><strong>${signed(f.spread)} · ${number(f.total)}</strong><span>${number(f.away_score)}–${number(f.home_score)} score</span></div>`:`<div class="forecast"><strong>—</strong><span>${missing}</span></div>`;
 const leagueData=league=>state.explorer?.leagues?.[league]||{ratings:[],schedule:[],summary:{}};
 const normalize=value=>String(value||'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const ratingFor=(league,team)=>leagueData(league).ratings.find(r=>r.team===team);
@@ -31,8 +31,8 @@ function renderProjections(){
   empty.querySelector('p:last-child').textContent=state.records.length?'Try a different team, conference/division, league, or week.':'The site is ready, but it will not invent picks. Run the prospective model refresh to append evidence to the ledger; this page then updates from the versioned JSON artifact.';
   rows.forEach(r=>{
     const button=document.createElement('button');button.className=`game-row ${r.out_of_distribution?'flagged':''}`;
-    const warning=r.warnings?.length?'<span class="warning-mark" aria-label="Review warning">!</span>':'';
-    button.innerHTML=`<div class="matchup-id"><span class="league-tag">${r.league.toUpperCase()}</span><div class="teams"><strong>${esc(r.away_team)} at ${esc(r.home_team)} ${warning}</strong><small>W${r.week} · ${date(r.kickoff)}</small><span class="quality ${r.confidence}">${esc(r.confidence)}</span></div></div>${forecast(r.independent)}${forecast(r.market)}${forecast(r.calibrated)}<div class="forecast diff"><strong>${signed(r.model_market_difference?.spread)} · ${signed(r.model_market_difference?.total)}</strong><span>spread · total</span></div>`;
+    const warning=r.out_of_distribution?'<span class="warning-mark" aria-label="Extreme model and market disagreement">!</span>':'';
+    button.innerHTML=`<div class="matchup-id"><span class="league-tag">${r.league.toUpperCase()}</span><div class="teams"><strong>${esc(r.away_team)} at ${esc(r.home_team)} ${warning}</strong><small>W${r.week} · ${date(r.kickoff)}</small><span class="quality ${r.confidence}">${esc(r.confidence)}</span></div></div>${forecast(r.independent)}${forecast(r.market,'','No line posted yet')}${forecast(r.calibrated)}<div class="forecast diff"><strong>${signed(r.model_market_difference?.spread)} · ${signed(r.model_market_difference?.total)}</strong><span>spread · total</span></div>`;
     button.addEventListener('click',()=>openDetail(r));list.append(button);
   });
 }
@@ -74,7 +74,7 @@ function renderLeague(){
   ].map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong></div>`).join('');
   $('#rankings-period').textContent=`${data.season||'—'} · Week ${data.week||'—'}`;
   $('#ranking-list').innerHTML=data.ratings.slice().sort((a,b)=>(a.net_rank||999)-(b.net_rank||999)).map(r=>`<button class="ranking-row" data-team-jump="${esc(r.team)}"><span><b>${r.net_rank||'—'}</b><i>${esc(r.team)}</i><small>${esc(r.conference||state.explorerLeague.toUpperCase())}</small></span><strong>${signed(r.net_rating)}</strong><em>#${r.off_rank||'—'}</em><em>#${r.def_rank||'—'}</em></button>`).join('');
-  $('#evidence-overview').innerHTML=`<div class="evidence-score"><strong>${records.filter(r=>r.confidence==='established').length}</strong><span>established forecasts</span></div><dl><dt>Incomplete</dt><dd>${records.filter(r=>r.confidence==='incomplete').length}</dd><dt>Large-disagreement review</dt><dd>${records.filter(r=>r.warnings?.length).length}</dd><dt>Spread calibration</dt><dd>${records.some(r=>r.calibration_status?.spread)?'validated':'not validated'}</dd><dt>Total calibration</dt><dd>${records.some(r=>r.calibration_status?.total)?'validated':'not validated'}</dd></dl><p>Quality describes evidence maturity. It is not a pick grade.</p>`;
+  $('#evidence-overview').innerHTML=`<div class="evidence-score"><strong>${records.filter(r=>r.confidence==='established').length}</strong><span>established forecasts</span></div><dl><dt>Incomplete</dt><dd>${records.filter(r=>r.confidence==='incomplete').length}</dd><dt>Extreme-disagreement review</dt><dd>${records.filter(r=>r.out_of_distribution).length}</dd><dt>Spread calibration</dt><dd>${records.some(r=>r.calibration_status?.spread)?'validated':'not validated'}</dd><dt>Total calibration</dt><dd>${records.some(r=>r.calibration_status?.total)?'validated':'not validated'}</dd></dl><p>Quality describes evidence maturity. It is not a pick grade.</p>`;
   $$('[data-team-jump]').forEach(button=>button.addEventListener('click',()=>{state.teamLeague=state.explorerLeague;state.team=button.dataset.teamJump;showView('teams')}));
 }
 function populateTeams(){

@@ -45,11 +45,12 @@ def assess_quality(
         if not calibration_status.get(market, False):
             reasons.append(f"{market} calibration is not validated")
     difference = abs(float(spread_difference)) if spread_difference is not None else 0.0
-    out_of_distribution = difference >= 14.0
+    # A warning icon is an interruption, not a generic uncertainty badge.  Reserve it
+    # for truly exceptional disagreement; ordinary Week 1 model/market differences are
+    # already disclosed numerically and by the preseason quality label.
+    out_of_distribution = difference >= 20.0
     if out_of_distribution:
         warnings.append("Extreme model/market disagreement; pick suppressed")
-    elif difference >= 10.0:
-        warnings.append("Large model/market disagreement; review inputs")
     pick_eligible = bool(
         bets_allowed and label == "established" and not reasons
         and not out_of_distribution and all(calibration_status.values())

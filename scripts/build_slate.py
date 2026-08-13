@@ -89,7 +89,7 @@ def main() -> int:
             uncertainty = (
                 adapter.projection_uncertainty(str(game["game_id"]))
                 if league == "ncaa" and hasattr(adapter, "projection_uncertainty")
-                else {"multiplier": 1.0, "warnings": ()}
+                else {"multiplier": 1.0, "reasons": ()}
             )
             independent = (
                 forecast_from_projection(
@@ -127,8 +127,9 @@ def main() -> int:
                 model_version=f"{league}-{source_digest(adapter.profile.repo)}",
                 data_cutoff=now.isoformat(), unavailable_features=unavailable,
                 bets_allowed=adapter.bets_allowed(), generated_at=now.isoformat(),
-                confidence=quality.label, quality_reasons=quality.reasons,
-                warnings=tuple((*quality.warnings, *uncertainty["warnings"])),
+                confidence=quality.label,
+                quality_reasons=tuple((*quality.reasons, *uncertainty["reasons"])),
+                warnings=quality.warnings,
                 pick_eligible=quality.pick_eligible,
                 out_of_distribution=quality.out_of_distribution,
                 calibration_status=permissions, games_observed=observed,

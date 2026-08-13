@@ -2,6 +2,7 @@
 """Refresh sources/models and transactionally build the public static artifacts."""
 from __future__ import annotations
 
+import argparse
 import os
 import shutil
 import subprocess
@@ -17,10 +18,18 @@ def checked(*args: str) -> None:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--market-only", action="store_true",
+        help="reuse validated model caches and refresh the public slate/market quotes",
+    )
+    args = parser.parse_args()
     python = sys.executable
-    checked(python, "nfl-model/run_backtest.py", "--refresh",
-            "--diagnostic-exit-zero")
-    checked(python, "ncaa-model/run_backtest.py", "--diagnostic-exit-zero")
+    checked(python, "scripts/refresh_market_data.py")
+    if not args.market_only:
+        checked(python, "nfl-model/run_backtest.py", "--refresh",
+                "--diagnostic-exit-zero")
+        checked(python, "ncaa-model/run_backtest.py", "--diagnostic-exit-zero")
 
     with tempfile.TemporaryDirectory(prefix="football-publish-") as directory:
         stage = Path(directory)
