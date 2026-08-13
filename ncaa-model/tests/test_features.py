@@ -55,6 +55,19 @@ def test_uncertainty_widens_early_and_cross_tier():
     assert uncertain > 1.5
 
 
+def test_significant_turnover_increases_uncertainty_without_inventing_a_point_penalty():
+    stable = game_uncertainty_multiplier(
+        1, preseason_available=True, cross_tier=False,
+        returning_production=.82, qb_continuity=.90,
+    )
+    high_turnover = game_uncertainty_multiplier(
+        1, preseason_available=True, cross_tier=False,
+        returning_production=.28, qb_continuity=.10,
+    )
+    assert high_turnover > stable
+    assert high_turnover - stable >= .15
+
+
 def test_matchup_feature_is_strictly_prior():
     games = pd.DataFrame([
         {"game_id": 1, "season": 2025, "week": 1, "homeTeam": "A", "awayTeam": "B"},

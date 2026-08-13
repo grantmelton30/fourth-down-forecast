@@ -46,6 +46,17 @@ def test_validated_mean_replaces_simulation_mean_without_destroying_distribution
     assert forecast.interval_80_low is not None
 
 
+def test_roster_uncertainty_widens_interval_but_preserves_projection_mean():
+    baseline = forecast_from_projection(Sim(), spread=9.0, total=49.0)
+    uncertain = forecast_from_projection(
+        Sim(), spread=9.0, total=49.0, interval_multiplier=1.35,
+    )
+    assert uncertain.spread == baseline.spread
+    assert uncertain.total == baseline.total
+    assert uncertain.interval_80_low < baseline.interval_80_low
+    assert uncertain.interval_80_high > baseline.interval_80_high
+
+
 def test_ncaa_calibration_permissions_are_market_specific_and_positive_only():
     weights = {
         "b_model_spread": .10, "t_model_spread": 1.60,
