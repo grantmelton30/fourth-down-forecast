@@ -20,6 +20,7 @@ import pandas as pd
 
 from src import ingest, nfelo
 from src.backtest import (
+    backtest_frame_path,
     bootstrap_ats,
     calibration_table,
     clv_proxy,
@@ -224,7 +225,12 @@ def main() -> int:
     gates = run_gates(
         weights, metrics, calib, sim_pmf, schedules, weekly_seconds, frame
     )
-    model_version = build_model_version("nfl", cfg.path.parent.parent, cfg.path, frame)
+    # Hash the persisted frame, not the in-memory one: the adapter verifies against what
+    # is on disk, so a version derived from anything else can never be reproduced and
+    # every artifact is silently repudiated. See the NCAA counterpart for the full note.
+    persisted = backtest_frame_path(cfg)
+    evidence = pd.read_parquet(persisted) if persisted.exists() else frame
+    model_version = build_model_version("nfl", cfg.path.parent.parent, cfg.path, evidence)
     cutoff_col = next(
         (c for c in ("kickoff", "gameday", "game_date", "date") if c in frame), None
     )

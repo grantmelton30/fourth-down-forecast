@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "shared"))
 
 from evidence_snapshot import snapshot_evidence  # noqa: E402
+from gate_artifact import FILENAME as GATE_FILENAME  # noqa: E402
+from sport import load_adapter  # noqa: E402
 
 
 def checked(*args: str) -> None:
@@ -70,6 +72,17 @@ def main() -> int:
         missing = [name for name, a in entry["artifacts"].items() if not a["present"]]
         if missing:
             print(f"{league}: no validation evidence for {', '.join(sorted(missing))}")
+    # An artifact that exists but is refused is the dangerous case: it looks measured and
+    # behaves unmeasured. That state shipped undetected -- the model version was hashed
+    # from an in-memory frame the reader could never reproduce, so every gate artifact was
+    # repudiated and "no bets" looked identical whether verification worked or not.
+    for league, entry in sorted(manifest["leagues"].items()):
+        if not entry["artifacts"][GATE_FILENAME]["present"]:
+            continue
+        adapter = load_adapter(league, ROOT)
+        if adapter.gate_artifact() is None:
+            print(f"WARNING: {league} wrote a gate artifact that the adapter refuses; "
+                  "picks are blocked by broken verification, not by a measured gate")
     if manifest["inconsistent_leagues"]:
         print("WARNING: gate results and calibration weights disagree on the model "
               f"version for: {', '.join(manifest['inconsistent_leagues'])}")

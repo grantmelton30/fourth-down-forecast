@@ -214,7 +214,16 @@ def main() -> int:
         gate_api_budget(client.calls_used, cfg),
     ]
     cutoff=pd.to_datetime(frame.get("kickoff"),utc=True,errors="coerce").max()
-    model_version=build_model_version("ncaa",cfg.path.parent.parent,cfg.path,frame)
+    # Stamp the version with the evidence that is actually PERSISTED, not the in-memory
+    # frame. walk_forward returns its working copy while caching a parquet whose dtypes
+    # differ on first write, so hashing the in-memory frame produced a version no reader
+    # could ever reproduce: the adapter reads the parquet, recomputes a different digest,
+    # and repudiates every artifact this script writes. bets_allowed() then returned
+    # False because verification was broken, not because a gate had failed -- and
+    # fail-closed made those two indistinguishable.
+    persisted = CACHE_DIR / "backtest_frame_default.parquet"
+    evidence = pd.read_parquet(persisted) if persisted.exists() else frame
+    model_version=build_model_version("ncaa",cfg.path.parent.parent,cfg.path,evidence)
     artifact_path=write_gate_artifact(CACHE_DIR,league="ncaa",model_version=model_version,
         data_cutoff=None if pd.isna(cutoff) else cutoff.isoformat(),gates=gates,
         promotion_names={"GATE_OPENER_COVERAGE","GATE_NO_LOOKAHEAD","GATE_GARBAGE_FILTER","GATE_UNBIASED","GATE_UNBIASED_BY_WEEK","GATE_BLEND_INFORMATIVE","GATE_RMSE_TOTAL","GATE_RMSE_SPREAD","GATE_KEY_NUMBERS","GATE_CALIBRATED"})
