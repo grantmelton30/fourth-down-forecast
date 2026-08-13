@@ -6,6 +6,9 @@ on:
     - cron: "17 11 * * 2,5"
     # A lightweight daily pass republishes newly posted free market quotes from cache.
     - cron: "17 13 * * *"
+    # Market capture only. Timestamped quotes cannot be reconstructed later, so this
+    # runs far more often than any model work and spends ~1 API call per pass.
+    - cron: "23 */6 * * *"
 permissions:
   contents: write
 concurrency:
@@ -36,7 +39,13 @@ jobs:
           uv run pytest -q shared/tests
           (cd nfl-model && uv run pytest -q -m "not integration" tests)
           (cd ncaa-model && uv run pytest -q -m "not integration" tests)
+      # Runs on every schedule, including the frequent capture-only pass. A quote that
+      # is not recorded now cannot be recovered later, so this must not depend on the
+      # model rebuild below succeeding.
+      - name: Capture market quotes
+        run: uv run python scripts/collect_market_quotes.py
       - name: Refresh sources, rebuild models, and stage publication
+        if: github.event.schedule != '23 */6 * * *'
         run: |
           if [ "${{ github.event.schedule }}" = "17 13 * * *" ]; then
             uv run python scripts/refresh_publication.py --market-only
@@ -44,6 +53,7 @@ jobs:
             uv run python scripts/refresh_publication.py
           fi
       - name: Validate promoted publication
+        if: github.event.schedule != '23 */6 * * *'
         run: uv run python scripts/validate_publication.py
       - name: Save refreshed caches
         if: always()
@@ -56,13 +66,15 @@ jobs:
           key: football-model-${{ runner.os }}-${{ github.run_id }}
       - name: Commit changed static artifact
         run: |
-          if git diff --quiet -- data/predictions.jsonl data/evidence web/api/v1; then
-            exit 0
-          fi
+          TRACKED="data/predictions.jsonl data/evidence data/market_quotes.jsonl web/api/v1"
+          if git diff --quiet -- $TRACKED; then exit 0; fi
           git config user.name "fourth-down-bot"
           git config user.email "actions@users.noreply.github.com"
           # The evidence goes in the same commit as the claim it authorized.
-          git add data/predictions.jsonl data/evidence \
+          git add data/predictions.jsonl data/evidence data/market_quotes.jsonl \
             web/api/v1/predictions.json web/api/v1/explorer.json
-          git commit -m "refresh model projections"
+          # Concurrent schedules append to the same ledgers; rebase onto whatever the
+          # previous run pushed rather than clobbering it.
+          git commit -m "capture market quotes and refresh projections"
+          git pull --rebase --autostash origin main
           git push

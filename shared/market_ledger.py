@@ -203,6 +203,48 @@ class MarketQuoteLedger:
     def extend(self, quotes: Iterable[MarketQuote]) -> int:
         return sum(int(self.append(q)) for q in quotes)
 
+    # -- change detection ----------------------------------------------------------
+
+    @staticmethod
+    def _series_key(quote: MarketQuote) -> tuple:
+        """What counts as "the same line". A book's opener and its current price are
+        separate claims about the same game, so phase is part of the key."""
+        return (quote.league, quote.game_id, quote.provider, quote.quote_phase.value)
+
+    @staticmethod
+    def _price(quote: MarketQuote) -> tuple:
+        return (quote.status.value, quote.spread, quote.total,
+                quote.moneyline_home, quote.moneyline_away)
+
+    def last_by_series(self) -> dict:
+        latest: dict = {}
+        for row in self.records():  # file order is chronological by construction
+            latest[self._series_key(row)] = row
+        return latest
+
+    def append_if_changed(self, quote: MarketQuote,
+                          _latest: "dict | None" = None) -> bool:
+        """Record only when this differs from the last quote for the same series.
+
+        Polling a market several times a day would otherwise write one row per game per
+        provider per run saying nothing changed. Comparing against the LAST stored quote
+        rather than against all history matters: a line that moves away and returns is a
+        real movement, and content-only deduplication would silently discard it.
+        """
+        latest = self.last_by_series() if _latest is None else _latest
+        previous = latest.get(self._series_key(quote))
+        if previous is not None and self._price(previous) == self._price(quote):
+            return False
+        if not self.append(quote):
+            return False
+        latest[self._series_key(quote)] = quote
+        return True
+
+    def extend_if_changed(self, quotes: Iterable[MarketQuote]) -> int:
+        """Bulk form that indexes the file once rather than per quote."""
+        latest = self.last_by_series()
+        return sum(int(self.append_if_changed(q, _latest=latest)) for q in quotes)
+
 
 def _median(values: Sequence[float]) -> "float | None":
     return float(np.median(values)) if len(values) else None
