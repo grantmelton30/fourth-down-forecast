@@ -39,8 +39,28 @@ the NCAA totals false positive, behaving exactly as documented: the apparent sig
 against the opening number and does not survive the closing one. It is a diagnostic, not
 an edge.
 
-**NFL has no reading.** Its artifacts are still absent (`data/evidence/manifest.json`);
-a cold NFL build has not been run since the availability fix changed its model version.
+### NFL — measured 2026-08-13 by the scheduled run
+
+The first NFL artifact this repository has ever committed, produced by CI rather than by
+hand. `bets_allowed` is **False**, blocked by six promotion gates:
+
+| gate | reading |
+|---|---|
+| `GATE_NO_LOOKAHEAD` | **PASS** — 200 sampled rows, none used a game at or after kickoff |
+| `GATE_UNBIASED` | **PASS** — worst bias 0.460 pts (total), tolerance 0.5 |
+| `GATE_RMSE_SPREAD` | **FAIL** — 13.452 vs close 12.692 (ratio 1.060) |
+| `GATE_RMSE_TOTAL` | **FAIL** — 13.627 vs close 13.214 (ratio 1.031) |
+| `GATE_BEATS_ELO` | **FAIL** — 13.452 vs Elo 13.208 |
+| `GATE_BLEND_INFORMATIVE` | **FAIL** — spread t = −1.16, total t = +1.41 |
+| `GATE_CALIBRATED` | **FAIL** — worst bin off by 13.88pp (bin (0.35, 0.40], n=124) |
+| `GATE_KEY_NUMBERS` | **FAIL** — worst gap 2.83pp at \|margin\|=3, tolerance 2pp |
+
+**Do not read this as an improvement over the 13.88 spread RMSE quoted in the project
+brief.** That figure came from the predecessor build under a different configuration, so
+the two are not a controlled comparison — this is simply the first NFL measurement that is
+reproducible from committed evidence. The model remains worse than the market on both
+markets, and `GATE_BLEND_INFORMATIVE` reads negative on spreads, which is the same null
+result recorded throughout.
 
 ### The verification path was broken until 2026-08-13
 
