@@ -33,15 +33,38 @@ from src.backtest import (
     select_window,
     walk_forward,
 )
+from dataclasses import asdict
+
 from src.cfbd_client import BudgetedCFBD
 from src.config import CACHE_DIR,load_config
-from src.market import clv,residual_fit,season_week_groups
+from src.market import clv,fit_blend,residual_fit,season_week_groups
 from src.ratings import build_walkforward
 from src.features import (load_free_preseason, matchup_feature_table,
                           normalize_preseason_sources)
 from src._shared import SHARED_DIR
+from calibration_evidence import write_calibration_evidence
 from gate_artifact import load_gate_artifact,write_gate_artifact
 from model_identity import build_model_version
+
+# NCAA's only apparent edge -- a totals signal -- was a false positive that existed
+# solely against the opener and vanished against the close (GATES.md). `fit_blend`
+# defaults to the opener for `run_paper.py`'s exploratory grading of that same
+# phenomenon, but the public "Calibrated" column is a validation claim, and every other
+# honest NCAA gate (GATE_RMSE_*) grades against the close. Calibration evidence must
+# clear the same bar, not the one that produced the false positive.
+CALIBRATION_ANCHOR = "close"
+
+
+def fit_and_write_calibration(frame, cfg, *, cache_dir, model_version, data_cutoff):
+    """Fit NCAA blend weights against the close and persist them as calibration
+    evidence bound to this build. Caller supplies an already-windowed frame (the same
+    primary evaluation window the other close-anchored gates use)."""
+    weights = fit_blend(frame, cfg, window="close-anchored-primary",
+                         grade=CALIBRATION_ANCHOR)
+    return write_calibration_evidence(
+        cache_dir, league="ncaa", model_version=model_version,
+        data_cutoff=data_cutoff, weights=asdict(weights),
+    )
 
 RULE = "=" * 96
 
@@ -227,6 +250,13 @@ def main() -> int:
     artifact_path=write_gate_artifact(CACHE_DIR,league="ncaa",model_version=model_version,
         data_cutoff=None if pd.isna(cutoff) else cutoff.isoformat(),gates=gates,
         promotion_names={"GATE_OPENER_COVERAGE","GATE_NO_LOOKAHEAD","GATE_GARBAGE_FILTER","GATE_UNBIASED","GATE_UNBIASED_BY_WEEK","GATE_BLEND_INFORMATIVE","GATE_RMSE_TOTAL","GATE_RMSE_SPREAD","GATE_KEY_NUMBERS","GATE_CALIBRATED"})
+
+    calibration_path = fit_and_write_calibration(
+        select_window(frame, cfg.graded_seasons, restricted=True), cfg,
+        cache_dir=CACHE_DIR, model_version=model_version,
+        data_cutoff=None if pd.isna(cutoff) else cutoff.isoformat(),
+    )
+    print(f"  calibration evidence ({CALIBRATION_ANCHOR}-anchored): {calibration_path}")
     print()
     print(RULE)
     print("ACCEPTANCE GATES")
