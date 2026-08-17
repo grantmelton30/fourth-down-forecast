@@ -206,12 +206,35 @@ def test_appendix_a_anchor_coefficients_hold():
 
 @pytest.mark.integration
 def test_full_fbs_close_anchored_null_is_adequately_powered():
-    """The properly powered close-anchored test — the one that settles the null.
+    """The properly powered close-anchored test — the one that, when it clears, settles
+    the null.
 
     The restricted universe (n=1,543) has 65% power against the reference effect, so its
-    null was never conclusive. The full FBS window declared in D2a carries n=2,985 and
-    93% power, and reads b indistinguishable from zero. This is the assertion that makes
-    the NCAA totals null evidence of absence rather than absence of evidence.
+    null was never conclusive on its own. The full FBS window declared in D2a carries
+    n=2,985, enough power to make a clearing result here evidence of absence rather than
+    absence of evidence.
+
+    THIS IS DELIBERATELY NOT A FROZEN POINT-ESTIMATE BAND AROUND b~=0 (retired
+    2026-08-16). A fixed +-0.05 window around zero fails on every legitimate change to
+    `model_total` — e.g. `_fit_feature_challenger` promotes any `*_sum`-suffixed candidate
+    for totals when it beats base RMSE by >=0.05 on a held-out season, and a promotion
+    shifts this number across the whole historical window with no bug involved. Three
+    commits landed exactly such candidates (`head_coach_continuity_sum`, a
+    turnover-uncertainty feature, a preseason-merge-key fix) on 2026-08-12/13, immediately
+    before this drift was first observed — the likely, not confirmed, cause.
+
+    What Appendix A actually needs guarded is distance from APPENDIX_A_OPEN_B (0.195,
+    t=2.23) — the magnitude PROVEN to be a pure artifact of anchoring the measurement on
+    the opener. So this checks the 95% CI upper bound against that danger line, not the
+    point estimate against zero.
+
+    2026-08-16 reading: b=+0.0911, se=0.0631 -> CI upper ~+0.2148, ABOVE the 0.195 danger
+    line. GATES.md's prior text ("0.091 is far below the 0.2 reference effect") undersold
+    this: the point estimate is a null, but the CI no longer cleanly excludes the proven
+    false-positive magnitude. Until a fresh rebuild confirms whether a totals challenger
+    was promoted (`feature_total_promoted`) and re-derives this figure, the totals null is
+    PROVISIONAL, not settled — see GATES.md "Appendix A, revisited 2026-08-16". A failure
+    here is the correct, honest state, not a bug in the test.
     """
     base = _frame()
     full = base[base["fbs_only"]].dropna(
@@ -224,5 +247,13 @@ def test_full_fbs_close_anchored_null_is_adequately_powered():
         f"the settling test has lost power (now {p.power_at():.1%}) — the standing "
         "conclusion can no longer cite it"
     )
-    assert abs(p.b) < 0.05, f"b = {p.b:+.4f}; the recorded null is b ~ 0"
+    ci_upper = p.b + 1.96 * p.se_b
+    danger = APPENDIX_A_OPEN_B
+    assert ci_upper < danger, (
+        f"b = {p.b:+.4f} (se {p.se_b:.4f}), 95% CI upper {ci_upper:+.4f} — this no longer "
+        f"clears the proven false-positive magnitude ({danger:.3f}, "
+        f"t={APPENDIX_A_OPEN_T:.2f}, Appendix A). Confirm whether a totals challenger "
+        "feature was promoted (feature_total_promoted on a fresh rebuild) before citing "
+        "the totals null as settled again. See GATES.md 'Appendix A, revisited'."
+    )
     assert p.verdict == "NULL (adequately powered)"
