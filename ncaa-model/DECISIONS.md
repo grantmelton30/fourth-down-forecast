@@ -412,6 +412,37 @@ unexcluded. That is a statement about what has not been tested, not a finding.
 gain and week-bias corrections are kept at all, they must be refit against the close, and
 the refit must be pre-registered before `b` is looked at.
 
+## D7. The live-publication path and the gate-measurement path stay separate, 2026-08-17
+
+GATES.md's 2026-08-17 entries flagged, while root-causing `GATE_UNBIASED_BY_WEEK`'s "week
+4" reading, that the live site's fixes (preseason poll points, FCS ratings) cannot move
+any gate: `model_spread`/`model_total` (what every gate reads) come from `walk_forward`/
+`build_features`'s single OLS fit across the whole season, while `PRESEASON_FEATURES`
+only feed `fit_live_mean`, the separate system behind `projection_mean()` that the public
+site actually uses. Flagged then as "worth a real design decision... not left as a
+standing trap." Decided: **keep them separate.**
+
+The reason is not inertia -- `fit_live_mean` is phase-aware by design
+(`features.py::maturity_phase`: preseason/early/developing/established), fitting a
+separate model and separately deciding which candidate features earn promotion in each
+phase. `recruiting_rating`/`preseason_poll_points` are exactly the kind of feature that
+should matter heavily in week 1 and fade to irrelevance by week 6 as real in-season data
+accumulates -- `fit_live_mean` can represent that directly (a feature promoted in the
+`preseason` phase can simply not be promoted in `established`); a single whole-season OLS
+fit structurally cannot represent a feature's importance changing mid-season without
+becoming phase-aware itself, which is not a unification, it is rebuilding
+`build_features`/`walk_forward` into something close to what `GATE_CALIBRATED` already
+needs and has not been built for the same reason: real scope, not attempted without
+validating it end to end first.
+
+**What actually closes this gap, not attempted today:** a dedicated gate or analysis
+script measuring `fit_live_mean`'s own walk-forward RMSE per phase, the way
+`GATE_RMSE_SPREAD`/`GATE_RMSE_TOTAL` already measure `model_spread`'s -- so "does the live
+site's extra machinery actually predict better where it's supposed to" has a real,
+committed number instead of only the internal `challenger_promoted` check `fit_live_mean`
+already does on itself. Recorded as the concrete next step, scoped the same deliberate way
+`GATE_CALIBRATED` was.
+
 ## D6. Spread sign convention
 
 CFBD quotes spreads negative = home favored; nflverse is the opposite. Normalized to
