@@ -346,6 +346,36 @@ one pathway's fix reaches the other.
 
 ---
 
+## NFL GATE_SCALE forensic pass, 2026-08-17 — confirmed honest, mechanism now precise
+
+Item #6 from the project-status review: give NFL's `GATE_SCALE` (spread sd ratio 0.990,
+total 0.707) the same scrutiny NCAA's got today, rather than taking its "don't fix, honest
+signal gap" docstring on faith the way the previous pass did.
+
+Traced the asymmetry to its exact mechanism instead of stopping at the docstring.
+`config/nfl.yaml`'s `projection.spread_source: linear` means spread is on `_fit_l1_spread`
+-- an actively-fit least-squares estimator, further enriched by `_fit_feature_challenger`
+(rest days, coach continuity, injury/matchup burden, validated the same way NCAA's
+`fit_live_mean` validates its candidates) -- while total is pinned to the raw drive
+simulator. That split is not new; NEXT_SESSION.md already measured that the simulator
+beats linear on total RMSE (13.445 vs 13.630) while linear beats the simulator on spread
+RMSE (13.196 vs 13.668), and chose accordingly. What was not previously stated: that same
+choice is *why* `GATE_SCALE` reads so differently on the two markets. Spread's ratio is
+near 1.0 because it's on the actively-fit, richer-feature path; total's 0.707 is the raw
+simulator's naturally compressed dispersion, undiluted -- the same mechanism behind
+NCAA's blowout-tail underproduction, fixed there with `SimResult.recentered()` onto a
+better-calibrated linear target.
+
+That specific fix does not transfer here. Recentering NCAA's tail onto its linear mean
+worked because the linear estimator is better-calibrated on dispersion without being
+worse on accuracy. NFL's linear total estimator is *worse* on RMSE (that's the whole
+reason total stays on the simulator) -- recentering onto it would trade a dispersion
+problem for an accuracy problem, undermining the reason this design exists. No fix
+applied. Confirms the docstring's conclusion holds, now for a stated mechanism rather
+than as a blanket "trust the analysis" — worth knowing precisely instead of assumed.
+
+---
+
 ## Historical readings (superseded — do not quote as current)
 
 The previous version of this file carried a pass/fail table measured **2026-08-04**, with
