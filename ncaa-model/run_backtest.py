@@ -230,7 +230,7 @@ def main() -> int:
     # weather, dome/lat/lon), which ingest.load_games alone does not carry -- attach_venues
     # is a separate, one-call CFBD pull, same as project_game.py's live-projection path.
     games_with_venues = attach_venues(games, load_venues(client))
-    sim_pmf = pooled_margin_pmf(cfg, games_with_venues, drives, wf)
+    sim_pmf = pooled_margin_pmf(cfg, games_with_venues, drives, wf, frame)
     key_numbers_gate = gate_key_numbers(sim_pmf, market)
     print(key_numbers_gate)
     if key_numbers_gate.detail:

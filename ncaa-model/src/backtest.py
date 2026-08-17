@@ -488,16 +488,39 @@ def pooled_margin_pmf(
     games: pd.DataFrame,
     drives_raw: pd.DataFrame,
     walkforward: pd.DataFrame,
+    linear_frame: pd.DataFrame,
     n_games: int = 400,
     n_sims: int = 4000,
 ) -> dict:
     """Pool simulated margins across many historical games and compare the shape to
-    history. Mirrors nfl-model's `backtest.py::pooled_margin_pmf` exactly.
+    history. Mirrors nfl-model's `backtest.py::pooled_margin_pmf`, with one addition NFL
+    already had and NCAA did not: each sampled game's raw simulated distribution is
+    recentred (`SimResult.recentered`, an importance-reweight, not a shift) onto that
+    game's own `model_spread` from `linear_frame` before pooling.
 
-    In-sample ratings are fine here -- this tests the distribution SHAPE the drive
-    simulator produces, not predictive power. Predictive power is what the mean-path
-    gates (GATE_RMSE_*, GATE_BLEND_INFORMATIVE, ...) already grade, walk-forward, and this
-    function does not touch that path.
+    Why this exists, root-caused 2026-08-17 in `analysis/blowout_tail_diagnosis.py`: the
+    raw (uncentred) simulator's own predicted mean varies only ~7.6 pts SD across
+    different matchups, vs ~13.1 for the market's spread and ~11.6 for this codebase's
+    gain-corrected `model_spread` -- the simulator's Monte Carlo draw variance is
+    approximately right, but it is compressing genuine mismatches toward the mean, which
+    is exactly what produces GATE_KEY_NUMBERS's underproduced blowout tail. NFL avoids
+    this by construction: `SimResult.recentered()` is called before any consumer ever
+    sees a sim margin. NCAA never wired that path in (the same missing piece
+    `GATE_CALIBRATED` needs `walk_forward` to grow, per GATES.md), so both this gate and
+    `project_game.py`'s printed spread were reading the uncorrected number.
+
+    This still does not touch the mean PATH in the sense that matters for betting
+    decisions -- `model_spread`/`model_total` are not written here, only read from
+    `linear_frame`, which is the same walk-forward frame the RMSE/blend gates already
+    grade. It changes what THIS gate measures (recentred sim shape, not raw sim shape),
+    which is the point: it makes the shape test agree with the mean the model actually
+    reports.
+
+    `linear_frame` must carry `game_id` and `model_spread` (e.g. `run_backtest.py`'s
+    `frame`, or the persisted `backtest_frame_default.parquet`). A game missing from it,
+    or with a null `model_spread`, is dropped from the pool rather than pooled uncentred
+    -- pooling a mix of recentred and raw margins would silently reintroduce the same bug
+    for whichever games happened to be missing.
     """
     season = int(walkforward["season"].max())
     drive_table = build_drive_table(drives_raw, games)
@@ -505,6 +528,13 @@ def pooled_margin_pmf(
     drive_model = fit_drive_model(drive_table, walkforward, cfg, as_of_season=season)
     endgame = fit_endgame_table(drive_table, cfg, as_of_season=season)
     venue_hfa = estimate_venue_hfa(games, cfg, walkforward=walkforward)
+
+    spread_by_game = (
+        linear_frame[["game_id", "model_spread"]]
+        .dropna(subset=["model_spread"])
+        .drop_duplicates(subset=["game_id"])
+        .set_index("game_id")["model_spread"]
+    )
 
     pool = games[
         games["season"].isin(cfg.graded_seasons)
@@ -515,8 +545,17 @@ def pooled_margin_pmf(
 
     sim_cfg = replace(cfg, simulation=replace(cfg.simulation, n_sims=n_sims))
     rng = np.random.default_rng(cfg.simulation.seed)
-    pooled = []
+    # `recentered()` does not shift `sim.margins` -- it reweights the same draws
+    # (`sim.weights`) so their weighted mean hits the target. So the pool must accumulate
+    # a WEIGHTED histogram per game, not concatenate raw margin arrays and count: that
+    # would silently discard every game's recentering and reproduce the pre-fix bug.
+    pooled_pmf: dict[int, float] = {}
+    n_pooled = 0
+    skipped_no_target = 0
     for _, g in pool.iterrows():
+        if g["game_id"] not in spread_by_game.index:
+            skipped_no_target += 1
+            continue
         try:
             rt = ratings_at(walkforward, g["season"], g["week"])
         except KeyError:
@@ -529,13 +568,23 @@ def pooled_margin_pmf(
             context_adj=ctx, endgame=endgame, rng=rng,
             neutral_site=bool(g.get("neutralSite", False)),
         )
-        pooled.append(sim.margins)
+        sim = sim.recentered(float(spread_by_game.loc[g["game_id"]]))
+        vals, inv = np.unique(sim.margins, return_inverse=True)
+        game_mass = np.zeros(len(vals))
+        np.add.at(game_mass, inv, sim.weights)
+        for v, w in zip(vals, game_mass):
+            pooled_pmf[int(v)] = pooled_pmf.get(int(v), 0.0) + float(w)
+        n_pooled += 1
 
-    if not pooled:
+    if skipped_no_target:
+        print(f"  pooled_margin_pmf: skipped {skipped_no_target} sampled games with no "
+              f"model_spread in linear_frame")
+    if not n_pooled:
         return {}
-    allm = np.concatenate(pooled)
-    vals, counts = np.unique(allm, return_counts=True)
-    return {int(v): float(c / counts.sum()) for v, c in zip(vals, counts)}
+    # Each game contributes equal total mass (its own weights already sum to 1), matching
+    # the pre-fix behaviour where every game supplied the same n_sims equally-weighted
+    # draws -- games were, and still are, weighted equally in the pool.
+    return {v: w / n_pooled for v, w in pooled_pmf.items()}
 
 
 def gate_key_numbers(

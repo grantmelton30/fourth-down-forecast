@@ -150,6 +150,11 @@ def main() -> None:
     print(f"  PROJECTED SCORE      {away} {as_:.1f}  -  {home} {hs:.1f}")
     print(f"  PROJECTED TOTAL      {sim.mean_total:.1f}")
     print(f"  PROJECTED SPREAD     {fav} by {abs(sim.mean_margin):.1f}")
+    print("    (raw simulator mean, not recentred onto the gain-corrected linear")
+    print("    model_spread -- run_backtest.py's GATE_KEY_NUMBERS analysis found the raw")
+    print("    simulator mean under-spreads mismatches; this number runs closer to")
+    print("    league-average than the codebase's own calibrated projection would.")
+    print("    See GATES.md's GATE_KEY_NUMBERS entry.)")
     print(f"  most likely score    {away} {np.median(sim.away_scores):.0f}  -  "
           f"{home} {np.median(sim.home_scores):.0f}")
     print()
