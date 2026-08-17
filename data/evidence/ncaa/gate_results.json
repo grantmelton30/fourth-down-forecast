@@ -4,8 +4,8 @@
     "GATE_UNBIASED_BY_WEEK",
     "GATE_RMSE_TOTAL",
     "GATE_RMSE_SPREAD",
-    "GATE_CALIBRATED",
-    "GATE_KEY_NUMBERS"
+    "GATE_KEY_NUMBERS",
+    "GATE_CALIBRATED"
   ],
   "data_cutoff": "2025-12-13T20:00:00+00:00",
   "gates": [
@@ -153,10 +153,25 @@
       "market": null,
       "n": null,
       "name": "GATE_API_BUDGET",
-      "observed": "184 calls for a cold build (budget 250)",
+      "observed": "203 calls for a cold build (budget 250)",
       "operator": null,
       "passed": true,
       "promotion": false,
+      "threshold": null
+    },
+    {
+      "ci_high": null,
+      "ci_low": null,
+      "detail": "|3|: sim  9.12%  real 10.66%  (-1.54pp)\n      |7|: sim  8.21%  real  8.55%  (-0.33pp)\n      |10|: sim  4.96%  real  4.71%  (+0.25pp)\n      |14|: sim  4.60%  real  4.14%  (+0.46pp)\n      |17|: sim  3.46%  real  3.92%  (-0.47pp)\n      |21|: sim  3.13%  real  3.64%  (-0.51pp)\n      >28: sim  9.39%  real 17.90%  (-8.51pp)",
+      "estimate": null,
+      "evaluation_line": null,
+      "market": null,
+      "n": null,
+      "name": "GATE_KEY_NUMBERS",
+      "observed": "worst gap 8.51pp at |margin|=>28 (tolerance 2pp)",
+      "operator": null,
+      "passed": false,
+      "promotion": true,
       "threshold": null
     },
     {
@@ -173,26 +188,11 @@
       "passed": null,
       "promotion": true,
       "threshold": null
-    },
-    {
-      "ci_high": null,
-      "ci_low": null,
-      "detail": "",
-      "estimate": null,
-      "evaluation_line": null,
-      "market": null,
-      "n": null,
-      "name": "GATE_KEY_NUMBERS",
-      "observed": "required promotion gate was not produced",
-      "operator": null,
-      "passed": null,
-      "promotion": true,
-      "threshold": null
     }
   ],
-  "generated_at": "2026-08-14T14:46:24.988728+00:00",
+  "generated_at": "2026-08-17T03:14:41.751343+00:00",
   "league": "ncaa",
-  "model_version": "ncaa-3ebcca364c0c65c7e2f4",
+  "model_version": "ncaa-90655c20fcbc2817b5d3",
   "producer": "run_backtest.py",
   "schema_version": 1
 }
