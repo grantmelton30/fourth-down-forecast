@@ -41,6 +41,7 @@ from src.cfbd_client import BudgetedCFBD
 from src.config import CACHE_DIR,load_config
 from src.market import clv,fit_blend,residual_fit,season_week_groups
 from src.ratings import build_walkforward
+from src.venues import attach_venues, load_venues
 from src.features import (load_free_preseason, matchup_feature_table,
                           normalize_preseason_sources)
 from src._shared import SHARED_DIR
@@ -225,7 +226,11 @@ def main() -> int:
     print("SIMULATOR-BACKED DISTRIBUTION CHECK (GATE_KEY_NUMBERS) -- pooled sample,")
     print("in-sample ratings; tests shape only, not predictive power")
     print(RULE)
-    sim_pmf = pooled_margin_pmf(cfg, games, drives, wf)
+    # pooled_margin_pmf's per-game context needs venue_id (for venue-HFA and, via
+    # weather, dome/lat/lon), which ingest.load_games alone does not carry -- attach_venues
+    # is a separate, one-call CFBD pull, same as project_game.py's live-projection path.
+    games_with_venues = attach_venues(games, load_venues(client))
+    sim_pmf = pooled_margin_pmf(cfg, games_with_venues, drives, wf)
     key_numbers_gate = gate_key_numbers(sim_pmf, market)
     print(key_numbers_gate)
     if key_numbers_gate.detail:
