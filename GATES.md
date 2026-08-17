@@ -409,6 +409,62 @@ everything else today.
 
 ---
 
+## Real, team-specific FCS ratings, 2026-08-17
+
+Every non-FBS opponent used to collapse into one shared `__FCS__` rating bucket at
+ingest (`ingest.py::build_game_offense`), so the model could not distinguish an elite,
+perennial-contender FCS program from a bottom-tier one. Quantified the blast radius
+before fixing it: FBS-vs-FCS games are only 3.5% of a full season (602/17,152,
+2021-2025) but **18.5% of week 1** (231/1,252) — the exact week the model is already
+weakest and the site gets the most attention. Directly caused the Jacksonville State @
+North Dakota State sign flip from the week-1 review (model favored the FBS team, market
+favored NDSU by 8.5).
+
+Checked feasibility before touching anything: CFBD's cached drive/play data already
+covers FCS-vs-FCS games in full (North Dakota State alone has 294 real drives cached for
+2024, a normal full-season sample) — no new CFBD calls needed. The fix turned out to be
+one function: stop collapsing `"fcs"`-classified teams alongside `"fbs"` in
+`build_game_offense`'s `home_norm`/`away_norm` construction (still collapse
+II/III/unclassified — verified directly that FBS never schedules them, 0 such games in
+7 seasons). `team_universe`/`build_walkforward`/`fit_pace` already derive the fitted team
+list dynamically from whatever's in the frame, and `resolve_team_ratings` already
+prefers a real team name over the bucket (its own docstring: written to handle a wider
+universe than it had ever actually been given) — none of that needed to change.
+`fit_ratings`'s ridge is a connected graph (FBS-vs-FBS, ~120/season FBS-vs-FCS bridge
+games, now FCS-vs-FCS too), so the joint least-squares solve places every team on the
+same PPA-per-play scale automatically; no separate calibration step was needed.
+
+**Validated end to end.** Cold rebuild: 30s, no crash, 266 teams now individually rated
+(was ~131). New ratings pass a face-validity check directly: North Dakota State
+(off +0.046, def -0.033, both strong) and Montana (+0.031/+0.004) rate clearly above the
+residual bucket (-0.022/+0.045); Nicholls, a genuinely weaker program, rates below both.
+Every currently-measured gate (`GATE_RMSE_*`, `GATE_SCALE`, `GATE_KEY_NUMBERS`,
+`GATE_UNBIASED_BY_WEEK`) is computed on `fbs_only`/`restricted` populations that already
+exclude FBS-vs-FCS games, so none of them should move on this fix's account — most read
+flat, and two moved further than expected in a *good* direction anyway
+(`GATE_UNBIASED_BY_WEEK` 3.401→2.703, `GATE_KEY_NUMBERS`'s >28 tail 5.05pp→4.13pp),
+because FBS teams' own ratings get more precise too once their ~1 bridge game a season is
+credited against the specific opponent they actually played instead of a blurred average.
+The Jacksonville State @ North Dakota State sign flip is fully resolved: model now
+favors NDSU by 15.6, matching the market's own +8.5 in direction, a real gap down from a
+wrong-signed -19.3pt one. Whole week-1 slate: mean spread bias -4.47pt → **-1.09pt**,
+games off by >15pt 10 → 6.
+
+**One real edge case found and fixed along the way.** `fit_live_mean` fits spread and
+total as two separate ridge models with nothing constraining their combination to be
+physically possible. Real FCS ratings can now be extreme enough to break that assumption:
+Georgia vs Tennessee State projected spread +47.6 and total +47.0, which implies an away
+score of (47.0-47.6)/2 = -0.3 — impossible on any scoreboard. Each target was
+individually inside the simulator's own range; the pair wasn't jointly achievable on its
+score lattice, and `sim.recentered().retotaled()` correctly raised rather than return
+something nonsensical. `scripts/build_slate.py::_independent_forecast` now catches that
+specific `ValueError` and falls back to the raw simulator for that one game — the same
+fallback already used when the validated mean doesn't exist at all, not a new code path,
+and disclosed via the same `source` field either way. The real fix (constraining the two
+ridge models jointly) is not attempted here; recorded as a candidate follow-on.
+
+---
+
 ## Historical readings (superseded — do not quote as current)
 
 The previous version of this file carried a pass/fail table measured **2026-08-04**, with

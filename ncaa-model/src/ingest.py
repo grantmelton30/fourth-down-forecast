@@ -371,8 +371,9 @@ def build_game_offense(
 ) -> pd.DataFrame:
     """One row per (game, offensive unit): efficiency, drive count, matchup context.
 
-    Efficiency is mean PPA per scrimmage play on competitive plays only. Non-FBS opponents
-    collapse into a single synthetic team so their games still inform the FBS side.
+    Efficiency is mean PPA per scrimmage play on competitive plays only. FBS and FCS teams
+    keep their own identity and get real, individually fitted ratings (2026-08-17); only
+    sub-FCS opponents, which FBS never schedules, collapse into a single synthetic team.
     """
     path = _parquet("game_offense")
     signature=build_cache_signature(builder=Path(__file__),config=asdict(cfg),inputs={"plays":frame_signature(plays,["game_id","offense","defense","period","ppa","playType","competitive"]),"drives":frame_signature(drives,["game_id","offense","driveNumber"]),"games":frame_signature(games,["game_id","season","week","kickoff","completed","homePoints","awayPoints"])},artifact_version=2)
@@ -399,9 +400,28 @@ def build_game_offense(
     ]]
     df = agg.merge(g, on="game_id", how="inner")
 
+    # FBS and FCS teams keep their own names -- both get real, walk-forward ratings.
+    # Everything below FCS (II/III/unclassified) collapses into the shared bucket: FBS
+    # never actually schedules them (verified directly against the cached games, 2019-2025,
+    # 0 such matchups), so there is no bridge connecting them to the rated graph and no
+    # benefit to a name they would never need resolved.
+    #
+    # Rating FCS teams individually, rather than collapsing them into `fcs` like every
+    # other non-FBS opponent, fixes a real, previously undiagnosed error: with one pooled
+    # rating for all ~130 FCS teams, the model could not distinguish an elite program (e.g.
+    # North Dakota State) from a bottom-tier one, and got a real week-1 sign flip wrong
+    # because of it (GATES.md, 2026-08-17). `fit_ratings`'s ridge solve already handles
+    # this correctly with no other code change: FBS-vs-FBS, FBS-vs-FCS (the ~120/season
+    # bridge games), and now FCS-vs-FCS games form one connected graph, so the joint
+    # least-squares solve places every team on the same PPA-per-play scale automatically.
+    # `team_universe`/`build_walkforward` already derive the fitted team list from
+    # whatever is in this frame, and `resolve_team_ratings` already prefers a real team
+    # name over the bucket -- both were written to handle a wider universe than they were
+    # ever actually given.
+    rated = {"fbs", "fcs"}
     fcs = cfg.teams.fcs_bucket_name
-    df["home_norm"] = np.where(df["homeClassification"] == "fbs", df["homeTeam"], fcs)
-    df["away_norm"] = np.where(df["awayClassification"] == "fbs", df["awayTeam"], fcs)
+    df["home_norm"] = np.where(df["homeClassification"].isin(rated), df["homeTeam"], fcs)
+    df["away_norm"] = np.where(df["awayClassification"].isin(rated), df["awayTeam"], fcs)
     is_home_off = df["offense"] == df["homeTeam"]
     df["offense_norm"] = np.where(is_home_off, df["home_norm"], df["away_norm"])
     df["defense_norm"] = np.where(is_home_off, df["away_norm"], df["home_norm"])

@@ -269,13 +269,15 @@ def net_epa_vec(
 
 
 def resolve_team_ratings(ratings: pd.DataFrame, team: str, cfg: Config) -> pd.Series:
-    """One team's ratings row, falling back to the FCS bucket for non-FBS opponents.
+    """One team's ratings row, falling back to the shared bucket for unrated opponents.
 
-    `ingest.build_game_offense` rewrites every non-FBS team to `cfg.teams.fcs_bucket_name`,
-    so the ridge fits one pooled rating for all of them and that is what a projection
-    against an FCS opponent should use. This function exists because a plain
-    `ratings.loc[team]` -- which is what the NFL binding can afford to do -- raises KeyError
-    the first time someone projects a week-one body-bag game.
+    FBS and FCS teams get real, individually fitted ratings (2026-08-17); `team in
+    ratings.index` finds those directly. `ingest.build_game_offense` still rewrites
+    sub-FCS opponents (II/III/unclassified -- FBS never schedules them) to
+    `cfg.teams.fcs_bucket_name`, so the ridge fits one pooled rating for that residual
+    group, and this function exists because a plain `ratings.loc[team]` -- which is what
+    the NFL binding can afford to do -- raises KeyError the first time someone projects a
+    game against one of them.
 
     The configured `fcs_off_rating` / `fcs_def_rating` are the last resort, used only when
     the bucket itself has no fitted rating yet.

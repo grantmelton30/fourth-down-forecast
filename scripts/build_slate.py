@@ -33,6 +33,36 @@ def manual_lines(path: Path) -> pd.DataFrame:
     return frame
 
 
+def _independent_forecast(sim, mean, uncertainty):
+    """The validated mean when it exists and is usable, else the raw simulator.
+
+    Found 2026-08-17, the day real FCS ratings went live: `fit_live_mean` fits spread and
+    total as two SEPARATE ridge models, with nothing constraining their combination to be
+    physically possible. For an ordinary game this never bites -- real spread/total pairs
+    are always internally consistent. For the most extreme mismatches it can fail: Georgia
+    vs Tennessee State projected spread +47.6 and total +47.0, which implies an away score
+    of (47.0-47.6)/2 = -0.3, impossible on any scoreboard. Each target is individually
+    inside the simulator's own range; the pair isn't jointly achievable on its score
+    lattice, and `sim.recentered().retotaled()` raises rather than silently return
+    something nonsensical (shared/sim_core.py's own `_calibration_weights`, unchanged).
+
+    Rather than crash the whole slate build on one extreme mismatch, or silently patch the
+    two ridge models' targets against each other (a real fix, not attempted here), this
+    falls back to the raw simulator for that one game -- the exact same fallback already
+    used when `mean is None`, just for a second reason the site's own `source` field
+    already discloses either way.
+    """
+    if mean is None:
+        return forecast_from_sim(sim)
+    try:
+        return forecast_from_projection(
+            sim, spread=mean["spread"], total=mean["total"],
+            interval_multiplier=uncertainty["multiplier"],
+        )
+    except ValueError:
+        return forecast_from_sim(sim)
+
+
 def unavailable_for(league: str, adapter=None, game_id=None) -> tuple[str, ...]:
     """Reasons this game's evidence is short of what a fully-mature build could have.
 
@@ -101,13 +131,7 @@ def main() -> int:
                 if league == "ncaa" and hasattr(adapter, "projection_uncertainty")
                 else {"multiplier": 1.0, "reasons": ()}
             )
-            independent = (
-                forecast_from_projection(
-                    sim, spread=mean["spread"], total=mean["total"],
-                    interval_multiplier=uncertainty["multiplier"],
-                )
-                if mean is not None else forecast_from_sim(sim)
-            )
+            independent = _independent_forecast(sim, mean, uncertainty)
             market, evidence = market_for_game(
                 game, league_lines, league=league, as_of=now)
             calibrated = calibration_from_weights(
