@@ -904,11 +904,13 @@ class NCAAAdapter(SportAdapter):
             return self._cache["preseason"]
         features = self._module("features")
         raw: dict[str, list[pd.DataFrame]] = {
-            name: [] for name in ("returning", "portal", "recruiting", "talent", "coaching")
+            name: [] for name in
+            ("returning", "portal", "recruiting", "talent", "coaching", "rankings")
         }
         stems = {
             "returning": "returning", "portal": "portal",
             "recruiting": "recruiting", "talent": "talent", "coaching": "coaches",
+            "rankings": "rankings",
         }
         for name, stem in stems.items():
             for path in sorted(self._cache_dir().glob(f"{stem}_[0-9][0-9][0-9][0-9].json")):

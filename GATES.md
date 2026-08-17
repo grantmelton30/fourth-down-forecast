@@ -280,6 +280,43 @@ against the close.
 
 ---
 
+## Preseason poll points — a real, validated preseason signal, added 2026-08-17
+
+Prompted by the week-1 review: the model's preseason candidate features (recruiting,
+returning production, portal activity, continuity) all describe roster *inputs*, but none
+of them are a human judgment about the *output* — how good the resulting team actually is.
+A generic "new head coach" dummy applies the same average historical effect to every
+coaching change; it cannot know that one specific hire is a proven program-builder and
+another is a retread. The market prices that in immediately; the model had no path to it.
+
+`ratings/sp` (CFBD's SP+) looked like the fix and was rejected after direct measurement:
+`week=` had no effect on a past season's result (2024 full-season and week=1 pulls
+returned the identical, final, descriptive rating), so a "preseason" SP+ pull for a
+historical season is actually the whole season's outcome leaking in as a prior. Not
+usable for a validated, leakage-safe feature.
+
+`rankings?week=1&seasonType=regular` does not have that problem — polls are inherently
+time-stamped, and the pulled 2024 week-1 AP Top 25 (Georgia 1, Ohio State 2, ... Florida
+State 10) matches the real, well-documented preseason poll, not one contaminated by
+FSU's actual historically bad season. Implemented as `preseason_poll_points` (mean of
+AP Top 25 / Coaches Poll points, per `src/features.py::_preseason_poll_points`), zero-filled
+for teams outside the top 25 — being unranked is the signal, not missing data — and wired
+through the existing `PRESEASON_FEATURES` / validated-challenger-promotion machinery
+exactly like every other preseason candidate, not force-fed in unvalidated.
+
+**Result: promoted, and it measurably helps.** `preseason_poll_points_diff_preseason`
+is in `fit_live_mean`'s spread feature set and `spread_preseason_promoted` stays `True`
+with it included. Measured on the real week-1 slate (51 games with a market line): mean
+spread bias -4.84pt → **-4.47pt**, SD 10.10 → 9.61, games off by >15pt 11 → 10. The
+effect concentrates where you'd expect — teams the human polls actually rank move the
+most (Texas State @ Texas: gap -18.6pt → -13.8pt; North Texas @ Indiana: -22.3pt →
+-17.9pt), while games between two unranked teams (Oklahoma State @ Tulsa) are essentially
+unaffected, since both sides contribute zero poll points either way. 6th CFBD call added
+per season (192/250 budget, still comfortable). 32/34 ncaa-model tests, 114/114 shared
+tests pass (2 pre-existing Appendix A failures, unrelated).
+
+---
+
 ## Historical readings (superseded — do not quote as current)
 
 The previous version of this file carried a pass/fail table measured **2026-08-04**, with

@@ -15,6 +15,7 @@ PRESEASON_FEATURES = (
     "prior_power_rating", "returning_production", "portal_net_rating", "recruiting_rating",
     "talent_composite", "qb_continuity", "head_coach_continuity",
     "offensive_coordinator_continuity", "defensive_coordinator_continuity",
+    "preseason_poll_points",
 )
 
 
@@ -81,12 +82,13 @@ def add_preseason_matchup_features(
                 out[f"home_{feature}"] + out[f"away_{feature}"]
             )
     phases = out["week"].map(maturity_phase)
+    interacted = {}
     for feature in PRESEASON_FEATURES:
         for kind in ("diff", "sum"):
             base = f"{feature}_{kind}"
             for phase in ("preseason", "early", "developing", "established"):
-                out[f"{base}_{phase}"] = out[base].where(phases.eq(phase))
-    return out
+                interacted[f"{base}_{phase}"] = out[base].where(phases.eq(phase))
+    return pd.concat([out, pd.DataFrame(interacted, index=out.index)], axis=1)
 
 
 def build_team_game_features(plays: pd.DataFrame) -> pd.DataFrame:
@@ -236,10 +238,65 @@ def _coach_seasons(coaching: pd.DataFrame) -> pd.DataFrame:
     return out[out["coach"].astype(str).str.strip().ne("")]
 
 
+def _preseason_poll_points(
+    rankings: pd.DataFrame, universe: "pd.DataFrame | None"
+) -> pd.DataFrame:
+    """Preseason AP/Coaches poll points -- a genuine, leakage-safe human-expert prior.
+
+    Added 2026-08-17 after a week-1 review found the model missing team-specific
+    turnover news (a coaching hire, a portal-built roster) that a human poll panel
+    prices in immediately and the model's box-score-only ratings cannot see for
+    another several games. CFBD's `/ratings/sp` looked like the same kind of signal
+    but was verified to leak: `week=` had no effect on a past season's result (year=2024
+    full-season vs week=1 both returned the identical, final descriptive rating), so a
+    "preseason" pull for a historical season would actually be the whole season's outcome
+    smuggled in as a prior. `/rankings?week=1&seasonType=regular` does not have this
+    problem -- polls are inherently time-stamped, and the 2024 week-1 AP Top 25 pulled
+    here (Georgia 1, Ohio State 2, ... Florida State 10) matches the real, well-known
+    preseason poll, not a result contaminated by FSU's actual historically bad season.
+
+    Not appearing in the poll is itself the signal, not missing data -- the poll only
+    ever names 25 teams by construction, and every other FBS team is genuinely unranked.
+    Filled to 0.0 only for teams present in `universe` (this season's recruiting-rating
+    roll, a reliable ~130+ team list) for seasons where a poll was actually parsed, so a
+    season with no rows here still resolves to an honest NaN via the caller's merge
+    rather than an invented zero.
+    """
+    rows = []
+    for _, row in rankings.iterrows():
+        season, polls = row.get("season"), row.get("polls")
+        if season is None or not isinstance(polls, list):
+            continue
+        by_team: dict[str, list[float]] = {}
+        for poll in polls:
+            if poll.get("poll") not in ("AP Top 25", "Coaches Poll"):
+                continue
+            for entry in poll.get("ranks") or []:
+                school, points = entry.get("school"), entry.get("points")
+                if school is None or points is None:
+                    continue
+                by_team.setdefault(school, []).append(float(points))
+        for team, values in by_team.items():
+            rows.append({"season": season, "team": team,
+                         "preseason_poll_points": float(np.mean(values))})
+    ranked = pd.DataFrame(rows, columns=["season", "team", "preseason_poll_points"])
+    if universe is None or not len(universe) or ranked.empty:
+        return ranked
+    base = pd.DataFrame({
+        "season": pd.to_numeric(_column(universe, "season", "year"), errors="coerce"),
+        "team": _column(universe, "team", "school"),
+    }).dropna(subset=["season", "team"])
+    base = base[base["season"].isin(ranked["season"].unique())]
+    filled = base.merge(ranked, on=["season", "team"], how="left")
+    filled["preseason_poll_points"] = filled["preseason_poll_points"].fillna(0.0)
+    return filled
+
+
 def normalize_preseason_sources(
     *, returning: pd.DataFrame | None = None, portal: pd.DataFrame | None = None,
     recruiting: pd.DataFrame | None = None, talent: pd.DataFrame | None = None,
-    coaching: pd.DataFrame | None = None, manual: pd.DataFrame | None = None,
+    coaching: pd.DataFrame | None = None, rankings: pd.DataFrame | None = None,
+    manual: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Normalize the stable parts of several CFBD schemas into team-season rows.
 
@@ -280,6 +337,10 @@ def normalize_preseason_sources(
                 "team": _column(d, "team", "school"),
                 output: pd.to_numeric(_column(d, *value_aliases), errors="coerce"),
             }))
+    if rankings is not None and len(rankings):
+        poll_points = _preseason_poll_points(rankings, recruiting)
+        if len(poll_points):
+            parts.append(poll_points)
     if coaching is not None and len(coaching):
         c = _coach_seasons(coaching)
         if len(c):
@@ -370,7 +431,7 @@ def game_uncertainty_multiplier(
 
 
 def load_free_preseason(client, seasons: list[int]) -> dict[str, pd.DataFrame]:
-    """Budget-visible CFBD pulls: five calls per season, then permanent cache."""
+    """Budget-visible CFBD pulls: six calls per season, then permanent cache."""
     from .cfbd_client import APIBudgetExceeded
 
     result = {name: [] for name in ("returning", "portal", "recruiting", "talent")}
@@ -381,6 +442,15 @@ def load_free_preseason(client, seasons: list[int]) -> dict[str, pd.DataFrame]:
     for season in seasons:
         for name, endpoint in endpoints.items():
             result[name].append(client.frame(endpoint, f"{name}_{season}", year=season))
+    # week=1, seasonType="regular" pins this to the preseason poll specifically -- see
+    # _preseason_poll_points for why that matters (unlike /ratings/sp, this is verified
+    # leakage-safe for historical seasons).
+    result["rankings"] = []
+    for season in seasons:
+        result["rankings"].append(
+            client.frame("rankings", f"rankings_{season}", year=season,
+                        week=1, seasonType="regular")
+        )
     # Coaches is not naturally a one-row-per-year endpoint; requesting by year keeps the
     # call bounded and the raw response cached even when it is empty.
     result["coaching"] = []
