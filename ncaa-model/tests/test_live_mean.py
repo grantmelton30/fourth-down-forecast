@@ -6,7 +6,53 @@ import pytest
 
 from src.features import (PRESEASON_FEATURES, add_preseason_matchup_features,
                           maturity_phase, previous_season_power)
-from src.live_mean import fit_live_mean
+from src.live_mean import LiveMeanModel, fit_live_mean
+from validated_model import ValidatedRidge
+
+
+def _constant_ridge(value: float, promoted: bool = False) -> ValidatedRidge:
+    """A ValidatedRidge that always predicts `value`, regardless of input -- for testing
+    LiveMeanModel.predict()'s own logic in isolation from the real fitting machinery."""
+    return ValidatedRidge(
+        features=(), center=np.array([]), scale=np.array([]), medians=np.array([]),
+        beta=np.array([value]), lower=np.array([]), upper=np.array([]),
+        challenger_promoted=promoted, validation_base_rmse=0.0,
+        validation_challenger_rmse=0.0,
+    )
+
+
+def test_predict_clips_an_infeasible_spread_total_pair_to_the_physical_floor():
+    """Regression guard for the 2026-08-17 bug: fit_live_mean fits spread and total as
+    two separate ridge models with nothing constraining their combination to be
+    physically possible. Real FCS ratings made this a real, not just theoretical, failure
+    -- Georgia vs Tennessee State predicted spread +47.6, total +47.0, which implies a
+    losing score of (47.0-47.6)/2 = -0.3. total can never be less than |spread|; a shutout
+    is the most lopsided a real game can be. Reproduces that exact pair directly against
+    LiveMeanModel.predict() rather than the full fit, so this stays fast and deterministic
+    even if the live rating data that first exposed it changes."""
+    model = LiveMeanModel(
+        spread=_constant_ridge(47.55294280197436, promoted=True),
+        total=_constant_ridge(47.01042655031927, promoted=False),
+        phase="preseason", validation_season=2025,
+    )
+
+    spread, total = model.predict(pd.DataFrame({"x": [0.0]}))
+
+    assert spread == pytest.approx(47.55294280197436)
+    assert total >= abs(spread), "total must never be less than |spread| -- negative score"
+    assert total == pytest.approx(abs(spread))
+
+
+def test_predict_leaves_a_feasible_pair_untouched():
+    model = LiveMeanModel(
+        spread=_constant_ridge(7.0), total=_constant_ridge(48.5),
+        phase="preseason", validation_season=2025,
+    )
+
+    spread, total = model.predict(pd.DataFrame({"x": [0.0]}))
+
+    assert spread == pytest.approx(7.0)
+    assert total == pytest.approx(48.5)
 
 
 def _frame(useful_preseason: bool) -> pd.DataFrame:

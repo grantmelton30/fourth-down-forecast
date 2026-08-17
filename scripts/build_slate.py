@@ -36,21 +36,18 @@ def manual_lines(path: Path) -> pd.DataFrame:
 def _independent_forecast(sim, mean, uncertainty):
     """The validated mean when it exists and is usable, else the raw simulator.
 
-    Found 2026-08-17, the day real FCS ratings went live: `fit_live_mean` fits spread and
-    total as two SEPARATE ridge models, with nothing constraining their combination to be
-    physically possible. For an ordinary game this never bites -- real spread/total pairs
-    are always internally consistent. For the most extreme mismatches it can fail: Georgia
-    vs Tennessee State projected spread +47.6 and total +47.0, which implies an away score
-    of (47.0-47.6)/2 = -0.3, impossible on any scoreboard. Each target is individually
-    inside the simulator's own range; the pair isn't jointly achievable on its score
-    lattice, and `sim.recentered().retotaled()` raises rather than silently return
-    something nonsensical (shared/sim_core.py's own `_calibration_weights`, unchanged).
-
-    Rather than crash the whole slate build on one extreme mismatch, or silently patch the
-    two ridge models' targets against each other (a real fix, not attempted here), this
-    falls back to the raw simulator for that one game -- the exact same fallback already
-    used when `mean is None`, just for a second reason the site's own `source` field
-    already discloses either way.
+    The known cause of `mean`'s spread/total pair being jointly infeasible -- fit_live_mean
+    fitting them as two separate ridge models with nothing constraining their combination
+    to be physically possible, first exposed by real FCS ratings (Georgia vs Tennessee
+    State: spread +47.6, total +47.0, implying a losing score of (47.0-47.6)/2 = -0.3) --
+    is fixed at the source as of the same day: `LiveMeanModel.predict()` now clips total up
+    to `|spread|` before this function ever sees it (ncaa-model/src/live_mean.py). The
+    `except ValueError` below stays as defense in depth for any other way this same
+    physical impossibility could arise, not because the known cause is still live -- falling
+    back to the raw simulator for one game is a lot cheaper than crashing the whole slate
+    build over it, and the same fallback is already used when `mean is None`, so a second
+    reason to reach it isn't a new code path, just a second cause the site's own `source`
+    field discloses identically either way.
     """
     if mean is None:
         return forecast_from_sim(sim)
