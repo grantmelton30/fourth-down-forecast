@@ -171,6 +171,21 @@ def main() -> int:
           f"game_offense {len(game_off):,}  market {len(market):,}")
     print(f"garbage-time plays dropped: {garbage:.1%}")
 
+    # `shared/sport.py::NCAAAdapter._market()` reads this file as the historical half of
+    # the live slate's market table -- concatenated with the freshly-pulled current season,
+    # season-excluded so the live half always wins. Nothing else in the pipeline ever wrote
+    # it (only a test fixture did), so `NCAAAdapter._market()` was silently scoped to the
+    # live season alone. That made `projection_mean()`'s `training_market` empty on every
+    # call (it filters for `completed`, which the live season doesn't have yet), which made
+    # `fit_live_mean` raise on 0-or-1 season, which is caught as `return None` -- and every
+    # published NCAA prediction fell back to `forecast_from_sim`'s raw, uncalibrated
+    # simulator mean instead of the validated, gain-corrected one. Found and fixed
+    # 2026-08-17 while reviewing week-1 spread/total quality. `market` already carries this
+    # backtest run's own CFBD data across `cfg.all_seasons`, so persisting it here costs no
+    # extra calls and keeps this file only as stale as this script's own last run.
+    (CACHE_DIR / "market.parquet").parent.mkdir(parents=True, exist_ok=True)
+    market.to_parquet(CACHE_DIR / "market.parquet", index=False)
+
     wf = build_walkforward(game_off, games, cfg)
     preseason_raw = load_free_preseason(client, cfg.all_seasons)
     preseason = normalize_preseason_sources(**preseason_raw)
