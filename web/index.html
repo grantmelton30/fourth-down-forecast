@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Independent NFL and NCAA score projections with market consensus and calibrated comparisons.">
+  <meta name="description" content="Independent NFL and NCAA score projections compared against the published market line.">
   <title>Fourth Down · Football Forecast Ledger</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
@@ -61,14 +61,13 @@
 
     <section class="legend" aria-label="Forecast definitions">
       <div><b>01</b><span><strong>Model</strong>Football-only score and line.</span></div>
-      <div><b>02</b><span><strong>Market</strong>Median of 3+ free line entries, when available.</span></div>
-      <div><b>03</b><span><strong>Calibrated</strong>Past-season validated blend.</span></div>
-      <div><b>04</b><span><strong>Difference</strong>Model minus market. Not automatically an edge.</span></div>
+      <div><b>02</b><span><strong>Market</strong>Best available published line(s), consensus median when more than one book agrees.</span></div>
+      <div><b>03</b><span><strong>Difference</strong>Model minus market. Not automatically an edge.</span></div>
     </section>
 
     <section id="matchups" class="matchups" aria-live="polite">
       <div class="table-head" aria-hidden="true">
-        <span>Matchup</span><span>01 Model</span><span>02 Market</span><span>03 Calibrated</span><span>04 Difference</span>
+        <span>Matchup</span><span>01 Model</span><span>02 Market</span><span>03 Difference</span>
       </div>
       <div id="game-list" class="game-list"></div>
       <div id="empty-state" class="empty-state" hidden>

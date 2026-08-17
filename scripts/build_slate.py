@@ -33,10 +33,17 @@ def manual_lines(path: Path) -> pd.DataFrame:
     return frame
 
 
-def unavailable_for(league: str, evidence, adapter=None, game_id=None) -> tuple[str, ...]:
+def unavailable_for(league: str, adapter=None, game_id=None) -> tuple[str, ...]:
+    """Reasons this game's evidence is short of what a fully-mature build could have.
+
+    "Three-source market consensus" used to be a permanent entry here: this system deliberately
+    sources 1-2 books per game (see market_consensus.py's minimum_books=3, which nothing here
+    ever meets), so it was flagging every single published game as "incomplete" forever rather
+    than describing a gap that closes with more data. Removed 2026-08-17; the exact book count
+    and provider list are still fully disclosed via market_evidence, which says more than a
+    boolean ever did.
+    """
     missing = []
-    if evidence is None or not evidence.is_consensus:
-        missing.append("three-source market consensus")
     if league == "nfl" and not (ROOT / "nfl-model/data/manual/availability.csv").exists():
         missing.append("confirmed live player availability")
     if league == "ncaa":
@@ -106,7 +113,7 @@ def main() -> int:
             calibrated = calibration_from_weights(
                 independent, market, weights, league)
             unavailable = unavailable_for(
-                league, evidence, adapter=adapter, game_id=game["game_id"])
+                league, adapter=adapter, game_id=game["game_id"])
             observed = (
                 adapter.games_observed(str(game["game_id"]))
                 if hasattr(adapter, "games_observed") else {"home": 0, "away": 0}

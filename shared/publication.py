@@ -39,8 +39,10 @@ def assess_quality(
         label = "established"
     if market_evidence is None:
         reasons.append("no market reference")
-    elif not market_evidence.is_consensus:
-        reasons.append("market is not a three-source consensus")
+    # "not a three-source consensus" used to be appended here too. Removed 2026-08-17: this
+    # system deliberately sources 1-2 books per game, so that condition was permanent, true
+    # for every published game, and never actually described a closable gap -- the exact
+    # book count and providers are already disclosed via market_evidence itself.
     unvalidated = [m for m in ("spread", "total") if not calibration_status.get(m, False)]
     for market in unvalidated:
         reasons.append(f"{market} calibration is not validated")

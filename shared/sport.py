@@ -1037,6 +1037,25 @@ class NCAAAdapter(SportAdapter):
         }
 
     def preseason_missing(self, game_id: str) -> tuple[str, ...]:
+        """Which preseason inputs this game's row is actually missing.
+
+        Two checks were removed here 2026-08-17, both for the same reason as the
+        "three-source market consensus" quality flag: they were permanently true for
+        (effectively) every published game, not a gap that closes with more data.
+
+        "recruiting/talent" used to test only home/away_talent_composite. CFBD's `talent`
+        endpoint returns an empty list for the live season -- confirmed by comparing the
+        cached talent_2025.json (134 teams) against talent_2026.json ([]) -- so that
+        column is null for 100% of rows this season, structurally, upstream of this repo.
+        Switched to home/away_recruiting_rating, which the model actually uses (it is in
+        the promoted feature list `fit_live_mean` produces) and which is fully populated.
+
+        "coordinator continuity" is gone entirely. home/away_*_coordinator_continuity are
+        listed as feature names in features.py's PRESEASON_FEATURES but nothing in this
+        codebase ever computes them -- `_coach_seasons` only extracts a single head coach
+        per team-season from CFBD's coaches endpoint, which has no coordinator-level data
+        at all. The columns were never anything but permanently-null placeholders.
+        """
         frame = self._live_features()
         row = frame[frame["game_id"].astype(str).eq(str(game_id))]
         if row.empty:
@@ -1045,15 +1064,9 @@ class NCAAAdapter(SportAdapter):
         checks = {
             "returning production": ("home_returning_production", "away_returning_production"),
             "transfer portal": ("home_portal_net_rating", "away_portal_net_rating"),
-            "recruiting/talent": ("home_talent_composite", "away_talent_composite"),
+            "recruiting/talent": ("home_recruiting_rating", "away_recruiting_rating"),
             "quarterback continuity": ("home_qb_continuity", "away_qb_continuity"),
             "head coach continuity": ("home_head_coach_continuity", "away_head_coach_continuity"),
-            "coordinator continuity": (
-                "home_offensive_coordinator_continuity",
-                "away_offensive_coordinator_continuity",
-                "home_defensive_coordinator_continuity",
-                "away_defensive_coordinator_continuity",
-            ),
         }
         return tuple(
             name for name, columns in checks.items()
