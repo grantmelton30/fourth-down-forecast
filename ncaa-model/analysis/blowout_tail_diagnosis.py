@@ -69,6 +69,29 @@ and would very likely narrow (not necessarily fully close -- the linear mean's o
 implemented in this pass -- it changes what `GATE_KEY_NUMBERS` measures (recentred sim
 margins, not raw ones), which is a real semantic decision this file's own rules say should
 not be made silently.
+
+RECENTRING WAS IMPLEMENTED, 2026-08-17 (separate commit, `pooled_margin_pmf` now takes
+`linear_frame` and recentres per game). Measured effect: >28 tail gap -8.33pp -> -3.63pp.
+Real, and it does not fully close, exactly as predicted above (the linear mean's own SD
+still trails the market's).
+
+WHY IT DOES NOT FULLY CLOSE, root-caused 2026-08-17: swept the fitted drive model's own
+`net_epa -> E[points/drive]` response across the real observed rating range
+([-0.14, +0.30], from actual `off_rating`/`def_rating` extremes) and read off the slope.
+It is not linear -- `MultinomialModel.probabilities()` is a softmax over
+`[net_epa, fp, fp^2, home, net_epa*fp]` by construction, and softmax saturates. Marginal
+E[points/drive] per unit net_epa peaks at 13.4 near net_epa=+0.06 (a middling favorite)
+and falls to 6.8 at net_epa=-0.14 (worst offense vs. best defense) and 9.0 at
+net_epa=+0.24 (best offense vs. worst defense) -- roughly half the model's peak
+sensitivity spent exactly where real blowout mismatches live. This is a property of the
+multinomial-softmax parameterization itself, present at any regularization strength,
+which is exactly why sweeping `C` (above) moved nothing: `C` shrinks coefficients
+uniformly, it does not change the functional form's saturation. Confirms the recentring
+fix could only partially close the gap -- the underlying drive model structurally
+compresses the exact games it needs to spread out the most. Candidate fix, not attempted:
+add `net_epa**2` (or a spline) to the design matrix so the model has room to counteract
+its own saturation at the extremes -- requires refitting `fit_drive_model` and
+revalidating every gate that reads from it, out of scope for this pass.
 """
 from __future__ import annotations
 
@@ -271,6 +294,30 @@ def regularization_sweep(cfg, games_with_venues, drives_raw, wf, n_games=140, n_
         print(f"C={C:6.1f}  n={len(means):4d}  SD of per-game means={means.std():.2f}")
 
 
+def saturation_sweep(cfg) -> None:
+    """Is the drive model's net_epa -> E[points/drive] response linear, or does the
+    softmax parameterization saturate at the extremes where real mismatches live?
+    Verdict, 2026-08-17: it saturates -- marginal sensitivity roughly halves at either
+    end of the real observed rating range versus its peak near a middling favorite."""
+    from src.config import CACHE_DIR
+    from sim_core import MultinomialModel
+
+    model = MultinomialModel.from_json((CACHE_DIR / "drive_model_2019_2026.json").read_text())
+    net_epa_range = np.linspace(-0.20, 0.30, 26)
+    fp = np.full_like(net_epa_range, model.fp_mean)
+    probs = model.probabilities(net_epa_range, fp, 0.0)
+    idx = {c: i for i, c in enumerate(model.classes)}
+    exp_pts = probs[:, idx["TD"]] * 6.94 + probs[:, idx["FG"]] * 3.0
+    slope = np.gradient(exp_pts, net_epa_range)
+    print(f"{'net_epa':>8s} {'E[pts/drive]':>13s} {'marginal slope':>15s}")
+    for ne, ep, s in zip(net_epa_range, exp_pts, slope):
+        print(f"{ne:8.3f} {ep:13.3f} {s:15.3f}")
+    peak = net_epa_range[np.argmax(slope)]
+    print(f"\npeak marginal sensitivity {slope.max():.2f} at net_epa={peak:+.3f}; "
+          f"falls to {slope[0]:.2f} at the low end ({net_epa_range[0]:+.3f}) and "
+          f"{slope[-1]:.2f} at the high end ({net_epa_range[-1]:+.3f}).")
+
+
 def main() -> int:
     print("=" * 90)
     print("PART 1 -- the recorded clamp hypothesis, measured directly")
@@ -299,6 +346,12 @@ def main() -> int:
     print("PART 3 -- is drive-model L2 regularization (C) the cause of the deficit?")
     print("=" * 90)
     regularization_sweep(cfg, games_with_venues, drives_raw, wf)
+
+    print()
+    print("=" * 90)
+    print("PART 4 -- does the drive model's net_epa response saturate at the extremes?")
+    print("=" * 90)
+    saturation_sweep(cfg)
     return 0
 
 

@@ -376,6 +376,39 @@ than as a blanket "trust the analysis" — worth knowing precisely instead of as
 
 ---
 
+## Root cause of the >28 tail's residual gap, 2026-08-17 — softmax saturation
+
+Item #4 from the project-status review, left open after the recentring fix: why does
+`fit_drive_model`'s multinomial produce a compressed across-game mean (SD 7.56) when the
+drive-count clamp and L2 regularization (`C`) were both directly tested and ruled out?
+
+Measured the mechanism directly: fed the fitted NCAA drive model a sweep of `net_epa`
+across the real observed range (`off_rating`/`def_rating` extremes give roughly [-0.14,
++0.30]) at average field position, and read off expected points per drive
+(`P(TD)*6.94 + P(FG)*3.0`) and its slope with respect to `net_epa`. The response is not
+close to linear -- it is the S-curve `probabilities()`'s softmax guarantees by
+construction. The marginal effect peaks at **13.4 pts/drive per unit net_epa** near
+`net_epa≈+0.06` (a middling favorite) and falls to **6.8** at `net_epa=-0.14` (worst
+offense vs. best defense) and **9.0** at `net_epa=+0.24` (best offense vs. worst
+defense) -- roughly half the model's peak sensitivity spent exactly where real blowout
+mismatches live. Over ~12 drives a team, that difference compounds into materially less
+game-to-game spread than a model with constant marginal sensitivity would produce, with
+no tunable knob responsible: it is a property of the multinomial-softmax parameterization
+itself (`design = [net_epa, fp, fp², home, net_epa·fp]`, softmax over four classes),
+present regardless of how well the coefficients are fit or how strongly they are
+regularized -- which is exactly why sweeping `C` across two orders of magnitude
+(recorded in `analysis/blowout_tail_diagnosis.py`) moved nothing.
+
+**Not fixed in this pass, and deliberately so.** The candidate fix -- adding `net_epa²`
+or a spline/piecewise term to the design matrix so the model has room to counteract its
+own saturation at the extremes -- means refitting `fit_drive_model` and revalidating
+every gate that reads from it (`GATE_KEY_NUMBERS`, `GATE_RMSE_*`, `GATE_SCALE`,
+`GATE_UNBIASED_BY_WEEK`), the same scope discipline `GATE_CALIBRATED` was left unbuilt
+under for the same reason. Recorded as the concrete next step, not attempted alongside
+everything else today.
+
+---
+
 ## Historical readings (superseded — do not quote as current)
 
 The previous version of this file carried a pass/fail table measured **2026-08-04**, with
