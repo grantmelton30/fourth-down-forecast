@@ -24,11 +24,13 @@ from src.backtest import (
     gate_api_budget,
     gate_blend_informative,
     gate_garbage,
+    gate_key_numbers,
     gate_no_lookahead,
     gate_opener_coverage,
     gate_scale,
     gate_unbiased,
     gate_unbiased_by_week,
+    pooled_margin_pmf,
     rmse_gate,
     select_window,
     walk_forward,
@@ -218,6 +220,16 @@ def main() -> int:
 
     primary_fits, _ = fits_by_window["2021-2025 restricted (PRIMARY)"]
     completed = market[market["completed"].fillna(False)]
+    print()
+    print(RULE)
+    print("SIMULATOR-BACKED DISTRIBUTION CHECK (GATE_KEY_NUMBERS) -- pooled sample,")
+    print("in-sample ratings; tests shape only, not predictive power")
+    print(RULE)
+    sim_pmf = pooled_margin_pmf(cfg, games, drives, wf)
+    key_numbers_gate = gate_key_numbers(sim_pmf, market)
+    print(key_numbers_gate)
+    if key_numbers_gate.detail:
+        print(f"      {key_numbers_gate.detail}")
     gates = [
         gate_opener_coverage(market, cfg, cfg.graded_seasons),
         gate_no_lookahead(build_features(completed, wf, cfg), wf),
@@ -235,6 +247,7 @@ def main() -> int:
         rmse_gate(select_window(frame, cfg.graded_seasons, restricted=True), cfg,
                   kind="spread"),
         gate_api_budget(client.calls_used, cfg),
+        key_numbers_gate,
     ]
     cutoff=pd.to_datetime(frame.get("kickoff"),utc=True,errors="coerce").max()
     # Stamp the version with the evidence that is actually PERSISTED, not the in-memory

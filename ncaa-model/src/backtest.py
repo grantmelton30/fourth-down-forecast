@@ -13,7 +13,7 @@ CLV: whether the market moved toward the model after the model committed.
 
 from __future__ import annotations
 
-from dataclasses import asdict,dataclass
+from dataclasses import asdict,dataclass,replace
 from pathlib import Path
 
 import numpy as np
@@ -21,7 +21,11 @@ import pandas as pd
 
 from ._shared import robust_inference, validated_model
 from .config import CACHE_DIR,Config,build_cache_signature,frame_signature,read_cached_frame,write_cached_frame
-from .ratings import net_epa_vec
+from .context import build_context, estimate_venue_hfa
+from .drive_model import fit_drive_model, fit_endgame_table
+from .drives import build_drive_table, fit_start_field_position
+from .ratings import net_epa_vec, ratings_at
+from .simulate import simulate_game
 
 FIRST_GRADED_WEEK = 4
 
@@ -461,6 +465,120 @@ def gate_api_budget(calls_used: int, cfg: Config) -> GateResult:
         "GATE_API_BUDGET", calls_used < cfg.gates.api_budget_max_cold,
         f"{calls_used} calls for a cold build "
         f"(budget {cfg.gates.api_budget_max_cold})",
+    )
+
+
+# --------------------------------------------------------------------------------------
+# Simulator-backed distribution check (GATE_KEY_NUMBERS)
+# --------------------------------------------------------------------------------------
+# THE MEAN PATH STILL DOES NOT GO THROUGH THE SIMULATOR -- see the module docstring. This
+# section only pools SIMULATED margins to check the SHAPE of the distribution the drive
+# simulator produces (the key-number spikes a linear model cannot reproduce) against the
+# real historical distribution. Nothing here feeds `model_spread` or `model_total`, and
+# it was added 2026-08-16 to close a gate that had been declared but never produced (see
+# GATES.md, "Known gap: NCAA calibration weights are not produced by the pipeline" and the
+# `GATE_CALIBRATED`/`GATE_KEY_NUMBERS` rows recorded `passed: null`).
+
+KEY_NUMBERS = (3, 7, 10, 14, 17, 21)
+TAIL_THRESHOLD = 28
+
+
+def pooled_margin_pmf(
+    cfg: Config,
+    games: pd.DataFrame,
+    drives_raw: pd.DataFrame,
+    walkforward: pd.DataFrame,
+    n_games: int = 400,
+    n_sims: int = 4000,
+) -> dict:
+    """Pool simulated margins across many historical games and compare the shape to
+    history. Mirrors nfl-model's `backtest.py::pooled_margin_pmf` exactly.
+
+    In-sample ratings are fine here -- this tests the distribution SHAPE the drive
+    simulator produces, not predictive power. Predictive power is what the mean-path
+    gates (GATE_RMSE_*, GATE_BLEND_INFORMATIVE, ...) already grade, walk-forward, and this
+    function does not touch that path.
+    """
+    season = int(walkforward["season"].max())
+    drive_table = build_drive_table(drives_raw, games)
+    start_fp = fit_start_field_position(drive_table[drive_table["season"] < season])
+    drive_model = fit_drive_model(drive_table, walkforward, cfg, as_of_season=season)
+    endgame = fit_endgame_table(drive_table, cfg, as_of_season=season)
+    venue_hfa = estimate_venue_hfa(games, cfg, walkforward=walkforward)
+
+    pool = games[
+        games["season"].isin(cfg.graded_seasons)
+        & games["homePoints"].notna()
+        & games["awayPoints"].notna()
+    ]
+    pool = pool.sample(min(n_games, len(pool)), random_state=cfg.simulation.seed)
+
+    sim_cfg = replace(cfg, simulation=replace(cfg.simulation, n_sims=n_sims))
+    rng = np.random.default_rng(cfg.simulation.seed)
+    pooled = []
+    for _, g in pool.iterrows():
+        try:
+            rt = ratings_at(walkforward, g["season"], g["week"])
+        except KeyError:
+            continue
+        if g["homeTeam"] not in rt.index or g["awayTeam"] not in rt.index:
+            continue
+        ctx = build_context(g, cfg, venue_hfa=venue_hfa, allow_network=False)
+        sim = simulate_game(
+            g["homeTeam"], g["awayTeam"], rt, drive_model, sim_cfg, start_fp,
+            context_adj=ctx, endgame=endgame, rng=rng,
+            neutral_site=bool(g.get("neutralSite", False)),
+        )
+        pooled.append(sim.margins)
+
+    if not pooled:
+        return {}
+    allm = np.concatenate(pooled)
+    vals, counts = np.unique(allm, return_counts=True)
+    return {int(v): float(c / counts.sum()) for v, c in zip(vals, counts)}
+
+
+def gate_key_numbers(
+    sim_pmf: dict, market: pd.DataFrame, tol: float = 2.0
+) -> GateResult:
+    """Simulated |margin| PMF vs historical, at the college key numbers plus the tail.
+
+    College's key-number set is not the NFL's: no missed-extra-point/safety combination
+    produces the NFL's spike at 6, and college football's extra-point/two-point rates
+    differ measurably from the NFL's (NEXT_SESSION 2026-08-07: colleges convert extra
+    points MORE often, 0.973 vs 0.940, and go for two LESS often, 0.070 vs 0.095) --
+    consequences for which margins carry mass. 17 and 21 (two- and three-score games with
+    the extra point) carry real mass in college the NFL check does not look for.
+    """
+    done = market[market["actual_margin"].notna() & market["fbs_only"]]
+    real = done["actual_margin"].abs().value_counts(normalize=True)
+    real_tail_pct = 100 * float((done["actual_margin"].abs() > TAIL_THRESHOLD).mean())
+
+    rows, worst, worst_k = [], 0.0, None
+    for k in KEY_NUMBERS:
+        sim_pct = 100 * (sim_pmf.get(k, 0.0) + sim_pmf.get(-k, 0.0))
+        real_pct = 100 * float(real.get(k, 0.0))
+        diff = abs(sim_pct - real_pct)
+        rows.append(
+            f"|{k}|: sim {sim_pct:5.2f}%  real {real_pct:5.2f}%  ({sim_pct - real_pct:+.2f}pp)"
+        )
+        if diff > worst:
+            worst, worst_k = diff, str(k)
+
+    sim_tail_pct = 100 * sum(v for m, v in sim_pmf.items() if abs(m) > TAIL_THRESHOLD)
+    tail_diff = abs(sim_tail_pct - real_tail_pct)
+    rows.append(
+        f">{TAIL_THRESHOLD}: sim {sim_tail_pct:5.2f}%  real {real_tail_pct:5.2f}%  "
+        f"({sim_tail_pct - real_tail_pct:+.2f}pp)"
+    )
+    if tail_diff > worst:
+        worst, worst_k = tail_diff, f">{TAIL_THRESHOLD}"
+
+    return GateResult(
+        "GATE_KEY_NUMBERS",
+        worst <= tol,
+        f"worst gap {worst:.2f}pp at |margin|={worst_k} (tolerance {tol:.0f}pp)",
+        "\n      ".join(rows),
     )
 
 
