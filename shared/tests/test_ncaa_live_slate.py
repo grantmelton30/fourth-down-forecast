@@ -142,6 +142,77 @@ def test_ncaa_public_market_uses_latest_quote_not_stale_opener(tmp_path):
     assert game.total_open == 51.5
 
 
+def test_market_without_a_history_file_has_no_completed_games_to_train_on(tmp_path):
+    """Regression guard for the 2026-08-17 bug: market.parquet was never written by any
+    production code path (only a test fixture wrote it), so NCAAAdapter._market() was
+    silently scoped to the live season alone. projection_mean()'s training_market filters
+    for completed games with a real actual_margin/actual_total -- which the live season
+    never has yet -- so it was permanently empty, fit_live_mean's "insufficient historical
+    seasons" check always tripped, and projection_mean() returned None unconditionally for
+    every NCAA prediction ever published, not just this test's synthetic scenario.
+
+    This does not re-derive the whole validated-ridge machinery (that needs hundreds of
+    realistic training rows); it asserts the specific precondition that machinery depends
+    on, which is exactly the thing that silently broke: does _market() ever expose a
+    completed, graded game to train on. Without a history file, the honest answer must be
+    "no completed games at all" -- not an empty DataFrame masquerading as "not yet
+    computed," and not a crash.
+    """
+    adapter = _adapter(tmp_path)
+    cache = adapter._cache_dir()
+    cache.mkdir()
+    (cache / "games_2026.json").write_text(json.dumps([{
+        "id": 2, "season": 2026, "week": 1, "startDate": "2026-08-29T23:00:00Z",
+        "completed": False, "neutralSite": False, "homeTeam": "Home",
+        "awayTeam": "Away", "homeConference": "ACC", "awayConference": "Sun Belt",
+        "homeClassification": "fbs", "awayClassification": "fbs",
+        "homePoints": None, "awayPoints": None,
+    }]))
+    (cache / "lines_2026.json").write_text(json.dumps([{
+        "id": 2, "season": 2026, "week": 1, "homeTeam": "Home", "awayTeam": "Away",
+        "homeConference": "ACC", "awayConference": "Sun Belt",
+        "homeClassification": "fbs", "awayClassification": "fbs",
+        "homeScore": None, "awayScore": None,
+        "lines": [{"provider": "Bovada", "spreadOpen": -4.5,
+                   "spread": -5.0, "overUnderOpen": 51.5, "overUnder": 52.0}],
+    }]))
+
+    market = adapter._market()
+
+    completed = market[market.get("completed", False).fillna(False).astype(bool)]
+    assert completed.empty, (
+        "no market.parquet on disk, so there is no legitimate source of completed "
+        "historical games -- any non-empty result here means something is inventing "
+        "training data that was never actually validated"
+    )
+
+
+def test_market_with_a_history_file_exposes_completed_games_to_train_on(tmp_path):
+    """The other half of the guard above: once market.parquet DOES carry completed,
+    graded seasons (what ingest.build_market produces and run_backtest.py now persists,
+    per the 2026-08-17 fix), _market() must actually expose them -- this is the
+    precondition projection_mean()'s training_market filter depends on."""
+    adapter = _adapter(tmp_path)
+    cache = adapter._cache_dir()
+    cache.mkdir()
+    pd.DataFrame([
+        {"game_id": 101, "season": 2024, "week": 1, "kickoff": "2024-08-29T00:00:00Z",
+         "completed": True, "actual_margin": 14.0, "actual_total": 55.0,
+         "spread_open": 3.0, "total_open": 50.0},
+        {"game_id": 102, "season": 2025, "week": 1, "kickoff": "2025-08-28T00:00:00Z",
+         "completed": True, "actual_margin": -7.0, "actual_total": 44.0,
+         "spread_open": -2.5, "total_open": 47.5},
+    ]).to_parquet(cache / "market.parquet", index=False)
+    (cache / "games_2026.json").write_text("[]")
+    (cache / "lines_2026.json").write_text("[]")
+
+    market = adapter._market()
+
+    completed = market[market.get("completed", False).fillna(False).astype(bool)]
+    assert sorted(completed["season"].tolist()) == [2024, 2025]
+    assert completed["actual_margin"].notna().all()
+
+
 def test_missing_projection_row_has_consistent_uncertainty_disclosure_shape(tmp_path):
     adapter = _adapter(tmp_path)
     adapter._live_features = lambda: pd.DataFrame({"game_id": []})
