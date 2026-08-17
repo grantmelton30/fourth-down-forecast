@@ -317,6 +317,35 @@ tests pass (2 pre-existing Appendix A failures, unrelated).
 
 ---
 
+## GATE_UNBIASED_BY_WEEK is not really a week-4 problem, measured 2026-08-17
+
+The gate's worst reading has consistently been "spread wk4: -3.40, n=167" -- read here
+previously as an unexplained week-4 anomaly. It is not week-specific. Splitting that same
+167-game restricted week-4 bucket by `cross_tier` (P5 vs G5): non-cross-tier bias is
+-0.50 (n=101, clean); cross-tier bias is **-7.84** (n=66). Checking every other week the
+same way, cross-tier bias is negative in 11 of 12 tested weeks, ranging -1.9 to -13.7 --
+**worse than week 4 in most weeks** -- but no other week has 40+ cross-tier games, so
+`min_n=40` never lets them register. Week 4 isn't where the bias is worst; it's the one
+week with enough cross-tier sample size to prove statistically what every week already
+shows. Pooled across the full season: cross-tier restricted games, n=170, bias **-7.89
+points**; non-cross-tier restricted games, n=1,374, bias +0.20 (clean).
+
+This is the same phenomenon the week-1 review and `preseason_poll_points` addition
+above are about -- the model under-projecting games between mismatched tiers -- now
+precisely quantified on the gate's own OLS pathway (`model_spread` from
+`walk_forward`/`build_features`) rather than the live `fit_live_mean` ridge path.
+**Important seam, not yet closed**: `preseason_poll_points` and the rest of
+`PRESEASON_FEATURES` only feed `fit_live_mean`, the live-publication path. They are not
+in `build_features`'s `net_diff`/`pace_sum`/`eff_sum` predictors, so they do not touch
+`model_spread` and cannot move this gate, `GATE_RMSE_*`, or any other gate graded against
+it. The two prediction pathways in this codebase are more separate than "gate reading"
+vs. "published number" suggests -- fixing the live site's week-1 numbers, done above,
+provably does not fix what the gates measure, and vice versa. Worth a real design
+decision (unify the paths, or explicitly document why they diverge) rather than assuming
+one pathway's fix reaches the other.
+
+---
+
 ## Historical readings (superseded — do not quote as current)
 
 The previous version of this file carried a pass/fail table measured **2026-08-04**, with
