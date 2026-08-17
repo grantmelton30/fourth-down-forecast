@@ -443,6 +443,32 @@ committed number instead of only the internal `challenger_promoted` check `fit_l
 already does on itself. Recorded as the concrete next step, scoped the same deliberate way
 `GATE_CALIBRATED` was.
 
+## D8. half_life_games looks under-tuned post-FCS, measured not yet acted on, 2026-08-17
+
+Ran the pre-registered 12-cell grid (`run_backtest.py --sweep`, DECISIONS D3) against the
+now-FCS-inclusive rating universe, prompted by "should regularization be re-tuned for the
+larger universe." `held-out t(b_total)`, the grid's own headline metric (2024-2025,
+unseen at tune time): the three `half_life_games=16` cells cluster at 2.10-2.21; the three
+`half_life_games=6` cells (which includes the closest match to the live config) sit at
+1.63-1.72. `off_weight=1.45` remains at or near the best score in every half-life bucket,
+so that part of the live config is not in question. Plausible, not just numerical: FCS
+teams have sparser, more irregular schedules than FBS teams, and a longer half-life (more
+weight on the full season, less on recent-game recency) would naturally help stabilize
+their now-freshly-fit ratings more than it would hurt FBS's already-dense ones.
+
+**Not acted on.** `prior_weight_games`'s own entry above is the standard to match before
+changing this: a careful, documented, multi-metric search (RMSE traded off against
+`GATE_SCALE`'s SD-ratio constraint specifically, an explicit check for a monotone
+interior optimum rather than one lucky cell, explicit acknowledgement of what the change
+does and does not affect) -- and that decision's own text says a post-hoc choice "is not
+a substitute for a pre-registered re-run," which is exactly the caution this measurement
+needs before being trusted over a single coarse-grid dimension. This sweep tests
+`half_life_games` at only three points (6/10/16); the true optimum could be anywhere
+above 6, including past 16. Recorded as a concrete, well-evidenced next step -- run a
+finer sweep centered on 16, holding `prior_weight_games=8.0` and `off_weight=1.45` fixed
+at their own already-validated values, checking `GATE_SCALE` impact the same way the
+existing decision does -- not attempted here alongside the rest of today's list.
+
 ## D6. Spread sign convention
 
 CFBD quotes spreads negative = home favored; nflverse is the opposite. Normalized to
