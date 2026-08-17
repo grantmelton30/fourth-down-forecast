@@ -74,16 +74,52 @@ Fail-closed made this invisible: a broken verification path and an honestly fail
 both produce "no picks". Both backtests now hash the persisted evidence, and
 `refresh_publication.py` warns loudly when an artifact exists but the adapter refuses it.
 
-### Open: the Appendix A null no longer reproduces exactly
+### Appendix A, revisited 2026-08-16 — decided, not tolerance-widened
 
-`test_power.py::test_full_fbs_close_anchored_null_is_adequately_powered` fails on the
+`test_power.py::test_full_fbs_close_anchored_null_is_adequately_powered` failed on the
 refreshed data: b = **+0.0911** (se 0.0631, t 1.44, n 2,985) against a recorded anchor of
-b ≈ 0 with a ±0.05 band. The null itself still holds — the 95% CI spans roughly
-[−0.03, +0.22] and includes zero, and 0.091 is far below the 0.2 reference effect — but
-the point estimate has drifted, and drifted **positive**. The tolerance has deliberately
-not been widened: doing so would dismantle the guard that keeps the NCAA totals false
-positive out. Both affected tests are `@pytest.mark.integration` and excluded from CI.
-This needs a decision, not a tolerance change.
+b ≈ 0 with a ±0.05 band.
+
+**Correcting the earlier read of this.** The previous version of this entry said "0.091 is
+far below the 0.2 reference effect." That undersold the risk: the 95% CI is
+**[−0.0326, +0.2148]**, and its upper bound sits *above* APPENDIX_A_OPEN_B (0.195, t=2.23)
+— the magnitude Appendix A proved was a pure artifact of anchoring on the opener. The point
+estimate is a null (t=1.44 < 1.96); the confidence interval no longer cleanly excludes the
+thing this whole guard exists to catch.
+
+**The decision:**
+
+1. **Do not widen the tolerance.** A fixed ±0.05 band around zero fails on every
+   legitimate change to `model_total`, which is most of what actually happened here — see
+   below. It was never the right invariant.
+2. **Do not cite the NCAA totals null as settled anymore.** Downgraded to *provisional*
+   until re-validated. It does not change any live decision — `GATE_RMSE_TOTAL` already
+   fails and `bets_allowed()` is already False for NCAA — but it does mean
+   `DECISIONS.md`/`NCAA_PLAYBOOK.md` language claiming the totals question is closed is no
+   longer accurate and should not be quoted as current.
+3. **Most likely cause, not yet confirmed.** `ncaa-model/src/backtest.py::_fit_feature_challenger`
+   promotes any `*_sum`-suffixed candidate into the totals model when it beats base RMSE by
+   ≥0.05 on a single held-out season — a legitimate mechanism, unrelated to the
+   opener-anchoring bug. Three commits landed exactly such candidates on
+   **2026-08-12/13, immediately before this drift was first observed**:
+   `4f8bb16` (validated NCAA projection integrity), `c8362ca`/`78a08c6` (coaching data /
+   preseason merge-key fixes), `4b5ec98` (head-coach continuity from the nested coaches
+   payload) — all touching `ncaa-model/src/features.py`, which emits both
+   `head_coach_continuity_sum` and a turnover-uncertainty `*_sum` column, either of which
+   `_fit_feature_challenger` would pick up as a totals candidate. This was not confirmed by
+   inspecting `feature_total_promoted` on a live rebuild — no local CFBD-backed cache was
+   available to run it — so it is a strong hypothesis, not a verified fact.
+4. **The test now polices the actual invariant.** It asserts the 95% CI upper bound stays
+   below the proven danger magnitude (0.195), not that the point estimate stays near zero.
+   It is currently failing, correctly — that failure is the record of item 2 above, and it
+   should keep failing until someone runs a fresh full rebuild, checks
+   `feature_total_promoted` for the seasons in the full-FBS window, and either re-baselines
+   the reference numbers with that provenance documented, or finds and fixes an actual bug
+   if promotion turns out not to explain it.
+
+Both affected tests are `@pytest.mark.integration` and excluded from CI, so this failure is
+visible only to someone deliberately running them — which is also why it is written down
+here rather than left to be rediscovered.
 
 ## Previously: NO GATE HAD A CURRENT READING
 
@@ -175,8 +211,8 @@ absent** — see the status section above.
 | `GATE_BLEND_INFORMATIVE` | yes | `src/backtest.py` | best \|t(b)\| > 2.0 |
 | `GATE_API_BUDGET` | yes | `src/backtest.py` | Cold build under 250 CFBD calls |
 | `GATE_RMSE_SPREAD` / `GATE_RMSE_TOTAL` | yes | `src/backtest.py::rmse_gate` | Model RMSE / market RMSE ≤ 1.0, close-anchored |
-| `GATE_CALIBRATED` | required for promotion | — | No probability bucket with 100+ obs off by >6 points |
-| `GATE_KEY_NUMBERS` | required for promotion | — | Simulated margin PMF matches historical at 3/7/10/14/17/21 and the >28 tail |
+| `GATE_KEY_NUMBERS` | yes, added 2026-08-16 | `src/backtest.py::pooled_margin_pmf`, `gate_key_numbers` | Simulated margin PMF matches historical at 3/7/10/14/17/21 and the >28 tail. Pools a sample of historical games through the NCAA drive simulator (in-sample ratings; tests distribution SHAPE only, mirrors `nfl-model`'s `pooled_margin_pmf`) — does not touch the mean path (`model_spread`/`model_total` stay linear-projection-only, per the module docstring). Wired into `run_backtest.py`; not yet run against real data in this repo (no local CFBD-backed cache available when it was written) — its first real reading comes from the next full rebuild. |
+| `GATE_CALIBRATED` | **not built — scoped, deliberately not attempted 2026-08-16** | — | No probability bucket with 100+ obs off by >6 points. Needs per-game `cover_prob_home`/`over_prob` from the simulator across the walk-forward backtest, which NFL gets by running `simulate_game` inside its `walk_forward` loop and recentring on the L1 mean (`probs = sim.recentered(model_spread)`). NCAA's `walk_forward` (`src/backtest.py`) has no such call — it is closed-form OLS + gain/week-bias correction only, and never touches `drives`/`drive_model`/`endgame`. Wiring the simulator into that loop is a real signature change (needs `drives`, `game_off`/`walkforward` threaded through `walk_forward`, called from both `run_backtest.py` and `run_paper.py`) across thousands of graded games — unlike `GATE_KEY_NUMBERS`'s few-hundred-game pooled sample, this is O(graded games), touches the live evaluation path, and cannot be responsibly shipped without running it end-to-end against real data first. No local CFBD-backed cache was available to do that validation. Left unbuilt rather than shipped unvalidated — see the project's own rule: "validate a method against a known answer before trusting it."|
 | `GATE_BEATS_SRS` | **NOT BUILT** | — | Model spread RMSE beats an SRS baseline (`src/srs.py` never written) |
 | `GATE_COMPETITIVE_WITH_SPPLUS` | **NOT BUILT** | — | Within 0.5 of SP+ (SP+ never ingested) |
 | `GATE_SPEED` | **NOT BUILT** | — | Weekly refresh under 240s on cached data |
