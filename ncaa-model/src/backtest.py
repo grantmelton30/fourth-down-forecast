@@ -536,10 +536,19 @@ def pooled_margin_pmf(
         .set_index("game_id")["model_spread"]
     )
 
+    # Restricted to FBS-vs-FBS: `games` is the unfiltered ingest output (17,144 completed
+    # rows across all divisions for the graded seasons, vs 2,996 with a fitted rating pair
+    # and a model_spread), and the simulator only has real ratings for FBS teams. Sampling
+    # from the unfiltered pool meant ~83% of the `n_games` draws were discarded downstream
+    # by the `rt.index`/`spread_by_game` checks, so the gate was reading off an effective
+    # sample of 65-140 games while reporting a "400 games" pool. Found and recorded
+    # 2026-08-17 while validating the recentring fix above; fixed same day.
     pool = games[
         games["season"].isin(cfg.graded_seasons)
         & games["homePoints"].notna()
         & games["awayPoints"].notna()
+        & (games["homeClassification"] == "fbs")
+        & (games["awayClassification"] == "fbs")
     ]
     pool = pool.sample(min(n_games, len(pool)), random_state=cfg.simulation.seed)
 
