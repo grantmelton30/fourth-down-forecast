@@ -123,10 +123,22 @@ def load_games(client: BudgetedCFBD, seasons: list) -> pd.DataFrame:
 
 # The score/clock fields feed the shared simulator's endgame layer; without them the drive
 # table cannot be built. See src/drives.py.
+#
+# "startTime" (bug, fixed 2026-08-17): CFBD's raw drive payload has no column literally
+# named "startTime" -- client.frame() runs it through pd.json_normalize, which flattens the
+# nested {"minutes": M, "seconds": S} clock into "startTime.minutes"/"startTime.seconds".
+# Neither ever matched the old "startTime" entry, so `[c for c in DRIVE_KEEP if c in
+# df.columns]` silently dropped the clock from EVERY drive ever loaded through this
+# function -- drives.py's `_game_seconds_remaining` then saw an all-null column, so
+# `start_gsr` was null for 100% of rows, `fit_endgame_table`'s "late game" filter matched
+# zero drives, and the entire endgame layer (where the 3/7-point key-number spikes come
+# from, per its own docstring) never actually ran. `project_game.py` was unaffected: it
+# reads raw drives_<year>.json directly, bypassing this keep-list entirely.
 DRIVE_KEEP = [
     "gameId", "season", "offense", "defense", "driveNumber", "driveResult",
     "startPeriod", "startYardsToGoal", "isHomeOffense", "plays", "scoring",
-    "startOffenseScore", "startDefenseScore", "endOffenseScore", "startTime",
+    "startOffenseScore", "startDefenseScore", "endOffenseScore",
+    "startTime.minutes", "startTime.seconds",
 ]
 
 
@@ -155,8 +167,12 @@ def load_drives(client: BudgetedCFBD, seasons: list) -> pd.DataFrame:
             c = pd.read_parquet(path)
             # Schema guard. Without it, extending DRIVE_KEEP silently keeps serving the old
             # narrower cache -- the exact failure that poisoned nfl-model's drive table for
-            # the lifetime of that repo.
-            if not {"startOffenseScore", "startTime"} - set(c.columns):
+            # the lifetime of that repo. This guard itself checked for "startTime" (which
+            # never existed as a column, see DRIVE_KEEP above) rather than the flattened
+            # "startTime.minutes"/"startTime.seconds" names, so it always evaluated as
+            # missing and silently forced a full rebuild on every call -- which is exactly
+            # why the fix above never got a chance to catch a stale on-disk parquet.
+            if not {"startOffenseScore", "startTime.minutes", "startTime.seconds"} - set(c.columns):
                 cached = c
         if cached is None:
             cached = _drives_frame(client, hist)

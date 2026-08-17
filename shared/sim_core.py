@@ -260,10 +260,27 @@ def fit_endgame_table(
 
     `cache_path` is supplied by the caller because each sport owns its own cache directory;
     pass None to skip caching entirely.
+
+    Both a fresh fit AND a load from `cache_path` are validated to have at least one
+    counted drive before being trusted. Found 2026-08-17: a run that reached this call
+    with an empty `drives` (or one missing `start_qtr`/`start_gsr`/`start_score_diff`)
+    silently produced `counts.sum() == 0` and an all-NaN `cum` -- and `path.exists()` was
+    the only cache-freshness check, so that broken table was cached once and served to
+    every simulated game since. It is not merely inert: `_play_drive`'s
+    `(u[:, None] > cum).sum(axis=1)` evaluates to 0 for an all-NaN row (every comparison
+    against NaN is False), and index 0 is `TD` -- so every endgame-masked drive (a team's
+    final 1-2 drives of every simulated game) was resolving to a GUARANTEED touchdown
+    instead of the scoreboard-conditioned outcome this table exists to produce. Same bug
+    class this file's own callers have hit three times before: a cache that does not
+    validate its inputs. Raising here, rather than adding a runtime NaN guard in
+    `_play_drive`, is deliberate -- silently tolerating a degenerate table there would just
+    make the next instance of this bug quiet again.
     """
     path = cache_path
     if path is not None and path.exists():
-        return EndgameTable.from_json(path.read_text())
+        cached = EndgameTable.from_json(path.read_text())
+        if cached.counts.sum() > 0:
+            return cached
 
     late = drives[
         (drives["season"] >= train_start)
@@ -272,6 +289,12 @@ def fit_endgame_table(
         & (drives["start_gsr"] <= late_seconds)
         & drives["start_score_diff"].notna()
     ]
+    if late.empty:
+        raise ValueError(
+            f"fit_endgame_table: 0 late-game drives for seasons [{train_start}, "
+            f"{as_of_season}) -- refusing to cache a degenerate table. Check that `drives` "
+            "carries start_qtr/start_gsr/start_score_diff and covers this season range."
+        )
 
     rows, counts = [], []
     overall = late["result"].value_counts(normalize=True)
