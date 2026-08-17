@@ -465,6 +465,29 @@ ridge models jointly) is not attempted here; recorded as a candidate follow-on.
 
 ---
 
+## The softmax-saturation candidate fix does not work, tested 2026-08-17
+
+The root-cause entry above proposed a candidate fix for the >28 tail's residual gap: add
+`net_epa**2` to `fit_drive_model`'s design matrix so the model has room to counteract its
+own saturation at the extremes. Tested it directly on the real 196,371-drive training set
+before shipping it, per this file's own rule. **It does not work.** Refit with and
+without the squared term and compared the same marginal-sensitivity ratio the root-cause
+measurement uses: 0.40 baseline vs. 0.41 with `net_epa**2` -- no meaningful change.
+
+The reason is more useful than the negative result. `net_epa**2` is symmetric in
+`net_epa`, so its fitted coefficient mostly rescales the curve's width around
+`net_epa=0`, not the saturating shape at both extremes -- and no polynomial feature could
+fix that shape, because softmax outputs are bounded in `[0, 1]` by construction, for any
+input, for any design matrix. A team cannot have a >100% chance of scoring; that ceiling
+is not a flexibility problem this model failed to solve, it is a property of predicting a
+bounded probability at all. Correctly rules out "give the drive model more features" as a
+path forward for this specific gap, rather than leaving it as an untested assumption.
+What would actually need to change is the model family for the mean path itself, not its
+feature set -- not attempted here. Reproducible via `analysis/blowout_tail_diagnosis.py`
+PART 5, no new CFBD calls.
+
+---
+
 ## Historical readings (superseded — do not quote as current)
 
 The previous version of this file carried a pass/fail table measured **2026-08-04**, with

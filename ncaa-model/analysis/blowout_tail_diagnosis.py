@@ -92,6 +92,22 @@ compresses the exact games it needs to spread out the most. Candidate fix, not a
 add `net_epa**2` (or a spline) to the design matrix so the model has room to counteract
 its own saturation at the extremes -- requires refitting `fit_drive_model` and
 revalidating every gate that reads from it, out of scope for this pass.
+
+TESTED, 2026-08-17: THE CANDIDATE FIX DOES NOT WORK, and the reason is worth having
+gotten wrong first. Refit the real, cached training data (196,371 drives) with
+`net_epa**2` added to the design matrix and re-swept the same net_epa range. The
+marginal-sensitivity ratio (min slope / max slope, the saturation measurement from PART 4)
+barely moved: 0.40 baseline vs 0.41 with the squared term. `net_epa**2` is symmetric in
+net_epa, so its coefficient mostly rescales the curve's overall width around net_epa=0,
+not the SHAPE that causes saturation at both extremes -- and the deeper reason no
+polynomial feature could fix this is that softmax outputs are bounded in [0, 1] by
+construction, for any input, for any set of features. A team cannot have a >100% chance
+of scoring a touchdown no matter what the design matrix contains; saturation here is not
+a flexibility problem this model failed to solve, it is a mathematical property of
+predicting a bounded probability at all. Ruling this out redirects any future effort away
+from "give the drive model more features" -- correctly, per this measurement -- and
+toward either accepting this as a structural limit of drive-based simulation, or a
+genuinely different model family for the mean path, neither attempted here.
 """
 from __future__ import annotations
 
@@ -318,6 +334,70 @@ def saturation_sweep(cfg) -> None:
           f"{slope[-1]:.2f} at the high end ({net_epa_range[-1]:+.3f}).")
 
 
+def net_epa_squared_experiment(cfg, games_with_venues, drives_raw, wf) -> None:
+    """Does adding net_epa**2 to the design matrix let the drive model counteract its own
+    softmax saturation? Verdict, 2026-08-17: no. Refits the real training data directly
+    (sklearn, bypassing the cached MultinomialModel) with and without the squared term and
+    compares the same marginal-sensitivity ratio PART 4 uses. The reason it fails is more
+    useful than the negative result itself: net_epa**2 is symmetric, so its coefficient
+    mostly rescales the curve's width around net_epa=0, not the saturating SHAPE -- and no
+    polynomial feature can fix that shape, because softmax outputs are bounded in [0, 1]
+    by construction regardless of what the design matrix contains. This rules out "add
+    more features" as a path forward for this specific gap, correctly, rather than by
+    assumption."""
+    from sklearn.linear_model import LogisticRegression
+    from sim_core import DRIVE_CLASSES
+    from src.drive_model import build_training_features
+    from src.drives import build_drive_table
+
+    drive_table = build_drive_table(drives_raw, games_with_venues)
+    season = int(wf["season"].max())
+    train = drive_table[(drive_table["season"] >= cfg.seasons.train_start)
+                        & (drive_table["season"] < season)]
+    feat = build_training_features(train, wf, cfg)
+    print(f"training rows: {len(feat):,}")
+
+    net = feat["net_epa"].to_numpy(float)
+    fp_mean, fp_scale = 50.0, 25.0
+    fp = (feat["start_yardline_100"].to_numpy(float) - fp_mean) / fp_scale
+    home = feat["is_home_offense"].to_numpy(float)
+    y = feat["result"].to_numpy()
+
+    def fit(with_square: bool):
+        cols = [net, fp, fp ** 2, home, net * fp]
+        if with_square:
+            cols.append(net ** 2)
+        return LogisticRegression(solver="lbfgs", C=1.0, max_iter=2000).fit(
+            np.column_stack(cols), y)
+
+    base, squared = fit(False), fit(True)
+    order = [list(base.classes_).index(c) for c in DRIVE_CLASSES]
+    tdi, fgi = list(DRIVE_CLASSES).index("TD"), list(DRIVE_CLASSES).index("FG")
+
+    def exp_pts(clf, net_range, with_square):
+        zeros = np.zeros_like(net_range)
+        cols = [net_range, zeros, zeros, zeros, net_range * zeros]
+        if with_square:
+            cols.append(net_range ** 2)
+        logits = np.column_stack(cols) @ clf.coef_[order].T + clf.intercept_[order]
+        logits -= logits.max(axis=1, keepdims=True)
+        p = np.exp(logits)
+        p /= p.sum(axis=1, keepdims=True)
+        return p[:, tdi] * 6.94 + p[:, fgi] * 3.0
+
+    net_range = np.linspace(-0.20, 0.30, 26)
+    slope_base = np.gradient(exp_pts(base, net_range, False), net_range)
+    slope_sq = np.gradient(exp_pts(squared, net_range, True), net_range)
+    ratio_base = slope_base.min() / slope_base.max()
+    ratio_sq = slope_sq.min() / slope_sq.max()
+    print(f"baseline slope range:      {slope_base.min():.2f} to {slope_base.max():.2f}"
+          f"  (min/max ratio {ratio_base:.2f})")
+    print(f"+net_epa**2 slope range:   {slope_sq.min():.2f} to {slope_sq.max():.2f}"
+          f"  (min/max ratio {ratio_sq:.2f})")
+    print(f"\nratio moved {ratio_base:.2f} -> {ratio_sq:.2f}: "
+          f"{'meaningful change' if abs(ratio_sq - ratio_base) > 0.05 else 'no meaningful change'}")
+
+
 def main() -> int:
     print("=" * 90)
     print("PART 1 -- the recorded clamp hypothesis, measured directly")
@@ -352,6 +432,12 @@ def main() -> int:
     print("PART 4 -- does the drive model's net_epa response saturate at the extremes?")
     print("=" * 90)
     saturation_sweep(cfg)
+
+    print()
+    print("=" * 90)
+    print("PART 5 -- does adding net_epa**2 let the model counteract its own saturation?")
+    print("=" * 90)
+    net_epa_squared_experiment(cfg, games_with_venues, drives_raw, wf)
     return 0
 
 
