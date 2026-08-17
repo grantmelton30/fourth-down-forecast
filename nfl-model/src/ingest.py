@@ -251,7 +251,12 @@ def load_depth_charts(seasons: list[int], refresh: bool = False) -> pd.DataFrame
 
         return normalize_all_team_columns(_to_pandas(nfl.load_depth_charts(seasons)))
 
-    return _cached("depth_charts", seasons, refresh, fetch)
+    # season/week are the two columns qb.py::detect_starters indexes unconditionally
+    # (`.get("season")`/`.get("week")`); the rest (position, depth order, player id/name)
+    # are looked up through a first-match-wins list of aliases specifically because their
+    # exact name has moved before, so guarding on any one of them would be another
+    # instance of the same over-specific-guard mistake this audit exists to fix.
+    return _cached("depth_charts", seasons, refresh, fetch, expected_cols=["season", "week"])
 
 
 def load_snap_counts(seasons: list[int], refresh: bool = False) -> pd.DataFrame:
@@ -271,7 +276,12 @@ def load_snap_counts(seasons: list[int], refresh: bool = False) -> pd.DataFrame:
 
         return normalize_all_team_columns(_to_pandas(nfl.load_snap_counts(seasons)))
 
-    return _cached("snap_counts", seasons, refresh, fetch)
+    # injuries.py::build_injury_burden indexes all five of these directly (no alias
+    # fallback), so a schema drift here silently breaks the injury-burden feature -- the
+    # one real, measured NFL injury signal this repo has (NEXT_SESSION.md).
+    return _cached("snap_counts", seasons, refresh, fetch, expected_cols=[
+        "season", "week", "player", "offense_pct", "defense_pct",
+    ])
 
 
 def load_injuries(seasons: list[int], refresh: bool = False) -> pd.DataFrame:

@@ -65,7 +65,15 @@ def fit_drive_model(
     """
     path = CACHE_DIR / f"drive_model_{cfg.seasons.train_start}_{as_of_season}.json"
     if cache and path.exists():
-        return MultinomialModel.from_json(path.read_text())
+        model = MultinomialModel.from_json(path.read_text())
+        # Schema guard, ported from ncaa-model/src/drive_model.py's fit_drive_model
+        # 2026-08-17 cache-consistency audit -- this side never had it. A cache written
+        # before the feature list changed would otherwise be served against a design
+        # matrix of a different width and fail somewhere far from here.
+        if model.classes == list(DRIVE_CLASSES) and model.coef.shape == (
+            len(DRIVE_CLASSES), len(FEATURES)
+        ):
+            return model
 
     train = drives[
         (drives["season"] >= cfg.seasons.train_start)
