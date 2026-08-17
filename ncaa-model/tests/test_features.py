@@ -50,6 +50,34 @@ def test_preseason_sources_preserve_missing_and_aggregate_portal():
     assert pd.isna(a.recruiting_rating)
 
 
+def test_preseason_poll_points_covers_both_fbs_polls_and_the_fcs_poll():
+    """FCS Coaches Poll added 2026-08-17, once FCS teams got real ratings and a reason
+    for this to matter. Safe to average alongside the two FBS polls with no
+    cross-contamination guard: a team is never listed in both an FBS and the FCS poll by
+    construction of the source data."""
+    rankings = pd.DataFrame([{
+        "season": 2026,
+        "polls": [
+            {"poll": "AP Top 25", "ranks": [{"school": "Georgia", "points": 1550}]},
+            {"poll": "Coaches Poll", "ranks": [{"school": "Georgia", "points": 1600}]},
+            {"poll": "FCS Coaches Poll",
+             "ranks": [{"school": "North Dakota State", "points": 700}]},
+        ],
+    }])
+    universe = pd.DataFrame([
+        {"season": 2026, "team": "Georgia"},
+        {"season": 2026, "team": "North Dakota State"},
+        {"season": 2026, "team": "Some Unranked Team"},
+    ])
+    out = normalize_preseason_sources(rankings=rankings, recruiting=universe.assign(
+        points=100.0))
+
+    by_team = out.set_index("team")["preseason_poll_points"]
+    assert by_team["Georgia"] == pytest.approx(1575.0)
+    assert by_team["North Dakota State"] == pytest.approx(700.0)
+    assert by_team["Some Unranked Team"] == 0.0
+
+
 def test_uncertainty_widens_early_and_cross_tier():
     baseline = game_uncertainty_multiplier(8, preseason_available=True, cross_tier=False)
     uncertain = game_uncertainty_multiplier(1, preseason_available=False, cross_tier=True)

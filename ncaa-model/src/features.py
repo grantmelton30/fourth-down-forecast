@@ -261,6 +261,12 @@ def _preseason_poll_points(
     roll, a reliable ~130+ team list) for seasons where a poll was actually parsed, so a
     season with no rows here still resolves to an honest NaN via the caller's merge
     rather than an invented zero.
+
+    Includes "FCS Coaches Poll" alongside the two FBS polls (2026-08-17, once FCS teams
+    got real ratings and a reason for this to matter): safe to average together with no
+    cross-contamination guard needed, since an FBS team is never listed in the FCS poll
+    and vice versa by construction of the source data -- CFBD's `/rankings` payload
+    already carries all three from the one call this function's caller already makes.
     """
     rows = []
     for _, row in rankings.iterrows():
@@ -269,7 +275,7 @@ def _preseason_poll_points(
             continue
         by_team: dict[str, list[float]] = {}
         for poll in polls:
-            if poll.get("poll") not in ("AP Top 25", "Coaches Poll"):
+            if poll.get("poll") not in ("AP Top 25", "Coaches Poll", "FCS Coaches Poll"):
                 continue
             for entry in poll.get("ranks") or []:
                 school, points = entry.get("school"), entry.get("points")
