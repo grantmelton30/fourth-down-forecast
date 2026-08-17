@@ -257,12 +257,23 @@ def load_lines(client: BudgetedCFBD, cfg: Config, seasons: list) -> pd.DataFrame
     parts = []
     if hist:
         path = _parquet(f"lines_{min(hist)}_{max(hist)}")
+        cached = None
         if path.exists():
-            parts.append(pd.read_parquet(path))
-        else:
+            c = pd.read_parquet(path)
+            # Schema guard, same reason as load_games/load_drives/load_plays: without it a
+            # narrower parquet from before a column was added (or a bug fixed) keeps being
+            # served forever. This function had none until 2026-08-17's cache-consistency
+            # audit -- the same unguarded-cache shape that silently broke the endgame table
+            # and dropped the drive clock, just not yet triggered here.
+            if not {"game_id", "spread_open", "spread_close",
+                    "total_open", "total_close", "provider"} - set(c.columns):
+                cached = c
+        if cached is None:
             built = _lines_frame(client, cfg, hist)
             built.to_parquet(path, index=False)
             parts.append(built)
+        else:
+            parts.append(cached)
     if live is not None:
         # Lines move all week, so this is the payload that most needs the TTL.
         parts.append(_lines_frame(client, cfg, [live], ttl=_live_ttl(client)))

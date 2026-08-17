@@ -84,11 +84,24 @@ def _cache_path(name: str, seasons: "list[int] | None" = None) -> Path:
     return CACHE_DIR / f"{name}.parquet"
 
 
-def _cached(name: str, seasons: "list[int] | None", refresh: bool, fetch):
-    """Read parquet if present and not refreshing, else fetch, normalize, and write."""
+def _cached(name: str, seasons: "list[int] | None", refresh: bool, fetch,
+            expected_cols: "list[str] | None" = None):
+    """Read parquet if present and not refreshing, else fetch, normalize, and write.
+
+    `expected_cols` guards the CACHED read specifically. `load_pbp`'s own `fetch()`
+    already validates a fresh pull against `PBP_COLUMNS`, but that check only runs on a
+    cache miss -- an old parquet built under a narrower expected-columns list is served
+    from `path.exists()` forever without ever reaching it. This is the exact failure
+    config.py's own docstring already names for this repo: "nfl-model's `drives_main.parquet`
+    was built before the builder learned to skip kickoff rows." Passing `expected_cols`
+    closes that gap for the cached path the same way `read_cached_frame`
+    (`ncaa-model/src/config.py`) already does for its own caches.
+    """
     path = _cache_path(name, seasons)
     if path.exists() and not refresh:
-        return pd.read_parquet(path)
+        cached = pd.read_parquet(path)
+        if expected_cols is None or not set(expected_cols) - set(cached.columns):
+            return cached
     try:
         df = fetch()
     except Exception as exc:  # noqa: BLE001 - re-raised with the actionable cause
@@ -153,7 +166,9 @@ def load_schedules(seasons: list[int], refresh: bool = False) -> pd.DataFrame:
         df["kickoff"] = _kickoff_timestamp(df)
         return df.sort_values("kickoff").reset_index(drop=True)
 
-    return _cached("schedules", seasons, refresh, fetch)
+    return _cached("schedules", seasons, refresh, fetch,
+                   expected_cols=["season", "home_team", "away_team",
+                                  "spread_line", "result", "kickoff"])
 
 
 def _kickoff_timestamp(df: pd.DataFrame) -> pd.Series:
@@ -194,7 +209,7 @@ def load_pbp(seasons: list[int], refresh: bool = False) -> pd.DataFrame:
         df = normalize_all_team_columns(df)
         return add_competitive_flag(df)
 
-    return _cached("pbp", seasons, refresh, fetch)
+    return _cached("pbp", seasons, refresh, fetch, expected_cols=PBP_COLUMNS)
 
 
 def add_competitive_flag(pbp: pd.DataFrame) -> pd.DataFrame:
