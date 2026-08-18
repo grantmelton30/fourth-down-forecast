@@ -327,6 +327,50 @@ signal) rather than sharpen it. No core rating, the linear projection's base coe
 or the drive simulator were touched — this was always a Stage 1, challenger-only test by
 design (`DECISIONS.md` D12), and stays that way given this result.
 
+## Calibration gate no longer requires significance, 2026-08-18
+
+Resolves a symptom flagged earlier this session ("why is calibrated always empty") that
+the earlier fix only addressed on the frontend (removing a UI column that could never
+populate). The actual cause was `shared/slate_builder.py::calibration_permissions`,
+which required both a directionally positive blend weight *and* `t > 2` before
+`calibration_from_weights` would publish a blended `calibrated` forecast at all. Checked
+the real `blend_weights.json`: NCAA spread `b=+0.058, t=1.24`; NCAA total `b=+0.155,
+t=1.75` — both positive, neither significant. Correcting an earlier claim in this
+conversation: total does *not* clear `t > 2` here despite `GATE_BLEND_INFORMATIVE`
+reading `t=3.09` in `run_backtest.py`'s printed table — that figure is opener-anchored
+(the exact anchor Appendix A proved inflates `t`); `blend_weights.json` is close-anchored
+(`CALIBRATION_ANCHOR = "close"`), the honest read, and on it neither market is
+independently proven yet.
+
+**Decision: drop the significance requirement, keep the sign requirement.** A blend
+toward a more-informed market is the right move when the model's own edge isn't proven,
+not something to withhold until it is — the "positive raw weight" check already excludes
+the one case that would be nonsensical (an anti-predictive weight; NFL spread's raw
+weight is `-0.095`, already clamped to `0.0`, and stays excluded with no new logic).
+Verified directly against the real weights: `calibration_permissions` now returns
+`{"spread": True, "total": True}` for NCAA (previously `{False, False}`), and
+`calibration_from_weights` produces a real blended forecast — spread shrinks heavily
+toward market (weight 0.058: a 2.0-point model/market gap collapses to ~0.1), total
+retains more of the model's own signal (weight 0.155). `calibrated_forecast`'s `source`
+string changed from `"validated spread and total blend"` to `"market blend, weight not
+independently significant"` so it stops overclaiming now that significance isn't
+required — `confidence_label`'s `"validated"` wording is unaffected, since it's gated on
+`bets_allowed()`, not on this.
+
+**NFL is unaffected in practice** (spread's own negative weight still blocks the
+"both markets or nothing" coupling), and nothing in the acceptance-gate system
+(`GATE_BLEND_INFORMATIVE`, `bets_allowed()`) changed — this is purely about what gets
+published as `calibrated`, matching D7's separation between the gate-measurement and
+live-publication paths.
+
+**Won't appear on the live site until the next full publish cycle.** The live
+`data/predictions.jsonl` currently shows `calibration_block_reason: "calibration
+evidence was fitted by a different model build"` — `blend_weights.json`'s `model_version`
+doesn't match what's currently deployed, the same fail-closed model-version check used
+everywhere else in this repo. Self-resolves the next time `run_backtest.py` and
+`build_slate.py` run against the same model version, same as every other
+model-version-gated artifact here.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of

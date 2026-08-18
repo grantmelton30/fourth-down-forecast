@@ -60,7 +60,20 @@ def _calibrate(**overrides):
     return calibration_from_weights(model, market, _weights(**overrides), "nfl"), market
 
 
-def test_unvalidated_spread_yields_no_calibrated_forecast_at_all():
+def test_low_significance_but_positive_weight_still_produces_a_blend():
+    """Significance (`t > 2`) is no longer required, dropped 2026-08-18: a directionally
+    positive weight is blended toward the market even when it isn't yet statistically
+    proven, since a market-anchored blend is the right move regardless of whether this
+    repo's own edge is independently demonstrated. `t_model`/`t_model_total` are no longer
+    read by `calibration_permissions` at all -- low values here are asserting they are
+    now ignored, not exercising a real gate."""
+    calibrated, market = _calibrate(t_model=0.4, t_model_total=0.4)
+    assert calibrated is not None
+    assert calibrated.spread != market.spread
+    assert calibrated.total != market.total
+
+
+def test_missing_spread_weight_yields_no_calibrated_forecast_at_all():
     """A market copy wearing a "calibrated" label is the thing to avoid.
 
     Weighting an unvalidated market at zero silently republishes the market under a
@@ -68,12 +81,12 @@ def test_unvalidated_spread_yields_no_calibrated_forecast_at_all():
     total, so a half-calibrated object cannot even be internally coherent. Absent
     evidence for either market, there is no calibrated projection -- publish null.
     """
-    calibrated, _ = _calibrate(t_model=0.4)  # spread fails the evidence threshold
-    assert calibrated is None, "an unvalidated spread must not be filled from the market"
+    calibrated, _ = _calibrate(b_model=None)
+    assert calibrated is None, "a missing spread weight must not be filled from the market"
 
 
-def test_unvalidated_total_yields_no_calibrated_forecast_at_all():
-    calibrated, _ = _calibrate(t_model_total=0.4)
+def test_missing_total_weight_yields_no_calibrated_forecast_at_all():
+    calibrated, _ = _calibrate(b_model_total=None)
     assert calibrated is None
 
 

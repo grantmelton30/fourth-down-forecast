@@ -106,7 +106,16 @@ def forecast_from_projection(
 
 
 def calibration_permissions(weights: dict, league: str) -> dict[str, bool]:
-    """Promote spread and total independently; anti-predictive slopes fail closed."""
+    """Promote spread and total independently; anti-predictive slopes fail closed.
+
+    Requires only that the fitted weight be directionally positive -- the model and market
+    agree on which way the disagreement should be trusted -- not that it also clear
+    statistical significance (`t > 2`, dropped 2026-08-18). A blend toward a more-informed
+    market is the right move even when this repo's own edge is not yet proven; anti-
+    predictive (negative) weights are the only case actually worth excluding, and stay
+    excluded here unchanged. See GATES.md "Calibration gate no longer requires
+    significance" for the numbers this was measured against.
+    """
     if not weights:
         return {"spread": False, "total": False}
     spread_key = "b_model" if league == "nfl" else "b_model_spread"
@@ -118,12 +127,10 @@ def calibration_permissions(weights: dict, league: str) -> dict[str, bool]:
     return {
         "spread": bool(
             spread_raw is not None and float(spread_raw) > 0
-            and float(weights.get("t_model" if league == "nfl" else "t_model_spread", 0)) > 2
             and float(weights.get(spread_key, 0)) > 0
         ),
         "total": bool(
             total_raw is not None and float(total_raw) > 0
-            and float(weights.get("t_model_total", 0)) > 2
             and float(weights.get("b_model_total", 0)) > 0
         ),
     }
@@ -149,7 +156,10 @@ def calibration_from_weights(independent: Forecast, market: Forecast | None,
         spread_weight=float(spread_weight),
         total_intercept=weights.get("a_total", 0),
         total_weight=float(total_weight),
-        source="validated spread and total blend",
+        # NOT "validated" -- that word is reserved for bets_allowed()-gated language
+        # elsewhere (publication.py::confidence_label). This blend only requires a
+        # directionally positive weight, not a statistically significant one.
+        source="market blend, weight not independently significant",
     )
 
 

@@ -58,9 +58,14 @@ def test_roster_uncertainty_widens_interval_but_preserves_projection_mean():
 
 
 def test_ncaa_calibration_permissions_are_market_specific_and_positive_only():
+    """Significance (`t > 2`) was dropped from `calibration_permissions` 2026-08-18 --
+    a directionally positive weight now blends toward the market regardless of whether it
+    also clears statistical significance. The only real exclusion criterion left is sign:
+    an anti-predictive (negative) weight must still never be blended. `t_model_spread`/
+    `t_model_total` are omitted from this fixture entirely since they're no longer read."""
     weights = {
-        "b_model_spread": .10, "t_model_spread": 1.60,
-        "b_model_total": .20, "t_model_total": 2.03,
+        "b_model_spread": -.10,
+        "b_model_total": .20,
         "a_spread": -.4, "a_total": .3,
     }
     permissions = calibration_permissions(weights, "ncaa")
@@ -68,12 +73,10 @@ def test_ncaa_calibration_permissions_are_market_specific_and_positive_only():
     model = Forecast.from_spread_total(14, 55, None, "model")
     market = Forecast.from_spread_total(35, 58, None, "market")
 
-    # Permissions stay market-specific -- the total cleared its evidence threshold and
-    # the spread did not. What changed is what gets PUBLISHED when they disagree.
-    # This previously asserted `calibrated.spread == market.spread` with the source
-    # "spread market baseline": the market re-emitted under a column that claims
-    # validation. That is the substitution the contract forbids, so a partially
-    # supported calibration is now published as null rather than half-copied.
+    # Permissions stay market-specific -- the total's weight is directionally positive and
+    # the spread's is not. What happens when they disagree: publish null rather than
+    # half-copy the market under a column that claims a blend, not "the market re-emitted
+    # under a column that claims validation" (the substitution the contract forbids).
     assert calibration_from_weights(model, market, weights, "ncaa") is None
 
 
