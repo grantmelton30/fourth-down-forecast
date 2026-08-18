@@ -661,6 +661,85 @@ independent signal (rush's residual contribution) rather than sharpen anything, 
 data. The directional part of the claim (pass > rush individually) replicates; the
 implementation implied by it does not survive contact with a properly controlled test.
 
+## D13. A genuine offense x defense interaction term, tested and not promoted, 2026-08-18
+
+Follow-up to D12, prompted directly by a user pushback that deserved a real test rather
+than a hand-wave: D12 showed rush-only ratings don't deserve their own *linear* term, but
+that's a different claim from "does a specific rushing offense do better against a
+specific defensive front than the additive model predicts." The current formula
+(`net_epa_vec`: `off_weight*off + def_weight*def`) is structurally additive everywhere --
+it cannot represent an effect that scales with how good the offense already is, regardless
+of how well `off`/`def` are individually fit. Tested directly: `ratings.py::
+interaction_matchup(wf, games, prefix)` computes a genuine product,
+`home_off_rating * away_def_rating` (and the mirrored away term), the standard textbook way
+to test a statistical interaction -- included as a `_diff`/`_sum` candidate alongside the
+existing main effects, not compared in isolation. Two versions: pooled ratings (the general
+form of the question) and rush-only ratings from D12's already-built `wf_rush` (the specific
+claim raised), both free -- no new walk-forward fit needed.
+
+**Result: neither promoted.** `feature_spread_promoted`/`feature_total_promoted` are False
+on all 5,621 graded rows, matching D12's own reading. But the honest, useful number is the
+controlled test, not the bare promotion flag -- regressing `actual_margin` on
+`net_diff + is_home + {interaction}` (n=1,543, restricted, 2021-2025) and reading the
+interaction term's own coefficient:
+
+| interaction | market | b | t |
+|---|---|---|---|
+| pooled (off x opponent def) | spread | +1598.5 | **+1.585** |
+| rush-only | spread | +1551.4 | +0.648 |
+| pooled | total | +358.4 | +0.370 |
+| rush-only | total | +2156.7 | +0.936 |
+
+The pooled spread interaction is the closest of the four to conventional significance
+(t=1.96) and points in the theoretically expected direction (a positive coefficient means
+a strong offense gets *more* benefit from a weak defense than the additive formula alone
+would predict) -- but at n=1,543 it isn't distinguishable from noise, and none of the four
+clear the bar `_validated_challenger` requires. Standalone correlation with the outcome is
+much weaker than the existing main effects for all four (expected and not informative on
+its own -- interaction terms are inherently second-order effects, not a replacement for
+the primary relationship, so a low bivariate correlation was never the right way to judge
+this; the controlled regression above is).
+
+**Not acted on.** The user's underlying intuition -- that specific playing styles may
+matchup better or worse against specific fronts in ways addition can't capture -- is not
+disproven by this, just not detected at this sample size with this specific (product)
+functional form. Worth a wider search (e.g. testing interactions built from pass-specific
+ratings too, or a larger n via a less-restricted window) if this is worth pursuing further,
+not concluded here either way.
+
+## D14. Per-season caching for `attach_calibration`, 2026-08-18
+
+`attach_calibration` (D9, GATE_CALIBRATED) cached its result as one blob for all graded
+seasons combined, keyed to a signature hashing the *entire* multi-season `frame`/`games`/
+`drives_raw`/`walkforward`. Found by the user asking why completed historical seasons kept
+getting redone: they didn't need to -- the signature included the current, still-in-progress
+season, which changes every week as new games get graded, so any routine update invalidated
+everything and re-simulated all 5,621+ games including several years of permanently-static
+history. Same "cache signature broader than what actually needs to invalidate it" bug class
+found and fixed several other places in this repo, just not yet caught here since the
+function was new this session.
+
+**Fix**: split into `_season_calibration`, cached per season
+(`backtest_calibration_{cache_key}_s{season}.parquet`), with the signature computed on
+`games`/`drive_table`/`walkforward` filtered to `season <= this season` -- not the
+unfiltered frames. A later season's data can then never appear in an earlier season's
+signature. `attach_calibration`'s public signature and every call site are unchanged.
+
+**Measured, not assumed.** Three real runs: (1) first run under the new scheme, no
+per-season cache yet, ~18-45 min depending on how much fresh ingest was also needed that
+run, numbers matched the known result exactly (5,621 games, worst bin 34.33pp) -- a
+regression check that the refactor changed nothing but the caching strategy; (2) a second
+run the same day, everything cached, no ingest refresh needed: **24 seconds real time**,
+same numbers, byte-identical. That's the actual fix, demonstrated directly: a routine
+rerun that used to cost ~40-45 minutes for the calibration step alone now costs about the
+time it takes to read the cache files off disk.
+
+Verified the fix itself with unit tests on the signature-scoping logic specifically
+(`tests/test_calibration_caching.py`) -- a season's cache is provably unaffected by a
+later season's data changing, and still correctly invalidated by a change to its own data.
+The orphaned monolithic `backtest_calibration_default.parquet` was deleted; the new
+per-season files are the only cache this function reads or writes now.
+
 ## D6. Spread sign convention
 
 CFBD quotes spreads negative = home favored; nflverse is the opposite. Normalized to

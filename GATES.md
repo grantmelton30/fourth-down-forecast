@@ -371,6 +371,39 @@ everywhere else in this repo. Self-resolves the next time `run_backtest.py` and
 `build_slate.py` run against the same model version, same as every other
 model-version-gated artifact here.
 
+## `GATE_CALIBRATED` now costs 24 seconds on a routine rerun, not 40-45 minutes, 2026-08-18
+
+Found by the user asking a simple, correct question: why would completed historical
+seasons ever need re-simulating? They didn't -- `attach_calibration` cached its result as
+one blob for every graded season combined, keyed to a signature that included the current,
+still-in-progress season. Any routine change (a new week's games graded, a rerun during
+development) invalidated the whole thing and re-simulated all 5,621+ games, including
+years of permanently-static history. See `DECISIONS.md` D14 for the fix (per-season
+caching, signature scoped to `season <= X`).
+
+**Measured before/after, not assumed:** a same-day rerun with every per-season cache warm
+completed in **24 seconds real time**, versus the ~40-45 minutes the calibration step alone
+cost before. `GATE_CALIBRATED`'s reported numbers (5,621 games, worst bin off by 34.33pp,
+bin (0.15, 0.2]) are byte-identical across three separate real runs spanning this change --
+confirms the refactor moved nothing but the caching strategy.
+
+## A genuine offense x defense interaction term, tested and not promoted, 2026-08-18
+
+Direct follow-up to "Pass-only EPA tested as a challenger feature" above, prompted by a
+user pushback worth taking seriously: that test showed rush-only ratings don't deserve
+their own linear term, which is a different claim from "does this rushing style do better
+against this specific front than the additive model predicts." Tested the second claim
+directly -- `ratings.py::interaction_matchup` builds a genuine product term
+(`home_off_rating * away_def_rating`, mirrored for the away side), the standard way to test
+a statistical interaction, in both a pooled (general) and rush-only (the specific claim
+raised) form. See `DECISIONS.md` D13 for the full controlled-regression numbers.
+
+**Result: neither promoted**, matching the existing pass/rush finding. The closest signal
+is the pooled spread interaction (t=+1.585 controlling for `net_diff`/`is_home`, n=1,543)
+-- positive, in the theoretically expected direction, but not distinguishable from noise at
+this sample size. Not disproven, not detected; recorded as a real negative result and a
+possible direction for a wider search, not acted on.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of

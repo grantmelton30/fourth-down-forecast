@@ -306,6 +306,46 @@ def split_net_epa_matchup(
     ]]
 
 
+def interaction_matchup(
+    wf: pd.DataFrame, games: pd.DataFrame, prefix: str = "",
+) -> pd.DataFrame:
+    """One row per game with `{prefix}interaction_diff`/`{prefix}interaction_sum` --
+    `off_rating * opponent's def_rating`, a genuine statistical interaction (a product),
+    not the linear `net_epa_vec` combination used everywhere else in this repo.
+
+    Tests a different claim than `split_net_epa_matchup` did. That function asked whether
+    pass-only/rush-only ratings deserve their own separate *linear* term -- they don't, the
+    pooled rating already beats them standalone (GATES.md 2026-08-17). This asks whether
+    the *effect* of facing a worse defense scales with how good the offense already is --
+    a multiplicative relationship the current additive formula (`off_weight*off +
+    def_weight*def`) cannot represent at all, regardless of how well `off`/`def` are
+    individually fit. `off_rating`/`def_rating` are mean-centered by `fit_ratings`, so a
+    raw product of the two is the standard way to test this: include it alongside the
+    main effects already in the model and let a held-out fit decide if the coefficient on
+    it is real, rather than assuming a direction a priori.
+
+    `wf` can be the pooled walk-forward ratings (the general form of the question) or a
+    play-type-restricted one like `wf_rush` from `ingest.py::build_game_offense(...,
+    play_type="rush")` (the specific "does this rushing style beat this front" claim) --
+    same function either way, distinguished only by which ratings and `prefix` are passed.
+    Output columns are `_diff`/`_sum`-suffixed for `_validated_challenger`'s existing
+    suffix-driven candidate detection -- merge onto `challenger` and no other wiring is
+    needed.
+    """
+    g = games[["game_id", "season", "week", "homeTeam", "awayTeam"]]
+    out = g.copy()
+    r = wf[["season", "week", "team", "off_rating", "def_rating"]]
+    h = r.rename(columns={"team": "homeTeam", "off_rating": "h_off", "def_rating": "h_def"})
+    a = r.rename(columns={"team": "awayTeam", "off_rating": "a_off", "def_rating": "a_def"})
+    out = out.merge(h, on=["season", "week", "homeTeam"], how="left")
+    out = out.merge(a, on=["season", "week", "awayTeam"], how="left")
+    home_interaction = out["h_off"] * out["a_def"]
+    away_interaction = out["a_off"] * out["h_def"]
+    out[f"{prefix}interaction_diff"] = home_interaction - away_interaction
+    out[f"{prefix}interaction_sum"] = home_interaction + away_interaction
+    return out[["game_id", f"{prefix}interaction_diff", f"{prefix}interaction_sum"]]
+
+
 def resolve_team_ratings(ratings: pd.DataFrame, team: str, cfg: Config) -> pd.Series:
     """One team's ratings row, falling back to the shared bucket for unrated opponents.
 

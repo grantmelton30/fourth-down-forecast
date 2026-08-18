@@ -679,6 +679,13 @@ def attach_calibration(
     any RMSE/scale/blend gate's inputs, and this cache invalidates independently of the
     (expensive, already load-bearing) `backtest_frame_*` cache.
 
+    Cached per season (`_season_calibration`), not as one blob for every season combined
+    (changed 2026-08-18 -- see GATES.md "Per-season caching for GATE_CALIBRATED"): a
+    completed historical season's signature only depends on data at or before that season,
+    so it is simulated once and never again, and a routine rerun only recomputes whatever
+    season actually changed -- realistically just the current one, as it accumulates
+    newly-graded weeks.
+
     Retotaling onto `model_total` can raise `ValueError` when the pair is jointly
     infeasible for that game's simulated lattice (documented in `scripts/build_slate.py`'s
     `_independent_forecast` and closed at the source for the live path in
@@ -687,79 +694,115 @@ def attach_calibration(
     total falls back to the simulator's own uncalibrated mean rather than dropping the
     game, matching `build_slate.py`'s fallback discipline.
     """
-    path = CACHE_DIR / f"backtest_calibration_{cache_key}.parquet"
+    targets = frame.dropna(subset=["model_spread", "model_total"])
+    drive_table = build_drive_table(drives_raw, games)
+    games_idx = games.set_index("game_id")
+
+    out = pd.concat(
+        [
+            _season_calibration(
+                int(season), season_targets, cfg, games, drive_table, games_idx,
+                walkforward, cache_key,
+            )
+            for season, season_targets in targets.groupby("season")
+        ],
+        ignore_index=True,
+    ) if len(targets) else pd.DataFrame(columns=["game_id", "cover_prob_home", "over_prob"])
+    return frame.merge(out, on="game_id", how="inner")
+
+
+def _season_calibration(
+    season: int,
+    season_targets: pd.DataFrame,
+    cfg: Config,
+    games: pd.DataFrame,
+    drive_table: pd.DataFrame,
+    games_idx: pd.DataFrame,
+    walkforward: pd.DataFrame,
+    cache_key: "str | None",
+) -> pd.DataFrame:
+    """One season's slice of `attach_calibration`, cached on its own.
+
+    Cached and keyed separately per season (`_s{season}` suffix) rather than as one blob
+    for the whole multi-season call, and the signature is computed on `games`/
+    `drive_table`/`walkforward` filtered to `season <= this season` -- not the unfiltered
+    frames. A later season's data (in particular the current, still-in-progress one, which
+    changes every week as new games get graded) can then never appear in an earlier
+    season's signature, so a completed historical season is simulated once and stays
+    cached indefinitely; only the season that actually changed gets recomputed. Found by
+    the user asking why completed seasons kept getting redone -- they didn't need to, the
+    single shared cache blob just couldn't tell them apart from the season that does
+    change. See GATES.md "Per-season caching for GATE_CALIBRATED" for the measured
+    before/after cost.
+    """
+    path = CACHE_DIR / f"backtest_calibration_{cache_key}_s{season}.parquet"
+    at_or_before = games["season"] <= season
     signature = build_cache_signature(builder=Path(__file__), config=asdict(cfg), inputs={
-        "frame": frame_signature(frame, [
+        "season_targets": frame_signature(season_targets, [
             "game_id", "season", "week", "model_spread", "model_total",
             "spread_close", "total_close", "actual_margin", "actual_total"]),
-        "games": frame_signature(games, [
+        "games": frame_signature(games[at_or_before], [
             "game_id", "season", "week", "homeTeam", "awayTeam", "neutralSite",
             "homeClassification", "awayClassification"]),
-        "drives_raw": frame_signature(drives_raw),
-        "walkforward": frame_signature(walkforward, [
+        "drive_table": frame_signature(drive_table[drive_table["season"] <= season]),
+        "walkforward": frame_signature(walkforward[walkforward["season"] <= season], [
             "season", "week", "as_of", "team", "off_rating", "def_rating", "pace_rating"]),
     }, artifact_version=1)
     if cache_key:
         cached = read_cached_frame(path, ["game_id", "cover_prob_home", "over_prob"], signature)
         if cached is not None:
-            return frame.merge(cached, on="game_id", how="inner")
+            return cached
 
-    targets = frame.dropna(subset=["model_spread", "model_total"])
-    drive_table = build_drive_table(drives_raw, games)
-    games_idx = games.set_index("game_id")
+    start_fp = fit_start_field_position(drive_table[drive_table["season"] < season])
+    drive_model = fit_drive_model(drive_table, walkforward, cfg, as_of_season=season)
+    endgame = fit_endgame_table(drive_table, cfg, as_of_season=season)
+    # Unlike `pooled_margin_pmf` (an explicitly diagnostic, shape-only check that fits
+    # venue HFA on everything), this function backs a real accuracy claim, so venue HFA
+    # must obey the same strict-`<` cutoff `project_game.py`'s live path already uses --
+    # the earliest kickoff of the season being graded, matching the season-level
+    # granularity `fit_drive_model`/`fit_endgame_table` use here.
+    season_start = pd.to_datetime(
+        games.loc[games["season"] == season, "kickoff"], utc=True, errors="coerce"
+    ).min()
+    venue_hfa = estimate_venue_hfa(games, cfg, walkforward=walkforward, as_of=season_start)
+    rng = np.random.default_rng(cfg.simulation.seed + season)
 
     rows = []
-    for season, season_targets in targets.groupby("season"):
-        season = int(season)
-        start_fp = fit_start_field_position(drive_table[drive_table["season"] < season])
-        drive_model = fit_drive_model(drive_table, walkforward, cfg, as_of_season=season)
-        endgame = fit_endgame_table(drive_table, cfg, as_of_season=season)
-        # Unlike `pooled_margin_pmf` (an explicitly diagnostic, shape-only check that
-        # fits venue HFA on everything), this function backs a real accuracy claim, so
-        # venue HFA must obey the same strict-`<` cutoff `project_game.py`'s live path
-        # already uses -- the earliest kickoff of the season being graded, matching the
-        # season-level granularity `fit_drive_model`/`fit_endgame_table` use here.
-        season_start = pd.to_datetime(
-            games.loc[games["season"] == season, "kickoff"], utc=True, errors="coerce"
-        ).min()
-        venue_hfa = estimate_venue_hfa(
-            games, cfg, walkforward=walkforward, as_of=season_start)
-        rng = np.random.default_rng(cfg.simulation.seed + season)
-        for t in season_targets.itertuples():
-            if t.game_id not in games_idx.index:
-                continue
-            g = games_idx.loc[t.game_id]
-            try:
-                rt = ratings_at(walkforward, t.season, t.week)
-            except KeyError:
-                continue
-            if g["homeTeam"] not in rt.index or g["awayTeam"] not in rt.index:
-                continue
-            ctx = build_context(g, cfg, venue_hfa=venue_hfa, allow_network=False)
-            sim = simulate_game(
-                g["homeTeam"], g["awayTeam"], rt, drive_model, cfg, start_fp,
-                context_adj=ctx, endgame=endgame, rng=rng,
-                neutral_site=bool(g.get("neutralSite", False)),
-            )
-            probs = sim.recentered(float(t.model_spread))
-            try:
-                probs = probs.retotaled(float(t.model_total))
-            except ValueError:
-                pass
-            rows.append({
-                "game_id": t.game_id,
-                "cover_prob_home": (
-                    probs.cover_prob(float(t.spread_close), "home")
-                    if pd.notna(t.spread_close) else np.nan),
-                "over_prob": (
-                    probs.total_prob(float(t.total_close), "over")
-                    if pd.notna(t.total_close) else np.nan),
-            })
+    for t in season_targets.itertuples():
+        if t.game_id not in games_idx.index:
+            continue
+        g = games_idx.loc[t.game_id]
+        try:
+            rt = ratings_at(walkforward, t.season, t.week)
+        except KeyError:
+            continue
+        if g["homeTeam"] not in rt.index or g["awayTeam"] not in rt.index:
+            continue
+        ctx = build_context(g, cfg, venue_hfa=venue_hfa, allow_network=False)
+        sim = simulate_game(
+            g["homeTeam"], g["awayTeam"], rt, drive_model, cfg, start_fp,
+            context_adj=ctx, endgame=endgame, rng=rng,
+            neutral_site=bool(g.get("neutralSite", False)),
+        )
+        probs = sim.recentered(float(t.model_spread))
+        try:
+            probs = probs.retotaled(float(t.model_total))
+        except ValueError:
+            pass
+        rows.append({
+            "game_id": t.game_id,
+            "cover_prob_home": (
+                probs.cover_prob(float(t.spread_close), "home")
+                if pd.notna(t.spread_close) else np.nan),
+            "over_prob": (
+                probs.total_prob(float(t.total_close), "over")
+                if pd.notna(t.total_close) else np.nan),
+        })
 
     out = pd.DataFrame(rows, columns=["game_id", "cover_prob_home", "over_prob"])
     if cache_key:
         write_cached_frame(out, path, signature)
-    return frame.merge(out, on="game_id", how="inner")
+    return out
 
 
 def calibration_table(frame: pd.DataFrame, grade: str = "close", bin_width: float = 0.05) -> pd.DataFrame:

@@ -43,7 +43,7 @@ from dataclasses import asdict
 from src.cfbd_client import BudgetedCFBD
 from src.config import CACHE_DIR,load_config
 from src.market import clv,fit_blend,residual_fit,season_week_groups
-from src.ratings import build_walkforward, split_net_epa_matchup
+from src.ratings import build_walkforward, interaction_matchup, split_net_epa_matchup
 from src.venues import attach_venues, load_venues
 from src.features import (load_free_preseason, matchup_feature_table,
                           normalize_preseason_sources)
@@ -205,6 +205,17 @@ def main() -> int:
     wf_rush = build_walkforward(game_off_rush, games, cfg, cache_key="rush")
     split_epa = split_net_epa_matchup(wf_pass, wf_rush, games, cfg)
     challenger = challenger.merge(split_epa, on="game_id", how="left")
+
+    # Tests a different, follow-on claim: not whether rush ratings deserve their own
+    # linear term (the split test above already rejected that), but whether the EFFECT of
+    # facing a worse defense scales with how good the offense already is -- a genuine
+    # multiplicative interaction the current additive off_weight*off + def_weight*def
+    # formula cannot represent at all. Pooled (general form) and rush-only (the specific
+    # "this rushing style beats this front" claim raised in review) versions, both free --
+    # `wf`/`wf_rush` are already fit above.
+    interactions = interaction_matchup(wf, games, prefix="pooled_").merge(
+        interaction_matchup(wf_rush, games, prefix="rush_"), on="game_id", how="left")
+    challenger = challenger.merge(interactions, on="game_id", how="left")
 
     frame = walk_forward(cfg, market, wf, challenger_features=challenger)
     print(f"backtest frame: {len(frame):,} graded games")
