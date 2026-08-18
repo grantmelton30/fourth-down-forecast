@@ -628,6 +628,39 @@ finding to act on: if this is worth pursuing further, the next step is a wider-r
 (the search has not yet seen a ceiling) declared and pre-registered the same way this one
 was, not an ad hoc extension of it.
 
+## D12. Pass-only EPA tested as a challenger feature, not promoted, 2026-08-17
+
+A competitor's methodology email (BTB Analytics) claimed rushing EPA "never gets close" to
+significant on a 7,000+-game re-fit, while passing EPA carries the load -- implying
+`ingest.py::build_game_offense`'s pooled `ppa_per_play` (pass + rush averaged together)
+dilutes a real signal. Deliberately scoped as a Stage 1, low-risk test through the existing
+validated-challenger machinery, not a rewrite of the core rating system: `build_game_offense`
+gained an optional `play_type` parameter (pass/rush filter, reusing
+`features.py::build_team_game_features`'s existing classifier), and a new
+`ratings.py::split_net_epa_matchup` combines the resulting pass-only/rush-only walk-forward
+ratings into `pass_net_epa_diff`/`_sum` and `rush_net_epa_diff`/`_sum` candidates merged
+onto the `challenger` frame `run_backtest.py` already builds. No change to
+`walk_forward`/`build_features`/`project_walkforward`, the core `off_rating`/`def_rating`,
+or the drive simulator -- `_validated_challenger`'s existing suffix-driven promotion logic
+picked the new columns up unchanged.
+
+**Result: neither promoted, but not a flat rejection either -- see GATES.md "Pass-only EPA
+tested as a challenger feature" for the full numbers.** Standalone, pass beats rush
+(spread r=+0.4234 vs +0.3749; total r=+0.1985 vs +0.1577), replicating the claim's core
+comparison directionally. But the *existing pooled* feature beats both individually
+(spread r=+0.5090; total r=+0.2405) -- averaging two correlated-but-not-identical signals
+outpredicts either alone here, which is also why validated-ridge correctly rejected both:
+`pass_net_epa_diff` is too collinear with the already-present `net_diff` to add incremental
+value once `net_diff` is in the model.
+
+**Not acted on, and the natural next step (replacing pooled EPA with pass-only, or
+threading a pass/rush split into the drive simulator) is now positively contraindicated by
+this evidence, not just out of scope.** The architectural implication most people would
+draw from the source claim -- split the rating, or go pass-only -- would remove real,
+independent signal (rush's residual contribution) rather than sharpen anything, on this
+data. The directional part of the claim (pass > rush individually) replicates; the
+implementation implied by it does not survive contact with a properly controlled test.
+
 ## D6. Spread sign convention
 
 CFBD quotes spreads negative = home favored; nflverse is the opposite. Normalized to

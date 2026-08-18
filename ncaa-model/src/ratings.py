@@ -268,6 +268,44 @@ def net_epa_vec(
     )
 
 
+def split_net_epa_matchup(
+    wf_pass: pd.DataFrame, wf_rush: pd.DataFrame, games: pd.DataFrame, cfg: Config,
+) -> pd.DataFrame:
+    """One row per game with `pass_net_epa_diff`/`_sum` and `rush_net_epa_diff`/`_sum`.
+
+    Tests a competitor's claimed methodology (GATES.md 2026-08-17): that passing EPA, not
+    pooled EPA, is where the real signal is, and that rushing EPA barely predicts a margin
+    once everything else is in the model. `wf_pass`/`wf_rush` are ordinary
+    `build_walkforward` outputs fit on play-type-restricted `game_off` views
+    (`ingest.py::build_game_offense(..., play_type="pass"|"rush")`) -- this function only
+    combines them into game-level candidates, using the exact same `net_epa_vec` combination
+    `backtest.py::build_features` uses for the main ratings, so a promoted column means
+    "beats the pooled signal under the same math," not a different measurement altogether.
+
+    Output columns are named to match `_validated_challenger`'s suffix-driven candidate
+    detection (`_diff` for spread, `_sum` for total) -- merge this onto the `challenger`
+    frame already passed to `walk_forward` and no other wiring is needed; promotion or
+    rejection is decided by the existing validated-ridge gate, not by this function.
+    """
+    g = games[["game_id", "season", "week", "homeTeam", "awayTeam"]]
+    out = g.copy()
+    for prefix, wf in (("pass", wf_pass), ("rush", wf_rush)):
+        r = wf[["season", "week", "team", "off_rating", "def_rating"]]
+        h = r.rename(columns={"team": "homeTeam", "off_rating": "h_off", "def_rating": "h_def"})
+        a = r.rename(columns={"team": "awayTeam", "off_rating": "a_off", "def_rating": "a_def"})
+        out = out.merge(h, on=["season", "week", "homeTeam"], how="left")
+        out = out.merge(a, on=["season", "week", "awayTeam"], how="left")
+        net_home = net_epa_vec(out["h_off"], out["a_def"], cfg)
+        net_away = net_epa_vec(out["a_off"], out["h_def"], cfg)
+        out[f"{prefix}_net_epa_diff"] = net_home - net_away
+        out[f"{prefix}_net_epa_sum"] = net_home + net_away
+        out = out.drop(columns=["h_off", "h_def", "a_off", "a_def"])
+    return out[[
+        "game_id", "pass_net_epa_diff", "pass_net_epa_sum",
+        "rush_net_epa_diff", "rush_net_epa_sum",
+    ]]
+
+
 def resolve_team_ratings(ratings: pd.DataFrame, team: str, cfg: Config) -> pd.Series:
     """One team's ratings row, falling back to the shared bucket for unrated opponents.
 

@@ -43,7 +43,7 @@ from dataclasses import asdict
 from src.cfbd_client import BudgetedCFBD
 from src.config import CACHE_DIR,load_config
 from src.market import clv,fit_blend,residual_fit,season_week_groups
-from src.ratings import build_walkforward
+from src.ratings import build_walkforward, split_net_epa_matchup
 from src.venues import attach_venues, load_venues
 from src.features import (load_free_preseason, matchup_feature_table,
                           normalize_preseason_sources)
@@ -193,6 +193,19 @@ def main() -> int:
     preseason_raw = load_free_preseason(client, cfg.all_seasons)
     preseason = normalize_preseason_sources(**preseason_raw)
     challenger = matchup_feature_table(plays, games, preseason)
+
+    # Tests a competitor's claimed methodology (GATES.md 2026-08-17): pass-only EPA as a
+    # stronger rating signal than the pooled pass+rush average `game_off` uses today.
+    # Candidates only -- promotion through the existing validated-ridge gate
+    # (_validated_challenger) decides whether either one actually beats the pooled signal;
+    # nothing here changes model_spread/model_total unless it does.
+    game_off_pass = ingest.build_game_offense(plays, drives, games, cfg, play_type="pass")
+    game_off_rush = ingest.build_game_offense(plays, drives, games, cfg, play_type="rush")
+    wf_pass = build_walkforward(game_off_pass, games, cfg, cache_key="pass")
+    wf_rush = build_walkforward(game_off_rush, games, cfg, cache_key="rush")
+    split_epa = split_net_epa_matchup(wf_pass, wf_rush, games, cfg)
+    challenger = challenger.merge(split_epa, on="game_id", how="left")
+
     frame = walk_forward(cfg, market, wf, challenger_features=challenger)
     print(f"backtest frame: {len(frame):,} graded games")
 

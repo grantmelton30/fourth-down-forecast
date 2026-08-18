@@ -279,6 +279,54 @@ Both affected tests remain `@pytest.mark.integration`, excluded from CI, visible
 someone deliberately running them against a real cache — which is why this is written down
 here again rather than left for a third rediscovery.
 
+## Pass-only EPA tested as a challenger feature, 2026-08-17 — nuanced result, not promoted
+
+A competitor's methodology email (BTB Analytics) claimed a re-fit on 7,000+ FBS games shows
+rushing EPA "never gets close" to significant while passing EPA carries the predictive
+load — implying this repo's pooled `ppa_per_play` (pass and rush averaged together in
+`ingest.py::build_game_offense`) is diluting a stronger signal with a weaker one. Tested
+directly rather than assumed: `build_game_offense` gained an optional `play_type`
+parameter, `ratings.py::split_net_epa_matchup` combines the resulting pass-only and
+rush-only walk-forward ratings into `pass_net_epa_diff`/`_sum` and `rush_net_epa_diff`/`_sum`
+candidates, and both were merged onto the existing `challenger` frame `run_backtest.py`
+already builds — no changes to `walk_forward`/`build_features`/`project_walkforward`,
+`_validated_challenger`'s existing suffix-driven promotion logic picked them up unchanged.
+
+**Neither promoted.** `feature_spread_promoted`/`feature_total_promoted` are `False` for
+every one of 5,621 graded rows (`None` only for the same 621 early-history rows every other
+challenger candidate is also absent from). Confirmed this is a real result, not a wiring
+bug: both candidate columns are 100% populated (6,242/6,242 rows) with sensible
+mean-centered values.
+
+**But the reason why is more interesting than a flat rejection.** Standalone (bivariate,
+restricted, 2021-2025, n=1,543) correlation with the actual outcome:
+
+| feature | spread: r vs `actual_margin` | total: r vs `actual_total` |
+|---|---|---|
+| `pass_net_epa_diff`/`_sum` (new, pass-only) | +0.4234 | +0.1985 |
+| `rush_net_epa_diff`/`_sum` (new, rush-only) | +0.3749 | +0.1577 |
+| `net_diff`/`eff_sum` (existing, pooled) | **+0.5090** | **+0.2405** |
+
+**Pass does beat rush individually** — directionally replicating the claim's core
+comparison, on this data, at this bivariate level. **But neither beats the existing pooled
+feature**, which is the strongest of the three in both markets. This is not a contradiction:
+averaging two noisy-but-correlated signals can out-predict either alone even when one of
+them is individually weaker, provided each carries some independent variance relevant to
+the outcome — which is exactly what these numbers show pass and rush both still do. This
+is also why validated-ridge promotion correctly rejected both: `pass_net_epa_diff` is too
+collinear with the already-present `net_diff` (both are largely the same underlying signal,
+split differently) to add incremental value once `net_diff` is already in the model, even
+though it explains real variance on its own.
+
+**Read this as a partial replication with a specific, load-bearing caveat, not a clean
+confirm or reject.** The claim that passing carries more signal than rushing holds up
+directionally on this repo's own data. The architectural implication most naturally drawn
+from it — split the core rating into pass/rush, or replace pooled EPA with pass-only EPA —
+does not: on this evidence, that would *remove* information (rush's residual, independent
+signal) rather than sharpen it. No core rating, the linear projection's base coefficients,
+or the drive simulator were touched — this was always a Stage 1, challenger-only test by
+design (`DECISIONS.md` D12), and stays that way given this result.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of

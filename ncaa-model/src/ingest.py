@@ -367,15 +367,28 @@ def garbage_share(plays: pd.DataFrame) -> float:
 # --------------------------------------------------------------------------------------
 
 def build_game_offense(
-    plays: pd.DataFrame, drives: pd.DataFrame, games: pd.DataFrame, cfg: Config
+    plays: pd.DataFrame, drives: pd.DataFrame, games: pd.DataFrame, cfg: Config,
+    play_type: "str | None" = None,
 ) -> pd.DataFrame:
     """One row per (game, offensive unit): efficiency, drive count, matchup context.
 
     Efficiency is mean PPA per scrimmage play on competitive plays only. FBS and FCS teams
     keep their own identity and get real, individually fitted ratings (2026-08-17); only
     sub-FCS opponents, which FBS never schedules, collapse into a single synthetic team.
+
+    `play_type`: None (default) pools every scrimmage play, unchanged from before this
+    parameter existed. `"pass"`/`"rush"` restrict `ppa_per_play` to that play type only,
+    using the same `playType` substring classifier `features.py::build_team_game_features`
+    already uses for explosive-play detection -- added to test whether pass-only EPA is a
+    stronger rating signal than the pooled one (a competitor's claimed methodology, GATES.md
+    2026-08-17). ~1.79% of currently-pooled scrimmage plays (measured against the 2019-2025
+    cache) fall into neither bucket -- turnover-outcome plays (`Interception`, `Fumble
+    Recovery (Own/Opponent)`, `Safety`, and their return-touchdown variants) rather than a
+    labeling gap -- and are excluded from both split views; they remain in the pooled
+    default, which is why the pooled call's output is unaffected by this parameter's
+    existence.
     """
-    path = _parquet("game_offense")
+    path = _parquet("game_offense" if play_type is None else f"game_offense_{play_type}")
     signature=build_cache_signature(builder=Path(__file__),config=asdict(cfg),inputs={"plays":frame_signature(plays,["game_id","offense","defense","period","ppa","playType","competitive"]),"drives":frame_signature(drives,["game_id","offense","driveNumber"]),"games":frame_signature(games,["game_id","season","week","kickoff","completed","homePoints","awayPoints"])},artifact_version=2)
     cached=read_cached_frame(path,["game_id","offense_norm","defense_norm","ppa_per_play","drives"],signature)
     if cached is not None:return cached
@@ -385,6 +398,16 @@ def build_game_offense(
         & plays["ppa"].notna()
         & ~plays["playType"].isin(SPECIAL_PLAY_TYPES)
     ]
+    if play_type is not None:
+        kind = scrimmage["playType"].astype(str)
+        mask = (
+            kind.str.contains("Pass|Sack", case=False, regex=True) if play_type == "pass"
+            else kind.str.contains("Rush", case=False, regex=True) if play_type == "rush"
+            else None
+        )
+        if mask is None:
+            raise ValueError(f"play_type must be 'pass', 'rush', or None, got {play_type!r}")
+        scrimmage = scrimmage[mask]
     eff = scrimmage.groupby(["game_id", "offense"], as_index=False).agg(
         ppa_per_play=("ppa", "mean"), n_plays=("ppa", "size"),
     )
