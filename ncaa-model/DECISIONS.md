@@ -525,6 +525,65 @@ market-refresh cadence, and `walk_forward`'s own frame stays cached and reused b
 runs. Worth revisiting (per-season checkpointing, or a bounded-but-larger-than-400 sample)
 if this ever needs to run inside a tighter time budget.
 
+## D10. Appendix A totals-coefficient drift confirmed caused by the FCS-ratings fix, 2026-08-17
+
+D9's own totals null re-baseline left the cause of the drift as "leading hypothesis, not
+yet confirmed." Confirmed same day via direct counterfactual
+(`analysis/appendix_a_fcs_counterfactual.py`): revert `build_game_offense` to the old
+single-bucket FCS behavior in memory only, re-run the walk-forward ratings and backtest
+frame against the *same* cached games/drives/plays (zero new CFBD calls), recompute the
+same three Appendix A statistics.
+
+**Result: the counterfactual's full-FBS-close reading (b=+0.0911, se=0.0631, CI upper
++0.2147) reproduces the pre-fix 2026-08-16 reading (b=+0.0911, CI upper +0.2148) almost to
+the fourth decimal.** Changing exactly one function back, holding cached data/config/
+machinery fixed, restores the pre-drift number. This is confirmation, not correlation —
+see GATES.md "Appendix A, revisited again 2026-08-17" for the full three-window table and
+a plausible (measured, not fully proven) mechanism: `model_spread` runs on `net_diff` (a
+difference, largely invariant to the ~0.007-point systematic rating-level shift measured
+directly between the two universes) while `model_total` runs on `eff_sum` (a sum, which
+compounds the same shift).
+
+**No action taken on the fix itself.** The FCS-ratings fix's actual purpose -- giving FBS-
+vs-FCS games real, individually-fitted opponent ratings instead of one shared bucket -- is
+unaffected by this finding and remains correct; this is a traced, understood side effect on
+one specific residual coefficient, not a defect in what the fix was built to do. The totals
+null was already provisional before today; tracing its drift to a specific, confirmed cause
+is strictly more information than the alternative of reverting or patching around it.
+
+## D11. Pre-registered finer `half_life_games` sweep, declared before running, 2026-08-17
+
+D8's concrete next step, acted on same day. **Declared here, before any cell is run**,
+matching D3's discipline: only the cells below are evaluated, and all of them are reported
+regardless of which one wins.
+
+`ratings.half_life_games` only (`config/ncaa.yaml`) -- **not** `pace.half_life_games`,
+a separately-tuned, unrelated parameter in the same file. `prior_weight_games=8.0` and
+`off_weight=1.45` (`def_weight=1.0`) held fixed at their own already-validated live values,
+matching the comment block directly above `prior_weight_games` in `config/ncaa.yaml` --
+that block, not a DECISIONS.md entry, turns out to be the "prior_weight_games's own entry"
+D8 pointed at.
+
+| cell | `half_life_games` |
+|---|---|
+| 1 | 8 |
+| 2 | 12 |
+| 3 | 16 |
+| 4 | 20 |
+| 5 | 24 |
+| 6 | 28 |
+
+Centered on 16 (the best of D8's coarse 6/10/16 test) with wide enough range on both sides
+to distinguish a true interior optimum from "the trend was still climbing when the coarse
+grid stopped." Tune 2021-2023, hold out 2024-2025, matching D3 and D8's own coarse sweep.
+
+**Metrics, matching `config/ncaa.yaml`'s own `prior_weight_games` precedent exactly:**
+held-out `t(b_total)` as the headline (D3's convention), RMSE and `GATE_SCALE`'s SD-ratio
+as the trade-off constraint, an explicit monotonicity check across the six cells rather
+than reading off the single best one, and an explicit statement of what any resulting
+config change does and does not affect (this changes `bets_allowed()` only if it flips a
+currently-failing gate; it does not by itself resolve the Appendix A totals null).
+
 ## D6. Spread sign convention
 
 CFBD quotes spreads negative = home favored; nflverse is the opposite. Normalized to

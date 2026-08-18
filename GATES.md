@@ -221,19 +221,35 @@ restricted-close reading, the one `NCAA_PLAYBOOK.md` Appendix A quotes directly 
 "decisive" at b=0.076/t=0.89, now reads b=0.155/t=1.75 — no longer the small, clearly-null
 number the original table shows.
 
-**Leading hypothesis, not yet confirmed: the FCS-ratings fix.** With challenger promotion
-ruled out, the next candidate is the same-day change that made every non-FBS opponent a
-real, separately-fitted team in the ridge design matrix instead of one shared `__FCS__`
-bucket (`ingest.py::build_game_offense`, `ratings.py::team_universe`). The FCS-ratings plan
-predicted this would leave FBS-vs-FBS relative ratings invariant, "because that's what a
-connected ridge fit already does" — a reasoned prediction, not something that plan actually
-measured against `model_total`'s residual-vs-market coefficient, because no cache existed
-to check it against until now. This entry is the first time that prediction has been
-checked, and on this specific statistic it looks wrong: the restricted/full-FBS *counts*
-didn't move (1,543 and 2,985 match exactly), but the *coefficients* did. Confirming this
-would need a counterfactual rebuild with `build_game_offense` reverted to the old
-single-bucket behavior, holding everything else fixed — not done in this session; recorded
-as the concrete next step, not the settled cause.
+**CONFIRMED: the FCS-ratings fix, by direct counterfactual.**
+`analysis/appendix_a_fcs_counterfactual.py` reverts `build_game_offense` to the old
+single-bucket behavior in memory only (no source change), re-runs the walk-forward ratings
+and backtest frame from that counterfactual `game_off` against the *same* cached
+games/drives/plays (zero new CFBD calls), and recomputes the same three statistics:
+
+| universe | anchor | counterfactual (old bucketing) | post-fix (current code) | 2026-08-16 reading |
+|---|---|---|---|---|
+| restricted | close | b=+0.1407, t=+1.573 | b=+0.1549, t=+1.745 | b=+0.076, t=+0.89 (original) |
+| restricted | open | b=+0.2636, t=+2.665 | b=+0.2808, t=+2.859 | b=+0.195, t=+2.23 (original) |
+| full FBS | close | b=+0.0911, se=0.0631, CI upper **+0.2147** | b=+0.1157, se=0.0623, CI upper +0.2379 | b=+0.0911, se=0.0631, CI upper +0.2148 |
+
+The counterfactual's full-FBS-close reading (+0.0911, CI upper +0.2147) reproduces the
+2026-08-16 reading almost to the fourth decimal — changing exactly one function back to its
+old behavior, with everything else (cached data, walk-forward machinery, config) held
+identical, restores the pre-drift numbers. This is as clean a single-variable isolation as
+this kind of question gets. The FCS-ratings plan's invariance prediction was wrong for this
+statistic.
+
+**A plausible (not fully proven) mechanism for why spreads barely moved but totals did:**
+`model_spread` is driven by `net_diff` (a *difference* of two teams' net efficiency);
+`model_total` by `eff_sum` (a *sum*). A small, systematic shift in the ridge fit's rating
+level from adding ~130 more teams to the joint solve — measured directly: mean FBS
+`off_rating` shifted +0.0069, `def_rating` −0.0004, both small but one-directional rather
+than noise, comparing the same season/week snapshot under both universes — cancels (mostly)
+in a difference and compounds in a sum. `GATE_UNBIASED`'s spread \|a\| actually *improved*
+slightly post-fix (0.214→0.151) while every totals reading moved the same direction as this
+entry's drift, which is consistent with that asymmetry but was not proven down to the exact
+mechanism inside `fit_ratings`'s ridge solve.
 
 **The decision, updating 2026-08-16's:**
 
@@ -253,6 +269,11 @@ as the concrete next step, not the settled cause.
    and is left as written**, matching this file's own practice of appending dated findings
    rather than rewriting history. Its "standing conclusion" prose was already flagged
    2026-08-16 as not safe to quote as current; this entry is further reason not to.
+4. **No action on the FCS-ratings fix itself.** The confirmed cause is a side effect on
+   `model_total`'s residual coefficient, not a bug in what the fix was built to do (real
+   FBS-vs-FCS spread/total projections, e.g. the NDSU sign-flip it fixed). The totals null
+   was already provisional before this was traced; tracing it to a specific, understood
+   cause is strictly more information than reverting or patching around it would be.
 
 Both affected tests remain `@pytest.mark.integration`, excluded from CI, visible only to
 someone deliberately running them against a real cache — which is why this is written down
