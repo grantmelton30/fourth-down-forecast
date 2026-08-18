@@ -46,11 +46,24 @@ function populateProjectionFilters(){
   const names=[...new Set(ratings.map(r=>r.team))].sort((a,b)=>a.localeCompare(b));
   $('#projection-teams').replaceChildren(...names.map(name=>{const option=document.createElement('option');option.value=name;return option}));
 }
+function winProbRow(r){
+  const p=r.independent?.home_win_probability;
+  if(p==null)return'';
+  const homePct=(100*p).toFixed(1),awayPct=(100*(1-p)).toFixed(1);
+  return`<dt>Win probability</dt><dd><span class="split-bar"><span class="split-home" style="width:${homePct}%"></span><span class="split-away" style="width:${awayPct}%"></span></span><small>${esc(r.home_team)} ${homePct}% (home) · ${esc(r.away_team)} ${awayPct}% (away)</small></dd>`;
+}
+function intervalRow(r){
+  const lo=r.independent?.interval_80_low,hi=r.independent?.interval_80_high,point=r.independent?.spread;
+  if(lo==null||hi==null)return'';
+  const DOMAIN=50,toPct=v=>(100*(Math.max(-DOMAIN,Math.min(DOMAIN,v))+DOMAIN)/(2*DOMAIN)).toFixed(1);
+  const leftPct=toPct(lo),rightPct=toPct(hi),pointPct=point==null?null:toPct(point);
+  return`<dt>80% interval (spread)</dt><dd><span class="range-bar"><span class="range-fill" style="left:${leftPct}%;right:${100-rightPct}%"></span>${pointPct==null?'':`<span class="range-point" style="left:${pointPct}%"></span>`}</span><small>${signed(lo)} to ${signed(hi)}</small></dd>`;
+}
 function openDetail(r){
   const ev=r.market_evidence,unavailable=r.unavailable_features?.length?r.unavailable_features.join(', '):'None reported';
   const warnings=r.warnings?.length?`<div class="alert-block"><strong>Review required</strong>${r.warnings.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:'';
   const reasons=r.quality_reasons?.length?r.quality_reasons.join('; '):'No quality blockers reported';
-  $('#dialog-content').innerHTML=`<div class="dialog-inner"><p class="dialog-kicker">${r.league.toUpperCase()} · Week ${r.week} · ${date(r.kickoff)}</p><h2>${esc(r.away_team)} <span>at</span> ${esc(r.home_team)}</h2>${warnings}<div class="detail-grid"><div><span>01 Model</span><strong>${signed(r.independent.spread)} / ${number(r.independent.total)}</strong></div><div><span>02 Market</span><strong>${signed(r.market?.spread)} / ${number(r.market?.total)}</strong></div><div><span>03 Difference</span><strong>${signed(r.model_market_difference?.spread)} / ${signed(r.model_market_difference?.total)}</strong></div></div><dl class="disclosures"><dt>Quality</dt><dd>${esc(r.confidence)} — ${esc(reasons)}</dd><dt>Model version</dt><dd>${esc(r.model_version)}</dd><dt>Information cutoff</dt><dd>${date(r.data_cutoff)}</dd><dt>Market evidence</dt><dd>${ev?`${esc(ev.label)}; ${ev.book_count_spread} spread / ${ev.book_count_total} total sources (${ev.providers.map(esc).join(', ')})`:'No market evidence attached'}</dd><dt>Calibration permissions</dt><dd>Spread: ${r.calibration_status?.spread?'validated':'not validated'} · Total: ${r.calibration_status?.total?'validated':'not validated'}</dd><dt>Unavailable inputs</dt><dd>${esc(unavailable)}</dd><dt>Interpretation</dt><dd>Difference is the independent model minus the market reference. Large disagreement triggers investigation, never an automatic pick.</dd></dl></div>`;
+  $('#dialog-content').innerHTML=`<div class="dialog-inner"><p class="dialog-kicker">${r.league.toUpperCase()} · Week ${r.week} · ${date(r.kickoff)}</p><h2>${esc(r.away_team)} <span>at</span> ${esc(r.home_team)}</h2>${warnings}<div class="detail-grid"><div><span>01 Model</span><strong>${signed(r.independent.spread)} / ${number(r.independent.total)}</strong></div><div><span>02 Market</span><strong>${signed(r.market?.spread)} / ${number(r.market?.total)}</strong></div><div><span>03 Difference</span><strong>${signed(r.model_market_difference?.spread)} / ${signed(r.model_market_difference?.total)}</strong></div></div><dl class="disclosures">${winProbRow(r)}${intervalRow(r)}<dt>Quality</dt><dd>${esc(r.confidence)} — ${esc(reasons)}</dd><dt>Model version</dt><dd>${esc(r.model_version)}</dd><dt>Information cutoff</dt><dd>${date(r.data_cutoff)}</dd><dt>Market evidence</dt><dd>${ev?`${esc(ev.label)}; ${ev.book_count_spread} spread / ${ev.book_count_total} total sources (${ev.providers.map(esc).join(', ')})`:'No market evidence attached'}</dd><dt>Calibration permissions</dt><dd>Spread: ${r.calibration_status?.spread?'validated':'not validated'} · Total: ${r.calibration_status?.total?'validated':'not validated'}</dd><dt>Unavailable inputs</dt><dd>${esc(unavailable)}</dd><dt>Interpretation</dt><dd>Difference is the independent model minus the market reference. Large disagreement triggers investigation, never an automatic pick.</dd></dl></div>`;
   dialog.showModal();
 }
 
@@ -73,7 +86,13 @@ function renderLeague(){
     ['3+ book consensus',consensus],['Pick eligible',records.filter(r=>r.pick_eligible).length],
   ].map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong></div>`).join('');
   $('#rankings-period').textContent=`${data.season||'—'} · Week ${data.week||'—'}`;
-  $('#ranking-list').innerHTML=data.ratings.slice().sort((a,b)=>(a.net_rank||999)-(b.net_rank||999)).map(r=>`<button class="ranking-row" data-team-jump="${esc(r.team)}"><span><b>${r.net_rank||'—'}</b><i>${esc(r.team)}</i><small>${esc(r.conference||state.explorerLeague.toUpperCase())}</small></span><strong>${signed(r.net_rating)}</strong><em>#${r.off_rank||'—'}</em><em>#${r.def_rank||'—'}</em></button>`).join('');
+  const ratings=data.ratings.slice().sort((a,b)=>(a.net_rank||999)-(b.net_rank||999));
+  const maxAbsRating=Math.max(1e-9,...ratings.map(r=>Math.abs(r.net_rating||0)));
+  $('#ranking-list').innerHTML=ratings.map(r=>{
+    const pct=(100*Math.abs(r.net_rating||0)/maxAbsRating).toFixed(1);
+    const dir=(r.net_rating||0)>=0?'pos':'neg';
+    return `<button class="ranking-row" data-team-jump="${esc(r.team)}"><span><b>${r.net_rank||'—'}</b><i>${esc(r.team)}</i><small>${esc(r.conference||state.explorerLeague.toUpperCase())}</small></span><strong>${signed(r.net_rating)}</strong><em>#${r.off_rank||'—'}</em><em>#${r.def_rank||'—'}</em><span class="rating-bar-track"><span class="rating-bar-fill ${dir}" style="width:${pct}%"></span></span></button>`;
+  }).join('');
   $('#evidence-overview').innerHTML=`<div class="evidence-score"><strong>${records.filter(r=>r.confidence==='established').length}</strong><span>established forecasts</span></div><dl><dt>Incomplete</dt><dd>${records.filter(r=>r.confidence==='incomplete').length}</dd><dt>Extreme-disagreement review</dt><dd>${records.filter(r=>r.out_of_distribution).length}</dd><dt>Spread calibration</dt><dd>${records.some(r=>r.calibration_status?.spread)?'validated':'not validated'}</dd><dt>Total calibration</dt><dd>${records.some(r=>r.calibration_status?.total)?'validated':'not validated'}</dd></dl><p>Quality describes evidence maturity. It is not a pick grade.</p>`;
   $$('[data-team-jump]').forEach(button=>button.addEventListener('click',()=>{state.teamLeague=state.explorerLeague;state.team=button.dataset.teamJump;showView('teams')}));
 }
