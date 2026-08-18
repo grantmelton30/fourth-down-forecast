@@ -23,7 +23,12 @@ def test_refresh_workflow_keeps_manual_and_twice_weekly_triggers():
     workflow = (ROOT / ".github/workflows/publish.yml").read_text()
     assert "workflow_dispatch:" in workflow
     assert 'cron: "17 11 * * 2,5"' in workflow
-    assert 'cron: "17 13 * * *"' in workflow
+    # Market-only republish, bumped from once daily to every 4 hours 2026-08-18 -- no
+    # model rebuild, just fresh live-season lines, cheap enough to run this often. The
+    # schedule string and the step's own comparison must stay in sync or the market-only
+    # branch silently stops matching and every scheduled run does a full rebuild instead.
+    assert 'cron: "17 */4 * * *"' in workflow
+    assert 'github.event.schedule }}" = "17 */4 * * *"' in workflow
 
 
 def test_ui_reserves_warning_icon_for_extreme_disagreement_and_labels_missing_market():
