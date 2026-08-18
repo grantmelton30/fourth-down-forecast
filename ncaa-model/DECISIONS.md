@@ -584,6 +584,50 @@ than reading off the single best one, and an explicit statement of what any resu
 config change does and does not affect (this changes `bets_allowed()` only if it flips a
 currently-failing gate; it does not by itself resolve the Appendix A totals null).
 
+**Results (`analysis/half_life_finer_sweep.py`, all six cells):**
+
+| `half_life_games` | tune t(total) | hold t(total) | hold RMSE(total) | hold SD ratio(total) | hold t(spread) |
+|---|---|---|---|---|---|
+| 8 | 2.340 | 1.821 | 17.020 | 0.751 | −0.999 |
+| 12 | 1.982 | 2.074 | 17.008 | 0.713 | −1.052 |
+| 16 | 1.822 | 2.196 | 17.012 | 0.690 | −1.091 |
+| 20 | 1.736 | 2.252 | 17.024 | 0.676 | −1.108 |
+| 24 | 1.683 | 2.280 | 17.038 | 0.667 | −1.112 |
+| 28 | 1.648 | 2.296 | 17.052 | 0.662 | −1.111 |
+
+**No interior optimum found. Held-out t(b_total) is still climbing at the top of the
+tested range** (1.82 at 8 -> 2.30 at 28, monotone throughout, no sign of turning over) --
+D8's own worry ("the true optimum could be anywhere above 6, including past 16") is
+confirmed, not resolved: past 16 is exactly where it keeps going. This is a materially
+different shape than `prior_weight_games`'s own search, which is why that one was trusted
+enough to become the live default and this one is not: that search found RMSE trough with
+points rising on *both* sides (16.718 -> 16.563 -> 16.630 -> 16.791 as prior_weight went
+0.42 -> 8.0 -> 20 -> 30). This search has only ever seen one side of whatever curve exists,
+if one exists at all.
+
+**GATE_SCALE reads as a non-issue here, but not for a reassuring reason.** Every single
+cell -- 8 through 28 -- sits at SD ratio 0.66-0.75, already well outside the [0.85, 1.15]
+tolerance the live config (`half_life_games=6`) is *already* failing at (0.7407, the
+committed reading in GATES.md's 2026-08-17 status table). Moving within this range does not
+flip `GATE_SCALE` from pass to fail because it never passed at any point tested -- the
+trade-off D8 anticipated needing to adjudicate does not actually bind, but only because the
+starting point was already on the wrong side of it. Dispersion also degrades monotonically
+in the same direction `t(b_total)` improves (0.751 -> 0.662), which is the same shape as
+"the projection is getting smoother/more heavily-averaged as decay slows," not obviously
+distinguishable from "the projection is getting more accurate."
+
+**Not acted on. No config change.** Two independent reasons this project has used before to
+withhold a config change apply directly here: (1) a monotone trend with no interior optimum
+is exactly the pattern D3's whole pre-registration discipline exists to guard against acting
+on -- picking 28 because it is the best of six arbitrarily-chosen points is a lucky-cell
+selection with extra steps, not a principled choice; (2) a metric that keeps improving while
+a plausible confound (dispersion collapse) moves in lockstep is the same shape this project
+has twice manufactured a false signal from before (Appendix A's opener-anchoring artifact;
+D6d's underpowered-subsample claim). Recorded as a well-evidenced open question, not a
+finding to act on: if this is worth pursuing further, the next step is a wider-range grid
+(the search has not yet seen a ceiling) declared and pre-registered the same way this one
+was, not an ad hoc extension of it.
+
 ## D6. Spread sign convention
 
 CFBD quotes spreads negative = home favored; nflverse is the opposite. Normalized to
