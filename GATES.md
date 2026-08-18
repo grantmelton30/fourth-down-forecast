@@ -39,6 +39,77 @@ the NCAA totals false positive, behaving exactly as documented: the apparent sig
 against the opening number and does not survive the closing one. It is a diagnostic, not
 an edge.
 
+## Updated status — measured 2026-08-17 (NCAA): `GATE_CALIBRATED` implemented, all promotion gates now produced
+
+First rebuild since the FCS-ratings fix and the first time `GATE_CALIBRATED` has ever
+been produced for NCAA — it was declared as a required promotion gate in
+`shared/gate_artifact.py::REQUIRED_PROMOTION_GATES` since this repo's gate schema was
+written but never implemented, which meant `write_gate_artifact` silently inserted a
+`passed: null` row on every single NCAA build and permanently blocked `bets_allowed()` for
+a reason no gate table ever showed. Ported from nfl-model's working
+`walk_forward`/`calibration_table`/`gate_calibrated` pattern: `attach_calibration`
+(`ncaa-model/src/backtest.py`) walks forward one season at a time, refits the drive model,
+endgame table, and venue HFA (with a proper `as_of` kickoff cutoff — `pooled_margin_pmf`'s
+existing venue-HFA call has none, which is fine for that diagnostic-only gate but would
+have been a real lookahead leak here), simulates every graded game with that season's
+ratings, and reweights the result onto this build's own `model_spread`/`model_total`
+(`SimResult.recentered().retotaled()`) before reading off `cover_prob_home`/`over_prob`.
+Additive and separately cached from `walk_forward` — reads `model_spread`/`model_total`,
+never recomputes them.
+
+| gate | reading |
+|---|---|
+| `GATE_OPENER_COVERAGE` | **PASS** — 99.7% coverage, mean \|open−close\| 1.40 |
+| `GATE_NO_LOOKAHEAD` | **PASS** — 0 of 200 sampled rows use ratings dated after kickoff |
+| `GATE_GARBAGE_FILTER` | **PASS** — 9.6% of plays dropped |
+| `GATE_UNBIASED` | **PASS** — largest \|a\| 0.151 (spread) |
+| `GATE_BLEND_INFORMATIVE` | **PASS** — best positive t(b) 3.09 (total), vs the opener |
+| `GATE_UNBIASED_BY_WEEK` | **FAIL** — worst \|a\| 2.703 (spread wk4, n=167) |
+| `GATE_SCALE` | **FAIL** — worst SD-ratio deviation 0.259 (total) |
+| `GATE_RMSE_TOTAL` | **FAIL** — 16.688 vs market 16.223 (ratio 1.029, n=1543) |
+| `GATE_RMSE_SPREAD` | **FAIL** — 16.955 vs market 15.514 (ratio 1.093, n=1543) |
+| `GATE_KEY_NUMBERS` | **FAIL** — worst gap 3.89pp at \|margin\|=\>28 (pre-existing softmax-saturation finding, unrelated to today's changes) |
+| `GATE_CALIBRATED` | **FAIL (now produced)** — worst bin off by 34.33pp (bin 0.15-0.20, n=106, tolerance 6pp) |
+| `GATE_API_BUDGET` | **FAIL** — 383 calls (budget 250) — **artifact of this session's retries, not the build's real cost**, see below |
+
+`bets_allowed()` is still **False**, but for the first time every required NCAA promotion
+gate in `REQUIRED_PROMOTION_GATES` has an actual measured reading — none are `passed: null`
+anymore.
+
+**RMSE/SCALE/UNBIASED/BLEND numbers are consistency-checked against the pre-FCS-fix
+2026-08-13 reading above and are essentially unchanged** (e.g. RMSE_TOTAL 16.665→16.688,
+RMSE_SPREAD 16.932→16.955) — confirming `attach_calibration` did not disturb the existing
+measurement pipeline, exactly as designed, and confirming the FCS-ratings plan's own
+prediction that these FBS-only-graded gates would be "materially unchanged" (they exclude
+FCS games by construction). `GATE_KEY_NUMBERS` is a pre-existing, already-documented finding
+(softmax saturation, `analysis/blowout_tail_diagnosis.py`) and did not change materially
+either.
+
+**`GATE_CALIBRATED`'s result is a genuinely new, clean, negative finding.** 5,621 graded
+games (a materially larger population than the FBS-only gates above, because FCS teams now
+carry real ratings and are simulable post-fix) carry a calibrated cover probability. The
+calibration table is close to flat: bins predicting a 92% home cover realize ~50%; bins
+predicting a 2.6% cover realize ~55%; nearly every bin, across the full 0-100% predicted
+range, realizes somewhere in the 45-60% band. The model's own stated confidence in a cover
+carries essentially no relationship to whether the cover actually happens — consistent with,
+and now directly quantifying, this project's standing finding that no real edge has been
+demonstrated.
+
+**`GATE_API_BUDGET`'s 383-call reading is not a real regression.** This session hit CFBD's
+429 four times in a row while rebuilding an empty local cache (the 2026-08-13 cache no
+longer existed in this environment) — three of those retries each re-recorded the same
+failed call against the monthly counter before the actual cause (an exhausted free-tier
+quota, unrelated to any per-minute throttle) was found and the account upgraded to the
+$1/5,000-call tier. `monthly_call_budget` in `config/ncaa.yaml` was bumped 900→4,500 to
+match. A single clean cold build still costs ~173-350 calls, comfortably under the 250
+`api_budget_max_cold` sanity check; this reading is the cumulative cost of one clean build
+plus several failed retries within the same month, not a change in the build's own cost.
+
+See "Appendix A, revisited again 2026-08-17" below for a second, unrelated finding
+surfaced by this being the first real rebuild since the FCS-ratings fix: the totals
+residual coefficient (`b`) has drifted upward, and the challenger-promotion hypothesis
+that could explain the 2026-08-16 drift is now ruled out for this one.
+
 ### NFL — measured 2026-08-13 by the scheduled run
 
 The first NFL artifact this repository has ever committed, produced by CI rather than by
@@ -120,6 +191,72 @@ thing this whole guard exists to catch.
 Both affected tests are `@pytest.mark.integration` and excluded from CI, so this failure is
 visible only to someone deliberately running them — which is also why it is written down
 here rather than left to be rediscovered.
+
+### Appendix A, revisited again 2026-08-17 — challenger-promotion hypothesis ruled out, drift grew
+
+The 2026-08-16 entry above ended with a specific instruction: run a fresh full rebuild,
+check `feature_total_promoted`, and either re-baseline with that provenance documented or
+find a bug. No local CFBD-backed cache existed to do that at the time. One now does (this
+session bought CFBD's $1/5,000-call tier after the free tier's 1,000/month ran out mid-build
+— see `monthly_call_budget` in `config/ncaa.yaml`), and a genuine cold rebuild ran
+2026-08-17, the first since the FCS-ratings fix (`ingest.py::build_game_offense`, same day)
+and the preseason-poll-points feature landed.
+
+**`feature_total_promoted` is `False` for every graded row, every season 2021-2025.** The
+challenger-promotion hypothesis from 2026-08-16 (three commits landing `*_sum`-suffixed
+candidates on 2026-08-12/13) is ruled out directly, not circumstantially, as the cause of
+*this* drift — no challenger has fired at any point in this rebuild.
+
+**And the drift grew, in the same direction, not shrank:**
+
+| universe | anchor | n | b | t / se | 2026-08-16 reading |
+|---|---|---|---|---|---|
+| restricted | close | 1,543 | +0.1549 | t=+1.745 | b=+0.076, t=+0.89 (Appendix A original) |
+| restricted | open | 1,543 | +0.2808 | t=+2.859 | b=+0.195, t=+2.23 (Appendix A original) |
+| full FBS | close | 2,985 | +0.1157 | se=0.0623, CI [−0.0065, +0.2378] | b=+0.0911, se=0.0631, CI upper +0.2148 |
+
+Full-FBS close-anchored `b` moved from +0.091 to +0.116 and its CI upper bound from +0.215
+to **+0.238** — further above APPENDIX_A_OPEN_B (0.195), not closer to it. The
+restricted-close reading, the one `NCAA_PLAYBOOK.md` Appendix A quotes directly as
+"decisive" at b=0.076/t=0.89, now reads b=0.155/t=1.75 — no longer the small, clearly-null
+number the original table shows.
+
+**Leading hypothesis, not yet confirmed: the FCS-ratings fix.** With challenger promotion
+ruled out, the next candidate is the same-day change that made every non-FBS opponent a
+real, separately-fitted team in the ridge design matrix instead of one shared `__FCS__`
+bucket (`ingest.py::build_game_offense`, `ratings.py::team_universe`). The FCS-ratings plan
+predicted this would leave FBS-vs-FBS relative ratings invariant, "because that's what a
+connected ridge fit already does" — a reasoned prediction, not something that plan actually
+measured against `model_total`'s residual-vs-market coefficient, because no cache existed
+to check it against until now. This entry is the first time that prediction has been
+checked, and on this specific statistic it looks wrong: the restricted/full-FBS *counts*
+didn't move (1,543 and 2,985 match exactly), but the *coefficients* did. Confirming this
+would need a counterfactual rebuild with `build_game_offense` reverted to the old
+single-bucket behavior, holding everything else fixed — not done in this session; recorded
+as the concrete next step, not the settled cause.
+
+**The decision, updating 2026-08-16's:**
+
+1. **Re-baseline the pinned constants in `test_power.py` to today's numbers.** The
+   2026-08-16 entry conditioned re-baselining on ruling out challenger promotion; that
+   condition is now met. `APPENDIX_A_CLOSE_B`/`_T`, `APPENDIX_A_OPEN_B`/`_T`, and the CI
+   reading in `test_full_fbs_close_anchored_null_is_adequately_powered`'s docstring are
+   updated to this entry's numbers.
+2. **Do not upgrade "provisional" back to "settled," and do not downgrade it to "there is an
+   edge" either.** The point estimates are still nulls by the pre-registered test (t=1.75
+   and t=1.86 both clear neither 1.96 nor even reliably 2.0), but the CI-upper-bound guard
+   that exists specifically to catch the opener-anchoring artifact reappearing is now
+   failing by a wider margin than 2026-08-16, not a narrower one. Read that as "still
+   cannot rule out re-contamination," not as "there is now a real edge" — nothing here
+   changes `GATE_RMSE_TOTAL` (still fails) or `bets_allowed()` (still False).
+3. **`NCAA_PLAYBOOK.md`'s Appendix A table is a historical record of the 2026-08-04 build
+   and is left as written**, matching this file's own practice of appending dated findings
+   rather than rewriting history. Its "standing conclusion" prose was already flagged
+   2026-08-16 as not safe to quote as current; this entry is further reason not to.
+
+Both affected tests remain `@pytest.mark.integration`, excluded from CI, visible only to
+someone deliberately running them against a real cache — which is why this is written down
+here again rather than left for a third rediscovery.
 
 ## Previously: NO GATE HAD A CURRENT READING
 

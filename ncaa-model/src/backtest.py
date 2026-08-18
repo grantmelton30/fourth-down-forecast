@@ -640,6 +640,166 @@ def gate_key_numbers(
     )
 
 
+# --------------------------------------------------------------------------------------
+# GATE_CALIBRATED -- per-game cover/over probabilities from the calibrated simulator
+# --------------------------------------------------------------------------------------
+# Declared as a required promotion gate since this repo's gate schema was written
+# (`shared/gate_artifact.py::REQUIRED_PROMOTION_GATES["ncaa"]`) but never produced --
+# `write_gate_artifact` has been silently inserting a `passed: null` row for it on every
+# NCAA build, which is an unconditional, permanent bets_allowed() blocker (fail-closed:
+# `passed is not True`). Ported from nfl-model's `walk_forward`/`calibration_table`/
+# `gate_calibrated` (`nfl-model/src/backtest.py`), which has run this exact pattern
+# against real data for the lifetime of that repo.
+
+def attach_calibration(
+    frame: pd.DataFrame,
+    cfg: Config,
+    games: pd.DataFrame,
+    drives_raw: pd.DataFrame,
+    walkforward: pd.DataFrame,
+    cache_key: "str | None" = "default",
+) -> pd.DataFrame:
+    """Attach `cover_prob_home`/`over_prob` to every row of `frame` that has a fitted
+    `model_spread`/`model_total`, walk-forward, one season at a time.
+
+    Mirrors nfl-model's per-season calibration loop: the drive model, endgame table and
+    venue HFA are refit once per season on strictly earlier data (`as_of_season=season`,
+    same no-lookahead contract as `pooled_margin_pmf` and every rating in this repo), then
+    every graded game in that season is simulated with that season's ratings and reweighted
+    (`SimResult.recentered().retotaled()`) onto THIS build's own `model_spread`/
+    `model_total` -- not the simulator's raw mean -- before reading off cover/over
+    probabilities. Recentring onto the shipped centre, not the simulator's own mean, is the
+    same fix `pooled_margin_pmf` needed (see its docstring): an uncalibrated sim mean varies
+    far less across matchups than the model actually ships, so probabilities read off the
+    raw sim would describe a different, over-confident-in-the-wrong-way projection than the
+    one on the site.
+
+    Deliberately additive and separately cached from `walk_forward`: `model_spread`/
+    `model_total` are read here, never recomputed, so a bug in this function cannot move
+    any RMSE/scale/blend gate's inputs, and this cache invalidates independently of the
+    (expensive, already load-bearing) `backtest_frame_*` cache.
+
+    Retotaling onto `model_total` can raise `ValueError` when the pair is jointly
+    infeasible for that game's simulated lattice (documented in `scripts/build_slate.py`'s
+    `_independent_forecast` and closed at the source for the live path in
+    `live_mean.py::LiveMeanModel.predict`'s physical-floor clip, which this OLS-fit
+    backtest path does not go through) -- in that case the margin stays calibrated and the
+    total falls back to the simulator's own uncalibrated mean rather than dropping the
+    game, matching `build_slate.py`'s fallback discipline.
+    """
+    path = CACHE_DIR / f"backtest_calibration_{cache_key}.parquet"
+    signature = build_cache_signature(builder=Path(__file__), config=asdict(cfg), inputs={
+        "frame": frame_signature(frame, [
+            "game_id", "season", "week", "model_spread", "model_total",
+            "spread_close", "total_close", "actual_margin", "actual_total"]),
+        "games": frame_signature(games, [
+            "game_id", "season", "week", "homeTeam", "awayTeam", "neutralSite",
+            "homeClassification", "awayClassification"]),
+        "drives_raw": frame_signature(drives_raw),
+        "walkforward": frame_signature(walkforward, [
+            "season", "week", "as_of", "team", "off_rating", "def_rating", "pace_rating"]),
+    }, artifact_version=1)
+    if cache_key:
+        cached = read_cached_frame(path, ["game_id", "cover_prob_home", "over_prob"], signature)
+        if cached is not None:
+            return frame.merge(cached, on="game_id", how="inner")
+
+    targets = frame.dropna(subset=["model_spread", "model_total"])
+    drive_table = build_drive_table(drives_raw, games)
+    games_idx = games.set_index("game_id")
+
+    rows = []
+    for season, season_targets in targets.groupby("season"):
+        season = int(season)
+        start_fp = fit_start_field_position(drive_table[drive_table["season"] < season])
+        drive_model = fit_drive_model(drive_table, walkforward, cfg, as_of_season=season)
+        endgame = fit_endgame_table(drive_table, cfg, as_of_season=season)
+        # Unlike `pooled_margin_pmf` (an explicitly diagnostic, shape-only check that
+        # fits venue HFA on everything), this function backs a real accuracy claim, so
+        # venue HFA must obey the same strict-`<` cutoff `project_game.py`'s live path
+        # already uses -- the earliest kickoff of the season being graded, matching the
+        # season-level granularity `fit_drive_model`/`fit_endgame_table` use here.
+        season_start = pd.to_datetime(
+            games.loc[games["season"] == season, "kickoff"], utc=True, errors="coerce"
+        ).min()
+        venue_hfa = estimate_venue_hfa(
+            games, cfg, walkforward=walkforward, as_of=season_start)
+        rng = np.random.default_rng(cfg.simulation.seed + season)
+        for t in season_targets.itertuples():
+            if t.game_id not in games_idx.index:
+                continue
+            g = games_idx.loc[t.game_id]
+            try:
+                rt = ratings_at(walkforward, t.season, t.week)
+            except KeyError:
+                continue
+            if g["homeTeam"] not in rt.index or g["awayTeam"] not in rt.index:
+                continue
+            ctx = build_context(g, cfg, venue_hfa=venue_hfa, allow_network=False)
+            sim = simulate_game(
+                g["homeTeam"], g["awayTeam"], rt, drive_model, cfg, start_fp,
+                context_adj=ctx, endgame=endgame, rng=rng,
+                neutral_site=bool(g.get("neutralSite", False)),
+            )
+            probs = sim.recentered(float(t.model_spread))
+            try:
+                probs = probs.retotaled(float(t.model_total))
+            except ValueError:
+                pass
+            rows.append({
+                "game_id": t.game_id,
+                "cover_prob_home": (
+                    probs.cover_prob(float(t.spread_close), "home")
+                    if pd.notna(t.spread_close) else np.nan),
+                "over_prob": (
+                    probs.total_prob(float(t.total_close), "over")
+                    if pd.notna(t.total_close) else np.nan),
+            })
+
+    out = pd.DataFrame(rows, columns=["game_id", "cover_prob_home", "over_prob"])
+    if cache_key:
+        write_cached_frame(out, path, signature)
+    return frame.merge(out, on="game_id", how="inner")
+
+
+def calibration_table(frame: pd.DataFrame, grade: str = "close", bin_width: float = 0.05) -> pd.DataFrame:
+    """Predicted P(home covers) vs realized cover rate, in 5% bins.
+
+    Ported from nfl-model's `calibration_table`. Anchored on the CLOSE by default,
+    matching every other NCAA gate that grades absolute accuracy (`rmse_gate`,
+    `run_backtest.py`'s `CALIBRATION_ANCHOR`) -- the opener is the wrong anchor for a
+    validation claim here (GATES.md: the opener-anchored totals signal was a false
+    positive that vanished against the close).
+    """
+    mkt = f"spread_{grade}"
+    resolved = frame.dropna(subset=["cover_prob_home", mkt, "actual_margin"])
+    resolved = resolved[resolved["actual_margin"] != resolved[mkt]].copy()
+    resolved["outcome"] = (resolved["actual_margin"] > resolved[mkt]).astype(float)
+    bins = np.arange(0.0, 1.0 + bin_width, bin_width)
+    resolved["bin"] = pd.cut(resolved["cover_prob_home"], bins, include_lowest=True)
+    grp = resolved.groupby("bin", observed=True).agg(
+        n=("outcome", "size"), predicted=("cover_prob_home", "mean"),
+        realized=("outcome", "mean"),
+    ).reset_index()
+    grp["abs_error"] = (grp["realized"] - grp["predicted"]).abs()
+    return grp
+
+
+def gate_calibrated(calib: pd.DataFrame, tol: float = 0.06) -> GateResult:
+    """Predicted cover probability must match realized cover rate in every well-populated
+    bin. Ported from nfl-model's `gate_calibrated`; same tolerance and bin-size floor."""
+    big = calib[calib["n"] >= 100]
+    if big.empty:
+        return GateResult("GATE_CALIBRATED", False, "no bin with 100+ observations")
+    worst = float(big["abs_error"].max())
+    row = big.loc[big["abs_error"].idxmax()]
+    return GateResult(
+        "GATE_CALIBRATED", worst <= tol,
+        f"worst bin off by {100 * worst:.2f}pp (bin {row['bin']}, n={int(row['n'])}, "
+        f"tolerance {100 * tol:.0f}pp)",
+    )
+
+
 def bootstrap(results:np.ndarray,seasons=None,n_boot:int=10000,seed:int=20260801):
     if len(results) == 0:
         return float("nan"), float("nan"), float("nan")

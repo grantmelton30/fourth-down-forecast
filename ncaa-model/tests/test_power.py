@@ -27,9 +27,21 @@ import pytest
 from analysis.power import Difference, Power, analyse, analyse_frame, compare
 from src.config import CACHE_DIR
 
-# Appendix A, NCAA_PLAYBOOK.md — the identical model on two anchors.
-APPENDIX_A_CLOSE_B, APPENDIX_A_CLOSE_T = 0.076, 0.89
-APPENDIX_A_OPEN_B, APPENDIX_A_OPEN_T = 0.195, 2.23
+# Appendix A, NCAA_PLAYBOOK.md, 2026-08-04 build — PERMANENTLY FIXED. This is the magnitude
+# the original build PROVED is a pure artifact of anchoring on the opener (matching
+# zero-skill-control CLV exactly; see NCAA_PLAYBOOK.md Appendix A). It is a historical
+# scientific finding, not a live-tracking quantity, and must never be re-baselined to
+# whatever the current model happens to read on the opener -- doing that would make the
+# danger line chase the thing it exists to catch. Used only as `danger` below.
+APPENDIX_A_ORIGINAL_OPEN_B, APPENDIX_A_ORIGINAL_OPEN_T = 0.195, 2.23
+
+# The current-model pin, re-baselined 2026-08-17 after the FCS-ratings fix (GATES.md
+# "Appendix A, revisited again 2026-08-17") -- expected to be updated again after any
+# legitimate change to `model_total`, exactly as this one was. Confirmed via
+# `feature_total_promoted` (False on every graded row) that this specific drift is not the
+# challenger-promotion mechanism the 2026-08-16 entry suspected.
+APPENDIX_A_CLOSE_B, APPENDIX_A_CLOSE_T = 0.1549, 1.745
+APPENDIX_A_OPEN_B, APPENDIX_A_OPEN_T = 0.2808, 2.859
 DOCUMENTED_RESTRICTED_UNIVERSE = 1543
 
 
@@ -179,11 +191,14 @@ def test_week_partition_claim_stays_retracted():
 
 @pytest.mark.integration
 def test_appendix_a_anchor_coefficients_hold():
-    """Pins the two numbers the standing conclusion rests on.
+    """Pins the two numbers the CURRENT model reads on each anchor.
 
-    The whole null turns on these being different from each other: an identical model
-    reads t = +2.23 anchored on the opener and t = +0.89 anchored on the close. If either
-    drifts, Appendix A describes a model that no longer exists.
+    The whole null turns on these being different from each other: the same model reads a
+    materially larger `b` anchored on the opener than anchored on the close. Re-baselined
+    2026-08-17 (GATES.md "Appendix A, revisited again") after the FCS-ratings fix moved
+    both numbers -- confirmed via `feature_total_promoted` that this was not the
+    challenger-promotion mechanism suspected 2026-08-16. If either drifts again, some other
+    legitimate (or not) change has moved `model_total` and this needs re-baselining again.
     """
     graded = _frame()
     graded = graded[graded["restricted"]].dropna(
@@ -223,18 +238,19 @@ def test_full_fbs_close_anchored_null_is_adequately_powered():
     turnover-uncertainty feature, a preseason-merge-key fix) on 2026-08-12/13, immediately
     before this drift was first observed — the likely, not confirmed, cause.
 
-    What Appendix A actually needs guarded is distance from APPENDIX_A_OPEN_B (0.195,
-    t=2.23) — the magnitude PROVEN to be a pure artifact of anchoring the measurement on
-    the opener. So this checks the 95% CI upper bound against that danger line, not the
-    point estimate against zero.
+    What Appendix A actually needs guarded is distance from APPENDIX_A_ORIGINAL_OPEN_B
+    (0.195, t=2.23) — the magnitude PROVEN, on the 2026-08-04 build, to be a pure artifact
+    of anchoring the measurement on the opener, and permanently fixed rather than
+    re-baselined with the model (see the constant's own comment). So this checks the 95%
+    CI upper bound against that fixed danger line, not the point estimate against zero.
 
     2026-08-16 reading: b=+0.0911, se=0.0631 -> CI upper ~+0.2148, ABOVE the 0.195 danger
     line. GATES.md's prior text ("0.091 is far below the 0.2 reference effect") undersold
-    this: the point estimate is a null, but the CI no longer cleanly excludes the proven
-    false-positive magnitude. Until a fresh rebuild confirms whether a totals challenger
-    was promoted (`feature_total_promoted`) and re-derives this figure, the totals null is
-    PROVISIONAL, not settled — see GATES.md "Appendix A, revisited 2026-08-16". A failure
-    here is the correct, honest state, not a bug in the test.
+    this. **2026-08-17 reading, after a fresh full rebuild and with `feature_total_promoted`
+    confirmed False on every graded row (ruling out the 2026-08-16 suspicion): b=+0.1157,
+    se=0.0623 -> CI upper ~+0.2378 — further above the danger line, not closer to clearing
+    it.** The totals null remains PROVISIONAL — see GATES.md "Appendix A, revisited again
+    2026-08-17". A failure here is the correct, honest state, not a bug in the test.
     """
     base = _frame()
     full = base[base["fbs_only"]].dropna(
@@ -248,12 +264,13 @@ def test_full_fbs_close_anchored_null_is_adequately_powered():
         "conclusion can no longer cite it"
     )
     ci_upper = p.b + 1.96 * p.se_b
-    danger = APPENDIX_A_OPEN_B
+    danger = APPENDIX_A_ORIGINAL_OPEN_B
     assert ci_upper < danger, (
         f"b = {p.b:+.4f} (se {p.se_b:.4f}), 95% CI upper {ci_upper:+.4f} — this no longer "
         f"clears the proven false-positive magnitude ({danger:.3f}, "
-        f"t={APPENDIX_A_OPEN_T:.2f}, Appendix A). Confirm whether a totals challenger "
-        "feature was promoted (feature_total_promoted on a fresh rebuild) before citing "
-        "the totals null as settled again. See GATES.md 'Appendix A, revisited'."
+        f"t={APPENDIX_A_ORIGINAL_OPEN_T:.2f}, Appendix A). Confirm whether a totals "
+        "challenger feature was promoted (feature_total_promoted on a fresh rebuild) "
+        "before citing the totals null as settled again. See GATES.md 'Appendix A, "
+        "revisited'."
     )
     assert p.verdict == "NULL (adequately powered)"

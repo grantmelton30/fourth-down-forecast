@@ -18,11 +18,14 @@ import pandas as pd
 
 from src import ingest
 from src.backtest import (
+    attach_calibration,
     bootstrap,
     build_features,
+    calibration_table,
     filtered_record,
     gate_api_budget,
     gate_blend_informative,
+    gate_calibrated,
     gate_garbage,
     gate_key_numbers,
     gate_no_lookahead,
@@ -250,6 +253,20 @@ def main() -> int:
     print(key_numbers_gate)
     if key_numbers_gate.detail:
         print(f"      {key_numbers_gate.detail}")
+
+    print()
+    print(RULE)
+    print("CALIBRATED COVER PROBABILITIES (GATE_CALIBRATED) -- walk-forward, one season")
+    print("of simulation at a time, reweighted onto this build's own model_spread/total")
+    print(RULE)
+    calibrated = attach_calibration(frame, cfg, games_with_venues, drives, wf)
+    print(f"  {len(calibrated):,} graded games carry a calibrated cover probability")
+    calib_table = calibration_table(calibrated)
+    calibrated_gate = gate_calibrated(calib_table)
+    print(calibrated_gate)
+    if len(calib_table):
+        print(calib_table.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+
     gates = [
         gate_opener_coverage(market, cfg, cfg.graded_seasons),
         gate_no_lookahead(build_features(completed, wf, cfg), wf),
@@ -268,6 +285,7 @@ def main() -> int:
                   kind="spread"),
         gate_api_budget(client.calls_used, cfg),
         key_numbers_gate,
+        calibrated_gate,
     ]
     cutoff=pd.to_datetime(frame.get("kickoff"),utc=True,errors="coerce").max()
     # Stamp the version with the evidence that is actually PERSISTED, not the in-memory

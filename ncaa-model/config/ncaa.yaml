@@ -8,7 +8,11 @@ seasons:
   exclude_from_scoring: [2019, 2020]
 
 api:
-  monthly_call_budget: 900   # 100-call safety margin under the 1000 free tier
+  monthly_call_budget: 4500   # 500-call safety margin under the paid 5,000/month CFBD tier
+  # (upgraded from the free 1,000/month tier 2026-08-17 after repeated cold-build retries
+  # burned through it in one session; see GATES.md). api_budget_max_cold below is a
+  # per-clean-build sanity check, not tied to the plan size -- a real cold build costs
+  # ~173-350 calls (GATES.md), so it is left alone.
   cache_permanent: true
   # LIVE-SEASON CACHE TTL, in hours. Applies ONLY to the season named by `seasons.current`;
   # every earlier season is immutable and stays permanently cached, which is what keeps a

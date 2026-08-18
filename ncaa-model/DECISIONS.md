@@ -469,6 +469,62 @@ finer sweep centered on 16, holding `prior_weight_games=8.0` and `off_weight=1.4
 at their own already-validated values, checking `GATE_SCALE` impact the same way the
 existing decision does -- not attempted here alongside the rest of today's list.
 
+## D9. `GATE_CALIBRATED` implemented for NCAA, 2026-08-17
+
+Ported nfl-model's working `walk_forward` calibration pattern
+(`nfl-model/src/backtest.py`) rather than inventing a new one: `attach_calibration`
+(`src/backtest.py`) walks forward one season at a time, refits the drive model, endgame
+table, and venue HFA on strictly earlier data, simulates every graded game with that
+season's ratings, and reweights the simulated distribution onto this build's own
+`model_spread`/`model_total` (`SimResult.recentered().retotaled()`, chained) before reading
+`cover_prob_home`/`over_prob` off it at the market's CLOSE line.
+
+**Design choices, and why:**
+
+- **Full graded population, not a sample.** `pooled_margin_pmf` (GATE_KEY_NUMBERS) samples
+  ~400 games because it is explicitly diagnostic-only (shape, not predictive power) -- its
+  own docstring says so. `GATE_CALIBRATED` is a real accuracy claim, so it needed the same
+  population NFL's `calibration_table`/`gate_calibrated` use: the *entire* frame NFL's
+  `walk_forward` produces, unrestricted. Matched that here rather than restricting to the
+  "restricted" (non-P5) window every other NCAA gate uses, both for precedent and because a
+  narrower window would leave too few observations per 5%-probability bin to ever clear the
+  n>=100 floor `gate_calibrated` requires.
+- **Close-anchored, not open-anchored**, matching `CALIBRATION_ANCHOR` in `run_backtest.py`
+  and every other absolute-accuracy NCAA gate -- the opener-anchored totals signal is a
+  proven false positive (Appendix A), so grading calibration against the opener would risk
+  reproducing the same artifact this project already caught once.
+- **Additive and separately cached from `walk_forward`.** Reads `model_spread`/
+  `model_total`, never recomputes them, so a bug here cannot move any RMSE/scale/blend
+  gate's inputs, and this cache invalidates independently of the (expensive, load-bearing)
+  `backtest_frame_*` cache.
+- **Explicit `as_of` cutoff on venue HFA.** `pooled_margin_pmf`'s existing venue-HFA call
+  has none (`estimate_venue_hfa(games, cfg, walkforward=walkforward)`), which is a real gap
+  but a tolerated one there because that gate is diagnostic-only. This function backs a
+  genuine accuracy claim, so it computes each season's first kickoff and passes it as
+  `as_of`, matching the live path (`project_game.py`) rather than the diagnostic one.
+- **Joint spread/total infeasibility falls back to margin-only recentering.** `.retotaled()`
+  can raise `ValueError` when the target pair is outside the simulated lattice's support
+  (the same infeasibility `live_mean.py`'s physical-floor clip closes for the live path, but
+  this OLS-fit backtest path doesn't go through `LiveMeanModel`). Caught per-game: the
+  margin stays calibrated onto `model_spread`, the total falls back to the simulator's own
+  uncalibrated mean rather than dropping the game, matching `build_slate.py`'s
+  `_independent_forecast` fallback discipline.
+
+**Result: the gate is now produced (not `passed: null`) and fails honestly** -- see
+GATES.md "Updated status -- measured 2026-08-17" and its calibration table. `bets_allowed()`
+remains False, now for a fully-measured set of reasons rather than one permanently-blocking
+un-produced gate.
+
+**Real cost, measured, not estimated: this is expensive.** ~40-45 minutes of wall time for
+5,621 games across 5 per-season refits, on top of the existing ingest/walk-forward cost --
+far more than the ~114-456ms/game range profiled from isolated timing tests before a real
+population count was available. The full graded population (post-FCS-fix, since FCS teams
+are now simulable) is larger than any prior estimate assumed. Not yet a problem in
+practice: this runs on-demand via `run_backtest.py`, not on the scheduled bot's
+market-refresh cadence, and `walk_forward`'s own frame stays cached and reused between
+runs. Worth revisiting (per-season checkpointing, or a bounded-but-larger-than-400 sample)
+if this ever needs to run inside a tighter time budget.
+
 ## D6. Spread sign convention
 
 CFBD quotes spreads negative = home favored; nflverse is the opposite. Normalized to
