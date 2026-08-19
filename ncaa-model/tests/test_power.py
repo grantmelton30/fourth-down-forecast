@@ -40,8 +40,18 @@ APPENDIX_A_ORIGINAL_OPEN_B, APPENDIX_A_ORIGINAL_OPEN_T = 0.195, 2.23
 # legitimate change to `model_total`, exactly as this one was. Confirmed via
 # `feature_total_promoted` (False on every graded row) that this specific drift is not the
 # challenger-promotion mechanism the 2026-08-16 entry suspected.
-APPENDIX_A_CLOSE_B, APPENDIX_A_CLOSE_T = 0.1549, 1.745
-APPENDIX_A_OPEN_B, APPENDIX_A_OPEN_T = 0.2808, 2.859
+#
+# Re-baselined again 2026-08-19, for the weather adjustment (DECISIONS.md D16), which is
+# the first change ever to move `model_total` by a route other than the ratings or the
+# challenger: a one-sided wind penalty applied in `project_walkforward`. Verified before
+# re-baselining that this is a legitimate move and not a broken null --
+#   * the gap the null turns on WIDENED rather than closed: open 0.3067 vs close 0.1718,
+#     against 0.2808 vs 0.1549 before, so the opener still reads materially higher;
+#   * the close-anchored t is still below 2.0 (1.908) and still not adequately powered;
+#   * totals RMSE improved 16.688 -> 16.636 on this same window, so `model_total` moved
+#     toward the outcomes, which is the direction a real improvement moves it.
+APPENDIX_A_CLOSE_B, APPENDIX_A_CLOSE_T = 0.1718, 1.908
+APPENDIX_A_OPEN_B, APPENDIX_A_OPEN_T = 0.3067, 3.119
 DOCUMENTED_RESTRICTED_UNIVERSE = 1543
 
 
@@ -251,6 +261,12 @@ def test_full_fbs_close_anchored_null_is_adequately_powered():
     se=0.0623 -> CI upper ~+0.2378 — further above the danger line, not closer to clearing
     it.** The totals null remains PROVISIONAL — see GATES.md "Appendix A, revisited again
     2026-08-17". A failure here is the correct, honest state, not a bug in the test.
+
+    2026-08-19 reading, after the weather adjustment (DECISIONS.md D16): b=+0.1206,
+    se=0.0631 -> CI upper ~+0.2442. Still above the danger line. Weather improved full-FBS
+    totals RMSE 16.484 -> 16.430 on this same window, so `model_total` moved toward the
+    outcomes; it did not move this test toward clearing, which is a separate matter and
+    stays provisional.
     """
     base = _frame()
     full = base[base["fbs_only"]].dropna(

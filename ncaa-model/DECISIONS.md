@@ -843,6 +843,29 @@ clear significance either direction; if a future, larger-sample test finds the s
 negative sign hold up, that would be a genuinely surprising result worth its own
 investigation, not evidence the current test's methodology is wrong.
 
+**AMENDED 2026-08-19 -- the conclusion above was drawn from a mis-specified test.** Every
+regression in the table controls for `net_diff`, and `net_diff` is built from EPA per play.
+A sack and a stuffed run ARE plays, with large negative EPA, so trench performance is
+already inside the control variable. The table therefore answers "does a trench rate add
+signal beyond a measure that already contains it," and the write-up reported that as
+"trench play does not matter." Those are not the same claim. Re-run without the control,
+on the same 2,984 games:
+
+| feature | market | specification | b | t |
+|---|---|---|---|---|
+| pass_block_success | spread | ALONE | +13.46 | **+2.45** |
+| pass_block_success | spread | with `net_diff` | -7.81 | -1.67 |
+| run_block_success | spread | ALONE | +4.48 | +1.54 |
+| run_block_success | spread | with `net_diff` | -4.80 | -1.96 |
+
+Pass protection predicts margin on its own at conventional significance, and the
+coefficient FLIPS SIGN once `net_diff` is controlled -- the signature of a variable whose
+effect is mediated by the control rather than absent. The honest statement of this result
+is **"trench play matters, and the model already captures it through EPA, just not under
+that name"** -- not "trench play does not matter." The promotion decision is unchanged
+(nothing to add, because the information is already in), but the reasoning recorded above
+was wrong and would have misled anyone reading it as evidence about football.
+
 **Reading across D12/D13/D15 together**: three separate attempts this session to find a
 trench/style/matchup-specific signal beyond the model's existing additive off/def ratings
 -- rush-vs-pass linear split (D12), a genuine off x def product interaction (D13), and now
@@ -853,6 +876,86 @@ trying to add, at least at this data source's resolution and this sample size. P
 R^2 numbers (cited above) suggest the underlying trench signal is real at the professional-grading
 level of detail CFBD's free play-by-play does not resolve -- box-score-derived sack/stuff
 rates are evidently too coarse a proxy for it, not proof the signal itself doesn't exist.
+
+## D16. Weather turned on, one-sided, and the incremental-vs-market test retired as the
+## default question, 2026-08-19
+
+**The reframe that prompted this.** Every feature test in D12/D13/D15 asked one question:
+does this beat the market? After five straight negatives the user pointed out that the
+question itself had drifted from the goal -- wind, rain and trench play obviously change
+football games, so a framework that keeps answering "no effect" is more likely mis-aimed
+than football is wrong. That is correct, and it exposed a specific, repeated error: an
+incremental-vs-market test **subtracts the market before looking**, so any effect the
+market already prices is removed by construction before it can be measured. Reporting that
+as "X does not matter" conflates *"the market already knows"* with *"it isn't real."*
+
+The project's goal is restated accordingly: build the most accurate independent projection
+of game outcomes, and judge an input on whether it improves that projection against actual
+results. Beating the market remains a useful benchmark and a promotion gate; it is no
+longer the question asked of every candidate input.
+
+**Three questions, separated, on 2,985 graded FBS games with real Open-Meteo readings**
+(free, no key, one request per venue-season; 2,887 outdoor games resolved, 98 indoor):
+
+1. *Does wind affect the actual total?* **Yes.** b = -0.249 pts/mph, **t = -3.07**. Bucket
+   means fall monotonically: 54.82 (0-5mph), 53.71, 53.26, 51.68 (15-20mph), 43.86 (20-25).
+2. *Does it beat the market?* **No, and precisely because the market is right.** Across the
+   same buckets the market total falls 53.63 -> 50.54, a 3.09-point adjustment, against a
+   3.14-point move in reality. Residual test t = -0.55; under-rate in 15mph+ games 50.5%
+   vs 48.8% in calm games. The market prices wind to within a twentieth of a point.
+3. *Would it improve OUR projection?* **Yes, and this is the question that was never asked.**
+
+**Two things found while answering (3) that would each have produced a false result.**
+
+*The weather module could not affect any shipped number.* It has existed for the life of
+this repo and was inert three times over: `weather.parquet` never existed, every backtest
+call site passes `allow_network=False`, and -- decisively -- the only consumer,
+`build_context`, feeds the simulator, whose total mean `_season_calibration` immediately
+overwrites via `.retotaled(model_total)`. Enabling it in place would have changed nothing.
+The adjustment therefore had to be applied in `project_walkforward`, which is where
+`model_total` is actually produced.
+
+*A level-bias confound nearly bought a fake improvement.* Fitting slope-and-intercept on
+prior-season residuals showed a -1.06% RMSE gain. Refitting with the wind slope alone,
+mean-centred so it cannot shift the level, gave **-0.01%**. The entire "improvement" was an
+intercept absorbing a -2.51-point level bias unrelated to weather. Same failure mode as
+Appendix A's opener artifact, caught this time before it was implemented.
+
+**What was implemented: the existing constants, one-sided.** Wind is a SUPPRESSOR -- it
+degrades throwing and kicking. The absence of wind is not a scoring bonus, so the positive
+half of the centred line ("a calm game scores 1.31 above baseline") asserts a mechanism
+that does not exist. Measured per bucket, out of sample:
+
+| specification | overall | indoor | 0-7 | 7-10 | 10-15 | 15+ |
+|---|---|---|---|---|---|---|
+| centred linear, as originally designed | -0.057% | **+1.81%** | **+0.42%** | -0.35% | -0.99% | -3.26% |
+| **same constants, negative side only** | **-0.342%** | 0.00% | 0.00% | -0.35% | -0.99% | -3.26% |
+| hinge@10, walk-forward fitted slope | -0.222% | 0.00% | 0.00% | 0.00% | -0.61% | -3.90% |
+
+The one-sided form wins on overall RMSE, harms no bucket, and -- the reason it was chosen
+over the fitted hinge, which is better on 15mph+ alone -- **introduces no new fitted
+parameter**. `wind_total_center_mph` (7.0) and `wind_total_points_per_mph` (0.1867) are
+unchanged and still carry their original measurement. Only the sign gate is new, so there
+is no knot to sweep and no lucky-cell selection to worry about (D3/D11's concern).
+
+`dome_total_bump` (1.31) is no longer applied: it was derived as `0.1867 * 7.0`, i.e. the
+positive half of the same line, and on 98 real indoor games it made predictions **1.81%
+worse**. The constant stays in config as the record of how it was derived.
+
+**Honest magnitude.** Overall totals RMSE improves 0.342% -- about 0.06 points on 16.45.
+Small, because 96% of college games are played in wind that does not matter. On the games
+where it does apply it is worth having: -0.99% at 10-15mph and **-3.26% at 15mph+**. It
+cannot harm a calm, indoor, or missing-reading game, because all three resolve to exactly
+zero adjustment. That last property is what makes it safe to ship: a failed fetch degrades
+to today's behaviour rather than quietly moving a line.
+
+**Rain and snow: not implemented.** 152 wet games showed nothing against the market
+(t = +0.23) and actual totals were 53.09 wet vs 53.95 dry; snow had 9 games, too few to
+test. Wind is the only weather term the data supports.
+
+**Not claimed.** This does not create betting edge and is not evidence of any -- finding (2)
+above is direct evidence against that. It makes the projection more accurate on windy
+games, which is the stated goal.
 
 ## D6. Spread sign convention
 

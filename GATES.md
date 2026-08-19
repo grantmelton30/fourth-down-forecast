@@ -461,6 +461,44 @@ sign from what the trench-matchup theory predicts (a better recent run-block edg
 associated with a *smaller* home margin, not larger). Reported as-is, not rationalized
 away. Full numbers and cross-test reading in `DECISIONS.md` D15.
 
+## Weather turned on, and the incremental-vs-market test retired as the default, 2026-08-19
+
+After five straight negative feature tests the user pointed out that the *question* had
+drifted from the goal: wind and trench play obviously change football games, so a framework
+that keeps answering "no effect" is more likely mis-aimed than football is wrong. That is
+correct and it exposed a repeated error. **An incremental-vs-market test subtracts the
+market before looking, so anything the market already prices is removed by construction.**
+Reporting that as "X does not matter" conflates *the market already knows* with *it isn't
+real*. Full detail in `DECISIONS.md` D16; D15's trench conclusion is amended there too
+(pass-block predicts margin at t=+2.45 on its own and flips sign only once `net_diff` --
+which already contains sacks and stuffs -- is controlled for).
+
+Measured on 2,985 graded games with real Open-Meteo readings, three questions separated:
+
+| question | answer |
+|---|---|
+| does wind change the actual total? | **yes** -- b=-0.249 pts/mph, t=-3.07; 54.82 pts at 0-5mph falling to 43.86 at 20-25mph |
+| does it beat the market? | **no** -- the market moves 3.09 points across that range against reality's 3.14 |
+| does it improve our projection? | **yes** -- and this question had never been asked |
+
+**Two near-misses worth recording.** The weather module could not have affected any shipped
+number even if switched on -- its only consumer is the simulator, whose total mean
+`_season_calibration` overwrites via `.retotaled(model_total)` -- so the adjustment had to
+go into `project_walkforward`. And a slope-plus-intercept fit showed a -1.06% gain that
+collapsed to **-0.01%** once the slope was mean-centred: the whole effect was an intercept
+absorbing an unrelated -2.51 point level bias.
+
+**Shipped**: the existing measured constants applied one-sided only. Wind suppresses
+passing and kicking; the absence of wind is not a bonus, so the positive half of the centred
+line was asserting a mechanism that does not exist -- and empirically made calm games 0.42%
+and dome games 1.81% worse. Negative side only improves overall totals RMSE by **0.342%**,
+harms no bucket, is **-3.26% on 15mph+ games**, and adds **no new fitted parameter**.
+`dome_total_bump` is no longer applied for the same reason. Rain (152 games, t=+0.23) and
+snow (9 games) are not used.
+
+This creates no betting edge and is not evidence of any -- the second row of that table is
+direct evidence against it. It makes the projection more accurate on windy games.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of

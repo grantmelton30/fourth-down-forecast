@@ -45,6 +45,7 @@ from src.config import CACHE_DIR,load_config
 from src.market import clv,fit_blend,residual_fit,season_week_groups
 from src.ratings import build_walkforward, interaction_matchup, split_net_epa_matchup
 from src.venues import attach_venues, load_venues
+from src.weather import bulk_game_weather
 from src.features import (load_free_preseason, matchup_feature_table,
                           normalize_preseason_sources)
 from src._shared import SHARED_DIR
@@ -155,6 +156,10 @@ def main() -> int:
         "--diagnostic-exit-zero", action="store_true",
         help="return success after a valid build even when betting gates remain closed",
     )
+    ap.add_argument(
+        "--weather-refresh", action="store_true",
+        help="fetch kickoff weather for games not already cached (Open-Meteo, free)",
+    )
     args = ap.parse_args()
 
     cfg = load_config()
@@ -223,6 +228,25 @@ def main() -> int:
         interaction_matchup(wf_pass, games, prefix="pass_"), on="game_id", how="left")
     challenger = challenger.merge(interactions, on="game_id", how="left")
 
+    # WEATHER (DECISIONS.md D16). `wind_mph`/`indoor` are deliberately NOT `_diff`/`_sum`
+    # suffixed: they are not challenger candidates competing for promotion, they are a
+    # measured physical condition applied directly in `project_walkforward`. Wind is the
+    # only weather term used -- rain showed nothing across 152 wet games and snow has only
+    # 9 games to test on.
+    #
+    # `--weather-refresh` is opt-in because this is the one part of the build that talks to
+    # a non-CFBD network. Cached readings are always used when present, so a normal run
+    # costs nothing; a refresh costs about one request per venue per season, and only for
+    # games not already cached.
+    games_with_venues = attach_venues(games, load_venues(client))
+    weather = bulk_game_weather(
+        games_with_venues, allow_network=args.weather_refresh, cache_key="default")
+    challenger = challenger.merge(
+        weather[["game_id", "indoor", "wind_mph"]], on="game_id", how="left")
+    have = weather["indoor"].fillna(False) | weather["wind_mph"].notna()
+    print(f"weather: {int(have.sum()):,} of {len(weather):,} games have a kickoff reading "
+          f"({int(weather['indoor'].fillna(False).sum()):,} indoor)")
+
     frame = walk_forward(cfg, market, wf, challenger_features=challenger)
     print(f"backtest frame: {len(frame):,} graded games")
 
@@ -277,7 +301,7 @@ def main() -> int:
     # pooled_margin_pmf's per-game context needs venue_id (for venue-HFA and, via
     # weather, dome/lat/lon), which ingest.load_games alone does not carry -- attach_venues
     # is a separate, one-call CFBD pull, same as project_game.py's live-projection path.
-    games_with_venues = attach_venues(games, load_venues(client))
+    # Already built above for the weather join; `load_venues` is cached either way.
     sim_pmf = pooled_margin_pmf(cfg, games_with_venues, drives, wf, frame)
     key_numbers_gate = gate_key_numbers(sim_pmf, market)
     print(key_numbers_gate)

@@ -155,9 +155,24 @@ def wind_total_adjustment(wind_mph: float, cfg: Config) -> float:
     config for the threshold sweep. Temperature and precipitation are deliberately absent:
     their effect is not distinguishable from noise, and adding them would spend degrees of
     freedom on nothing.
+
+    ONE-SIDED since 2026-08-19, and the asymmetry is physical rather than fitted. Wind is a
+    SUPPRESSOR: it degrades throwing and kicking. The absence of wind is not a scoring
+    bonus, it is merely the absence of that suppression, so the positive half of the
+    centred line -- "a calm game scores 1.31 points above baseline" -- asserts something
+    the mechanism does not support. Measured directly on 2,985 graded games with real
+    Open-Meteo readings (`DECISIONS.md` D16): applying the positive half made calm games
+    WORSE by 0.42% and dome games worse by 1.81%, while the negative half improved 10-15mph
+    games by 0.99% and 15mph+ games by 3.26%. Keeping only the half that is both physically
+    motivated and empirically helpful improved overall totals RMSE by 0.342% against 0.057%
+    for the two-sided form, and cannot by construction harm a game at or below average wind.
+
+    No new constant was introduced to do this -- `wind_total_center_mph` and
+    `wind_total_points_per_mph` are unchanged and still carry the measurement that produced
+    them. Only the sign gate is new.
     """
     deviation = float(wind_mph) - cfg.context.wind_total_center_mph
-    return -cfg.context.wind_total_points_per_mph * deviation
+    return min(-cfg.context.wind_total_points_per_mph * deviation, 0.0)
 
 
 def build_context(
@@ -186,8 +201,13 @@ def build_context(
     total_adj = 0.0
     comps["weather_source"] = weather.source
     if weather.indoor:
-        total_adj += cfg.context.dome_total_bump
-        comps["dome_bump"] = cfg.context.dome_total_bump
+        # A dome is the calm end of the same one-sided relationship, so it gets the same
+        # answer a calm outdoor game gets: no adjustment. `dome_total_bump` was derived as
+        # `0.1867 * 7.0` -- the positive half of the centred line -- and measuring it
+        # against 98 real indoor games made them 1.81% WORSE (DECISIONS.md D16). The
+        # constant is left in config as the record of how it was derived; it is no longer
+        # applied, for the same reason the positive half of the wind line is not.
+        comps["dome_bump"] = 0.0
     elif weather.wind_mph is not None:
         wind_pts = wind_total_adjustment(weather.wind_mph, cfg)
         total_adj += wind_pts

@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 import requests
 
@@ -166,6 +167,102 @@ def weather_for_game(game: pd.Series, allow_network: bool = True) -> GameWeather
     })
     _cache_write(pd.concat([cache, fresh], ignore_index=True)[WEATHER_COLUMNS])
     return _nearest(fresh, local.hour, source)
+
+
+GAME_WEATHER_COLUMNS = ["game_id", "indoor", "wind_mph", "temp_f", "precip_in", "source"]
+
+
+def bulk_game_weather(
+    games: pd.DataFrame, allow_network: bool = False, cache_key: str = "default",
+) -> pd.DataFrame:
+    """Kickoff conditions for MANY games, one row per `game_id`.
+
+    `weather_for_game` is per-game and re-reads the whole parquet on every call, which is
+    fine for a slate and unusable for a backtest of several thousand games. This batches by
+    (venue, season) instead: Open-Meteo's archive accepts a date RANGE, so one request
+    covers a venue's entire football season -- ~700 requests for 2021-2025 rather than
+    ~2,900. Only games missing from the cache are fetched, so the in-progress season costs
+    a handful of requests a week and finished seasons cost nothing.
+
+    Indoor games short-circuit with no request, exactly as `weather_for_game` does.
+    `allow_network=False` returns whatever is already cached and nothing more, so a
+    backtest can never silently start making thousands of HTTP calls.
+
+    `games` needs `game_id`, `season`, `lat`, `lon`, `tz`, `dome`, `kickoff`.
+    """
+    path = CACHE_DIR / f"game_weather_{cache_key}.parquet"
+    cached = pd.DataFrame(columns=GAME_WEATHER_COLUMNS)
+    if path.exists():
+        disk = pd.read_parquet(path)
+        if not set(GAME_WEATHER_COLUMNS) - set(disk.columns):
+            cached = disk
+
+    need = games[~games["game_id"].isin(cached["game_id"])].copy()
+    indoor = need[need["dome"].fillna(False).astype(bool)]
+    fresh = [pd.DataFrame({
+        "game_id": indoor["game_id"], "indoor": True, "wind_mph": np.nan,
+        "temp_f": np.nan, "precip_in": np.nan, "source": "indoor",
+    })] if len(indoor) else []
+
+    outdoor = need[~need["dome"].fillna(False).astype(bool)].dropna(subset=["lat", "lon"])
+    outdoor = outdoor[outdoor["kickoff"].notna()]
+    if len(outdoor) and allow_network:
+        local = [_local_kickoff(k, tz if isinstance(tz, str) and tz else "America/New_York")
+                 for k, tz in zip(outdoor["kickoff"], outdoor["tz"])]
+        outdoor = outdoor.assign(
+            _date=[t.strftime("%Y-%m-%d") if t is not None else None for t in local],
+            _hour_key=[t.strftime("%Y-%m-%dT%H:00") if t is not None else None
+                       for t in local],
+        ).dropna(subset=["_date"])
+        for (_, _), sub in outdoor.groupby(["lat", "lon"], sort=False):
+            for _, season_sub in sub.groupby("season", sort=False):
+                lat, lon = float(season_sub["lat"].iloc[0]), float(season_sub["lon"].iloc[0])
+                tz = season_sub["tz"].iloc[0]
+                tz = tz if isinstance(tz, str) and tz else "America/New_York"
+                start, end = season_sub["_date"].min(), season_sub["_date"].max()
+                past = pd.Timestamp(end) < pd.Timestamp.now().normalize()
+                try:
+                    hourly = _fetch_range(
+                        ARCHIVE_URL if past else FORECAST_URL, lat, lon, tz, start, end)
+                except Exception as exc:  # noqa: BLE001 - a missing venue must not stop it
+                    print(f"  weather: {lat},{lon} {start}..{end} failed: {exc}")
+                    continue
+                merged = season_sub[["game_id", "_hour_key"]].merge(
+                    hourly, left_on="_hour_key", right_on="hour_key", how="left")
+                fresh.append(pd.DataFrame({
+                    "game_id": merged["game_id"], "indoor": False,
+                    "wind_mph": merged["wind_mph"], "temp_f": merged["temp_f"],
+                    "precip_in": merged["precip_in"],
+                    "source": "archive" if past else "forecast",
+                }))
+
+    if fresh:
+        cached = pd.concat([cached, *fresh], ignore_index=True)
+        cached = cached.drop_duplicates("game_id", keep="last")[GAME_WEATHER_COLUMNS]
+        cached.to_parquet(path, index=False)
+    return games[["game_id"]].merge(cached, on="game_id", how="left")
+
+
+def _fetch_range(url, lat, lon, tz, start_date, end_date) -> pd.DataFrame:
+    """One request covering a whole date range, keyed by local `YYYY-MM-DDTHH:00`."""
+    resp = requests.get(url, params={
+        "latitude": round(float(lat), 4), "longitude": round(float(lon), 4),
+        "hourly": _HOURLY,
+        "temperature_unit": "fahrenheit",   # never rely on the Celsius default
+        "wind_speed_unit": "mph",           # never rely on the km/h default
+        "precipitation_unit": "inch",
+        "timezone": tz, "start_date": start_date, "end_date": end_date,
+    }, timeout=_TIMEOUT)
+    resp.raise_for_status()
+    hourly = resp.json().get("hourly", {})
+    if not hourly.get("time"):
+        raise RuntimeError(f"no hourly data for {start_date}..{end_date} at {lat},{lon}")
+    return pd.DataFrame({
+        "hour_key": hourly["time"],
+        "temp_f": hourly.get("temperature_2m"),
+        "wind_mph": hourly.get("wind_speed_10m"),
+        "precip_in": hourly.get("precipitation"),
+    })
 
 
 def _nearest(rows: pd.DataFrame, hour: int, source: str) -> GameWeather:

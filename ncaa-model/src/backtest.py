@@ -139,6 +139,35 @@ def project_walkforward(feats: pd.DataFrame, cfg: Config) -> pd.DataFrame:
         if test["feature_total_promoted"].iloc[0]:
             test["model_total"] = total_challenger.predict(test)
 
+        # WEATHER (2026-08-19, DECISIONS.md D16). Applied HERE -- after the challenger
+        # block so a promotion cannot overwrite it, and before the `*_pure` snapshot below
+        # because wind is a feature of the game, not a market input.
+        #
+        # This is the only path by which weather reaches a shipped number. `build_context`
+        # feeds the simulator, and `_season_calibration` immediately calls
+        # `.retotaled(model_total)`, which overwrites the simulated total mean -- so
+        # weather applied there is erased before anything reads it. For three years the
+        # whole weather module was inert regardless: `weather.parquet` never existed and
+        # every backtest call site passes `allow_network=False`.
+        #
+        # One-sided by construction (see `context.wind_total_adjustment`): zero at or below
+        # league-average wind, negative above. A game with no reading gets no adjustment,
+        # which is the same answer a calm game gets and therefore cannot silently penalise
+        # a slate with missing data.
+        test["wind_total_pts"] = 0.0
+        if "wind_mph" in test.columns:
+            wind = pd.to_numeric(test["wind_mph"], errors="coerce")
+            # Must be a Series, not a bare False: `~False` is -1 in Python, which would
+            # silently poison the mask below rather than failing loudly.
+            indoor = (test["indoor"].fillna(False).astype(bool) if "indoor" in test
+                      else pd.Series(False, index=test.index))
+            penalty = np.minimum(
+                -cfg.context.wind_total_points_per_mph
+                * (wind - cfg.context.wind_total_center_mph), 0.0)
+            penalty = penalty.where(wind.notna() & ~indoor, 0.0)
+            test["wind_total_pts"] = penalty
+            test["model_total"] = test["model_total"] + penalty
+
         # THE PURE PROJECTION (Phase 0E). Everything below this line touches a betting
         # line; these two columns are the last point at which the projection is a function
         # of features and nothing else. They are persisted because the shipped
@@ -253,7 +282,7 @@ def walk_forward(
     path = CACHE_DIR / f"backtest_frame_{cache_key}.parquet"
     signature=build_cache_signature(builder=Path(__file__),config=asdict(cfg),inputs={
         "market":frame_signature(market,["game_id","kickoff","completed","spread_open","spread_close","total_open","total_close","actual_margin","actual_total"]),
-        "walkforward":frame_signature(walkforward,["season","week","as_of","team","off_rating","def_rating","pace_rating"])},artifact_version=2)
+        "walkforward":frame_signature(walkforward,["season","week","as_of","team","off_rating","def_rating","pace_rating"])},artifact_version=3)
     if cache_key:
         cached=read_cached_frame(path,["game_id","model_spread","model_total","model_spread_pure","model_total_pure"],signature)
         if cached is not None: return cached
