@@ -32,10 +32,11 @@ import pandas as pd
 from src import drive_model as DM
 from src import drives as D
 from src import ingest
+from src import qb as QB
 from src import ratings as R
 from src import venues as V
 from src.cfbd_client import BudgetedCFBD
-from src.config import CACHE_DIR, load_config
+from src.config import CACHE_DIR, MANUAL_DIR, load_config
 from src.context import NULL_CONTEXT, build_context, estimate_venue_hfa
 from src.simulate import simulate_game
 
@@ -132,6 +133,25 @@ def main() -> None:
         build_context(row, cfg, venue_hfa=venue_hfa, allow_network=args.weather)
         if row is not None else NULL_CONTEXT
     )
+
+    # QUARTERBACK (DECISIONS.md D17). Folded into the CONTEXT, not into `model_spread`:
+    # this script reports the raw simulator mean, so the context is the only thing that can
+    # move the number printed below. Fails soft to zero -- no passer history, no row for the
+    # game, or a disabled config all leave the projection exactly as it was.
+    qb_note = ""
+    if row is not None:
+        try:
+            passers = ingest.load_passers(client, games, cfg.all_seasons)
+            qb_table = QB.qb_ratings_table(passers, cfg, games=games)
+            manual = QB.load_manual_status(MANUAL_DIR)
+            if manual is not None:
+                qb_table = QB.apply_manual_status(qb_table, manual)
+            adj = QB.qb_points_for_game(
+                row["game_id"], row["homeTeam"], row["awayTeam"], qb_table, cfg)
+            ctx = ctx.with_qb(adj.points, adj.note)
+            qb_note = adj.note
+        except Exception as exc:  # noqa: BLE001 - a projection must not die on this
+            print(f"  (quarterback adjustment unavailable: {exc})")
 
     sim = simulate_game(home, away, rt, model, cfg, start_fp,
                         context_adj=ctx, endgame=endgame, neutral_site=neutral)

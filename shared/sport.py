@@ -1227,11 +1227,61 @@ class NCAAAdapter(SportAdapter):
         # allow_network=False: a live Open-Meteo call per game would make the tab feel
         # broken. Readings already in weather.parquet are still used.
         ctx = context.build_context(g, cfg, venue_hfa=venue, allow_network=False)
+        ctx = self._with_qb(ctx, g, cfg)
         return simulate.simulate_game(
             g["homeTeam"], g["awayTeam"], rt, model, cfg, start_fp,
             context_adj=ctx, endgame=endgame,
             neutral_site=bool(g.get("neutralSite", False)),
         )
+
+    def _with_qb(self, ctx, g, cfg):
+        """Fold the quarterback adjustment into the context (ncaa-model DECISIONS D17).
+
+        This tab reports the raw simulator mean, so the context is the only route by which
+        a missing starter can move the number a reader sees -- the adjustment applied in
+        `project_walkforward` moves `model_spread`, which nothing here reads.
+
+        Every failure path returns the context untouched: no cached passer table, no row for
+        this game, a malformed override file, or `qb.enabled: false` all leave the projection
+        exactly as it was. The viewer must never go dark over an optional adjustment.
+        """
+        try:
+            qb = self._module("qb")
+            table = self._qb_table(cfg)
+            if table is None or not len(table):
+                return ctx
+            adj = qb.qb_points_for_game(
+                g["game_id"], g["homeTeam"], g["awayTeam"], table, cfg)
+            return ctx.with_qb(adj.points, adj.note)
+        except Exception:  # noqa: BLE001 - an optional adjustment cannot break the page
+            return ctx
+
+    def _qb_table(self, cfg):
+        """Built once per session from the cached passer parquet -- never from the network.
+
+        Rebuilding this per game would make the tab feel broken; it is a few pandas passes
+        over ~17k rows, so it is cached on the adapter instead.
+        """
+        if getattr(self, "_qb_table_cache", "unset") != "unset":
+            return self._qb_table_cache
+        self._qb_table_cache = None
+        try:
+            import pandas as pd
+
+            qb = self._module("qb")
+            cache_dir = self._module("config").CACHE_DIR
+            hits = sorted(cache_dir.glob("passers_*.parquet"))
+            if not hits:
+                return None
+            passers = pd.concat([pd.read_parquet(h) for h in hits], ignore_index=True)
+            table = qb.qb_ratings_table(passers, cfg, games=self._games_with_venues())
+            manual = qb.load_manual_status(self._module("config").MANUAL_DIR)
+            if manual is not None:
+                table = qb.apply_manual_status(table, manual)
+            self._qb_table_cache = table
+        except Exception:  # noqa: BLE001
+            self._qb_table_cache = None
+        return self._qb_table_cache
 
     def gate_table(self) -> pd.DataFrame:
         return super().gate_table()

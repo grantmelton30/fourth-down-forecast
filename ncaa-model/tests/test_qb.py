@@ -15,7 +15,7 @@ import pytest
 
 from src.config import load_config
 from src.qb import (apply_manual_status, build_passer_games, game_qb_delta, qb_points,
-                    qb_ratings_table)
+                    qb_points_for_game, qb_ratings_table)
 
 
 def _passers():
@@ -179,3 +179,79 @@ def test_build_passer_games_survives_missing_efficiency():
     out = build_passer_games(attempts, pd.DataFrame())
     assert len(out) == 1
     assert pd.isna(out["ppa"].iloc[0])
+
+
+# --------------------------------------------------------------------------------------
+# THE LIVE PATH. Everything above tests the table; these test the only route by which a
+# missing quarterback reaches a number a user actually reads.
+# --------------------------------------------------------------------------------------
+
+def _schedule():
+    return pd.DataFrame([
+        {"game_id": 1, "season": 2025, "week": 1, "homeTeam": "A", "awayTeam": "Z"},
+        {"game_id": 2, "season": 2025, "week": 2, "homeTeam": "A", "awayTeam": "Z"},
+        {"game_id": 3, "season": 2025, "week": 3, "homeTeam": "A", "awayTeam": "Z"},
+        # scheduled, not yet played: no box score exists for it at all
+        {"game_id": 4, "season": 2025, "week": 4, "homeTeam": "A", "awayTeam": "Z"},
+    ])
+
+
+def test_scheduled_but_unplayed_games_get_a_row_and_are_not_called_absent():
+    """The gap that made this feature unable to affect a single future projection.
+
+    A game that has not happened has no box score, so it appeared nowhere in the passer
+    data and got no row -- meaning no adjustment could fire and a manual override had
+    nothing to attach to. It must now get a row, carry an incumbent identified from prior
+    weeks, and default to "the starter is playing".
+    """
+    cfg = load_config()
+    t = qb_ratings_table(_passers(), cfg, games=_schedule())
+    future = t[t["game_id"] == 4]
+    assert len(future) >= 1, "a scheduled game must produce a row"
+    row = future[future["team"] == "A"].iloc[0]
+    assert bool(row["incumbent_absent"]) is False, "unplayed is unknown, not absent"
+    assert row["incumbent_id"] == "starter", "incumbent comes from prior weeks"
+
+
+def test_manual_override_can_reach_a_future_game():
+    """The point of the row above: a human can now say a starter is out for a game that
+    has not been played, which is the entire live use case."""
+    cfg = load_config()
+    t = qb_ratings_table(_passers(), cfg, games=_schedule())
+    manual = pd.DataFrame([{"season": 2025, "week": 4, "team": "A", "starter_out": True,
+                            "observed_at": "2025-09-24T12:00:00Z", "source": "manual"}])
+    out = apply_manual_status(t, manual)
+    row = out[(out["game_id"] == 4) & (out["team"] == "A")].iloc[0]
+    assert bool(row["incumbent_absent"]) is True
+    assert row["qb_delta"] == pytest.approx(-1.0)
+
+
+def test_qb_points_for_game_is_home_perspective_and_fails_soft():
+    cfg = load_config()
+    table = pd.DataFrame([
+        {"game_id": 7, "team": "H", "qb_delta": -1.0},
+        {"game_id": 7, "team": "V", "qb_delta": 0.0},
+    ])
+    home_out = qb_points_for_game(7, "H", "V", table, cfg)
+    assert home_out.points == pytest.approx(-cfg.qb.points_per_starter_out)
+    away_out = qb_points_for_game(
+        7, "V", "H", table, cfg)          # same table, sides swapped
+    assert away_out.points == pytest.approx(+cfg.qb.points_per_starter_out)
+    # Every failure path is a no-op, never a penalty.
+    assert qb_points_for_game(7, "H", "V", None, cfg).points == 0.0
+    assert qb_points_for_game(999, "H", "V", table, cfg).points == 0.0
+    assert qb_points_for_game(7, "H", "V", pd.DataFrame(), cfg).points == 0.0
+
+
+def test_with_qb_moves_the_spread_only_and_is_identity_at_zero():
+    """`ContextAdjustment` is the sole injection point into the simulator mean that
+    project_game.py and the viewer both report."""
+    from src.context import NULL_CONTEXT
+
+    moved = NULL_CONTEXT.with_qb(-1.75, "H starter out")
+    assert moved.spread_points == pytest.approx(-1.75)
+    assert moved.total_points == pytest.approx(NULL_CONTEXT.total_points)
+    assert moved.components["qb_points"] == pytest.approx(-1.75)
+    # A zero adjustment must not even allocate a new object, so an unaffected game is
+    # provably untouched.
+    assert NULL_CONTEXT.with_qb(0.0) is NULL_CONTEXT

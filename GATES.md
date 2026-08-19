@@ -529,6 +529,17 @@ appeared, so an absent starter has no row rather than a zero row, and the fixtur
 invented a shape real data never produces. Caught solely by a diagnostic count printed in
 `run_backtest.py`, which is why that line stays.
 
+**It reached nothing a user sees, and that was corrected the same day.** As first shipped
+the adjustment moved `model_spread`, which is a backtest quantity -- but `project_game.py`
+and the viewer both report the RAW SIMULATOR MEAN, whose only injection point is
+`ContextAdjustment`. The table was also built from box scores, so a scheduled-but-unplayed
+game had no row, no adjustment could fire on a future game, and a manual override had
+nothing to attach to. Fixed by porting `nfl-model`'s `ContextAdjustment.with_qb`, applying it
+in both live paths, and seeding the table from the SCHEDULE with a `_played` flag so an
+unplayed game is never mistaken for a missing starter. **A general lesson worth keeping: an
+input that only moves a backtest column changes no output, and "the tests pass" does not
+establish otherwise.**
+
 **Simulator decoupled (negative, but informative).** `_season_calibration` now records the
 simulator's own mean before `recentered()`/`retotaled()` overwrite it. Its disagreement with
 the OLS projection does **not** predict error -- correlation +0.020 (spread), +0.019 (total),

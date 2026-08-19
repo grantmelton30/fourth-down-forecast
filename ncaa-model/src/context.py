@@ -45,6 +45,34 @@ class ContextAdjustment:
     data_incomplete: bool = False
     incomplete_reasons: tuple = ()
 
+    def with_qb(self, qb_points: float, note: str = "") -> "ContextAdjustment":
+        """Fold the quarterback adjustment in, keeping the component breakdown intact.
+
+        Ported from `nfl-model/src/context.py`, and this is the ONLY route by which the
+        quarterback reaches a number anyone actually reads. `project_game.py` and the shared
+        viewer both report the raw simulator mean, and the sole injection point into that
+        mean is this object -- an adjustment applied in `project_walkforward` moves
+        `model_spread`, which is a backtest quantity, and changes nothing a user sees
+        (DECISIONS.md D17, 2026-08-19).
+
+        Spread only: a missing quarterback lowers his team's expected margin. Whether the
+        total should move is a separate empirical question and `nfl-model/src/injuries.py`
+        measured it as nothing (-0.011, t = -0.05), so the total is left alone.
+        """
+        if not qb_points:
+            return self
+        comps = dict(self.components)
+        comps["qb_points"] = float(qb_points)
+        if note:
+            comps["qb_note"] = note
+        return ContextAdjustment(
+            spread_points=self.spread_points + float(qb_points),
+            total_points=self.total_points,
+            components=comps,
+            data_incomplete=self.data_incomplete,
+            incomplete_reasons=self.incomplete_reasons,
+        )
+
 
 NULL_CONTEXT = ContextAdjustment(0.0, 0.0)
 

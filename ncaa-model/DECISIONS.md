@@ -1023,14 +1023,40 @@ individually (-0.05% to -1.04%). Two other gates moved with it: `GATE_CALIBRATED
 `nfl-model/src/injuries.py` measured the equivalent question there and found injuries move
 the spread and not the total, and nothing here contradicts that.
 
-**Live path, and its honest limitation.** Historically an absence is read off the box score;
-an upcoming game has no box score. CFBD has no injury or depth-chart endpoint (`/injuries`,
-`/depth`, `/depthchart`, `/player/injuries` all 404). ESPN's undocumented API does expose
-`status.name` and an `injuries[]` array per athlete and was confirmed to respond correctly,
-but every roster reads `Active` in August, so **it cannot be verified end to end until games
-start**. `data/manual/qb_status.csv` overrides in both directions. A missing reading, a
-failed pull, or no file at all resolves to zero adjustment -- identical to today's behaviour
--- so a broken feed can never quietly move a line.
+**Live path -- and a correction to the first version of this entry, made the same day.**
+As first shipped this reached NOTHING a user sees, and the entry claimed otherwise. Two
+separate reasons, both verified:
+
+1. `project_game.py` and the shared viewer both report the RAW SIMULATOR MEAN
+   (`sim.mean_margin`), not `model_spread`. The adjustment had been applied in
+   `project_walkforward`, which produces `model_spread` -- a backtest quantity that no
+   user-facing surface reads. `ContextAdjustment` is the only injection point into the
+   simulator mean.
+2. The table was built from box scores, so a scheduled-but-unplayed game had no row at all.
+   No row meant no adjustment could fire AND nothing for a manual override to attach to --
+   so the claim that `qb_status.csv` handled the live path was simply wrong.
+
+**Fixed**: `ContextAdjustment.with_qb` ported from `nfl-model/src/context.py` and applied in
+both `project_game.py` and `sport.py::NCAAAdapter._simulate`; `qb_ratings_table` now takes
+the schedule and emits rows for unplayed games, with a `_played` flag so "this game has not
+happened" is never mistaken for "the starter is missing" (without it, every future game
+would be flagged absent). Verified end to end on a real game: away starter out ->
+`+1.75` to home `spread_points`, and an unaffected game returns the identical context
+object.
+
+The adjustment stays in `project_walkforward` as well, and that is not double-counting:
+`model_spread` and the simulator mean are separate estimates, and `_season_calibration`
+recenters one onto the other by replacement rather than addition.
+
+**Remaining limitation, stated plainly.** Historically an absence is read off the box score;
+an upcoming game has none, so it depends on `data/manual/qb_status.csv` until an automated
+feed exists. CFBD has no injury or depth-chart endpoint (`/injuries`, `/depth`,
+`/depthchart`, `/player/injuries` all 404). ESPN's undocumented API exposes `status.name`
+and an `injuries[]` array per athlete and responds correctly, but every roster reads
+`Active` in August, so **it cannot be verified end to end until games start** and is not
+wired in yet. A missing reading, a failed pull, a malformed override file, or no file at all
+all resolve to zero adjustment -- identical to prior behaviour -- so a broken feed can never
+quietly move a line.
 
 **Not an edge, and not claimed as one.** The t = -0.37 against the market on exactly the
 knowable subset is direct evidence against one.

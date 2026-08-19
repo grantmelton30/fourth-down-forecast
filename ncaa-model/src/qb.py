@@ -94,7 +94,28 @@ def build_passer_games(
     return merged.reindex(columns=[*PASSER_COLUMNS, "game_id"])
 
 
-def qb_ratings_table(passers: pd.DataFrame, cfg) -> pd.DataFrame:
+def scheduled_team_weeks(games: pd.DataFrame) -> pd.DataFrame:
+    """One row per (game_id, season, week, team) straight off the SCHEDULE.
+
+    An upcoming game has thrown no passes, so it appears nowhere in the box-score data and
+    `qb_ratings_table` would emit no row for it -- which is precisely why the first version
+    of this feature could not affect a single future projection, and why a manual override
+    had nothing to attach to. Seeding the table from the schedule instead means a scheduled
+    game gets a row, an incumbent identified from prior weeks, and somewhere for
+    `apply_manual_status` to write.
+    """
+    if games is None or games.empty:
+        return pd.DataFrame(columns=["game_id", "season", "week", "team"])
+    cols = {"game_id", "season", "week", "homeTeam", "awayTeam"} & set(games.columns)
+    if {"game_id", "season", "week", "homeTeam", "awayTeam"} - cols:
+        return pd.DataFrame(columns=["game_id", "season", "week", "team"])
+    base = games[["game_id", "season", "week", "homeTeam", "awayTeam"]]
+    home = base.rename(columns={"homeTeam": "team"})[["game_id", "season", "week", "team"]]
+    away = base.rename(columns={"awayTeam": "team"})[["game_id", "season", "week", "team"]]
+    return pd.concat([home, away], ignore_index=True).dropna(subset=["team"])
+
+
+def qb_ratings_table(passers: pd.DataFrame, cfg, games: "pd.DataFrame | None" = None) -> pd.DataFrame:
     """Per (game_id, team): the incumbent, the replacement, and their prior-form ratings.
 
     NO LOOKAHEAD, and the mechanism is a shift rather than a filter: every rating is built
@@ -129,6 +150,18 @@ def qb_ratings_table(passers: pd.DataFrame, cfg) -> pd.DataFrame:
     # is carried into every one of that team's later weeks, with zero attempts when he did
     # not appear. Absence then becomes an observable value rather than an absent row.
     team_weeks = raw[["season", "team", "week", "game_id"]].drop_duplicates()
+    team_weeks["_played"] = True
+    if games is not None and len(games):
+        # Scheduled-but-unplayed games carry no box score, so they must come off the
+        # schedule or they get no row at all and no future projection can ever move.
+        # `_played` keeps the two apart: "he was there and threw nothing" is an absence,
+        # "this game has not happened" is not, and conflating them would flag every future
+        # game as missing its starter.
+        sched = scheduled_team_weeks(games)[["game_id", "season", "week", "team"]]
+        sched["_played"] = False
+        team_weeks = pd.concat([team_weeks, sched], ignore_index=True)
+        team_weeks = team_weeks.sort_values("_played", ascending=False).drop_duplicates(
+            ["season", "team", "week", "game_id"], keep="first")
     team_passers = raw[["season", "team", "qb_id", "qb_name"]].drop_duplicates(
         ["season", "team", "qb_id"])
     df = team_weeks.merge(team_passers, on=["season", "team"], how="left")
@@ -177,7 +210,7 @@ def qb_ratings_table(passers: pd.DataFrame, cfg) -> pd.DataFrame:
     rep = df[df["_rank"] == 2].rename(columns={
         "qb_id": "replacement_id", "rating": "replacement_rating"})
     keys = ["game_id", "season", "week", "team"]
-    out = inc[[*keys, "incumbent_id", "incumbent_rating", "attempts"]].rename(
+    out = inc[[*keys, "incumbent_id", "incumbent_rating", "attempts", "_played"]].rename(
         columns={"attempts": "incumbent_attempts_now"})
     out = out.merge(rep[[*keys, "replacement_id", "replacement_rating"]],
                     on=keys, how="left")
@@ -186,7 +219,13 @@ def qb_ratings_table(passers: pd.DataFrame, cfg) -> pd.DataFrame:
     # a full absence, which is announced pre-kickoff. A partial workload means he played and
     # lost the job mid-game -- worth -6.5 points and knowable to nobody in advance -- so it
     # is explicitly NOT treated as an absence.
-    out["incumbent_absent"] = out["incumbent_attempts_now"].fillna(0.0).eq(0.0)
+    # An unplayed game is NOT an absence -- it is an unknown, and the honest default is
+    # that the usual starter plays. Only `apply_manual_status` (or a future ESPN pull) can
+    # say otherwise for a game that has not happened.
+    out["incumbent_absent"] = (
+        out["_played"].fillna(False).astype(bool)
+        & out["incumbent_attempts_now"].fillna(0.0).eq(0.0)
+    )
 
     # BINARY, and this is a measured retreat from a more elaborate design that did not work.
     #
@@ -258,6 +297,50 @@ def game_qb_delta(table: pd.DataFrame, games: pd.DataFrame) -> pd.DataFrame:
     return g[["game_id", "qb_delta_gap"]]
 
 
+def load_manual_status(manual_dir) -> "pd.DataFrame | None":
+    """Read `qb_status.csv` if it exists. Absent file is not an error -- it is the normal
+    state, and means no overrides."""
+    from pathlib import Path
+    path = Path(manual_dir) / "qb_status.csv"
+    if not path.exists():
+        return None
+    try:
+        frame = pd.read_csv(path)
+    except Exception:  # noqa: BLE001 - a malformed override must not stop a projection
+        return None
+    return frame if len(frame) else None
+
+
+def qb_points_for_game(game_id, home_team, away_team, table, cfg) -> QBAdjustment:
+    """Points of spread for ONE game, home perspective, capped -- the live-path entry point.
+
+    `project_game.py` and the shared viewer both report the raw simulator mean, and the only
+    way into that number is `ContextAdjustment.with_qb`, which this feeds. Anything applied
+    in `project_walkforward` moves `model_spread`, which no user-facing surface reads.
+
+    Fails soft in every direction: no table, no row, or a table missing the columns all
+    return zero points, which is identical to the model's behaviour before this existed.
+    """
+    if table is None or len(table) == 0 or not cfg.qb.enabled:
+        return QBAdjustment(0.0, "none")
+    if {"game_id", "team", "qb_delta"} - set(table.columns):
+        return QBAdjustment(0.0, "none")
+    rows = table[table["game_id"].astype(str) == str(game_id)]
+    if rows.empty:
+        return QBAdjustment(0.0, "none")
+
+    def _delta(team) -> float:
+        hit = rows[rows["team"] == team]
+        return float(hit["qb_delta"].iloc[0]) if len(hit) else 0.0
+
+    gap = _delta(home_team) - _delta(away_team)
+    if gap == 0.0:
+        return QBAdjustment(0.0, "none")
+    points = float(qb_points([gap], cfg)[0])
+    out_side = home_team if _delta(home_team) else away_team
+    return QBAdjustment(points, "measured", f"{out_side} starter out")
+
+
 def qb_points(delta_diff, cfg) -> np.ndarray:
     """Convert the starter-out indicator into points of spread, capped.
 
@@ -274,4 +357,5 @@ def qb_points(delta_diff, cfg) -> np.ndarray:
 
 
 __all__ = ["QBAdjustment", "PASSER_COLUMNS", "QB_TABLE_COLUMNS", "apply_manual_status",
-           "build_passer_games", "game_qb_delta", "qb_points", "qb_ratings_table"]
+           "build_passer_games", "game_qb_delta", "load_manual_status", "qb_points",
+           "qb_points_for_game", "qb_ratings_table", "scheduled_team_weeks"]
