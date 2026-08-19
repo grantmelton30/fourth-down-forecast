@@ -499,6 +499,45 @@ snow (9 games) are not used.
 This creates no betting edge and is not evidence of any -- the second row of that table is
 direct evidence against it. It makes the projection more accurate on windy games.
 
+## Quarterback availability added, and the simulator decoupled, 2026-08-19
+
+Two follow-ups to D16's reframe (judge an input on whether it improves the projection, not
+on whether it beats the market). Full detail in `DECISIONS.md` D17.
+
+**Quarterback (shipped).** The NCAA model previously had no notion of who was playing
+quarterback. A starter change is worth -3.21 points against the close (t = -5.56), but that
+decomposes into an **announced absence at -0.25, t = -0.37** -- the market prices it
+correctly, there is no edge -- and a **mid-game change at -6.46, t = -7.56**, which nobody
+can know in advance. Against *our* model the knowable half cost 1.37 points against a +0.61
+baseline, and closing that is the point.
+
+The version that mirrors `nfl-model` most closely -- scaling by quarterback QUALITY -- was
+built first and **lost**: +5.12 per unit, t = +0.89, RMSE *worse* by 0.020%. A college backup
+has too few prior attempts for shrinkage to leave anything but the incumbent's own rating in
+disguise. The binary form wins: -1.758 per starter-out, t = -3.05, and the market's implied
+adjustment (+1.82 home-out / -1.62 away-out, about 1.72) agrees to 0.04 points from a source
+that never saw an outcome. Shipped at 1.75.
+
+Spread RMSE improves in all three windows (restricted 16.955 -> 16.928, pre-committed
+17.015 -> 16.985, full FBS 16.918 -> 16.899), by 0.560% on the 806 affected games, by exactly
+0.000% on untouched games, and in every one of the five seasons individually.
+`GATE_CALIBRATED` moved 34.33pp -> 29.31pp and `GATE_KEY_NUMBERS` 3.89pp -> 3.64pp alongside.
+
+**A silent no-op worth remembering.** The first working build reported `0 with the incumbent
+absent` across 11,441 team-games while all unit tests passed: CFBD returns only players who
+appeared, so an absent starter has no row rather than a zero row, and the fixtures had
+invented a shape real data never produces. Caught solely by a diagnostic count printed in
+`run_backtest.py`, which is why that line stays.
+
+**Simulator decoupled (negative, but informative).** `_season_calibration` now records the
+simulator's own mean before `recentered()`/`retotaled()` overwrite it. Its disagreement with
+the OLS projection does **not** predict error -- correlation +0.020 (spread), +0.019 (total),
+and RMSE by disagreement quintile is non-monotonic noise -- so no confidence filter was
+built on it. The byproduct is worth more: the simulator's own mean scores **worse** than the
+OLS projection (spread 16.785 vs 16.506, total 16.412 vs 16.396), so "the simulator is not in
+the mean path" now rests on direct NCAA evidence instead of the NFL measurement
+`backtest.py`'s header has always cited.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of

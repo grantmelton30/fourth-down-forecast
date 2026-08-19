@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from . import qb as qb_mod
 from .cfbd_client import BudgetedCFBD
 from .config import CACHE_DIR,Config,build_cache_signature,frame_signature,read_cached_frame,write_cached_frame
 
@@ -245,6 +246,86 @@ def _plays_frame(client: BudgetedCFBD, games: pd.DataFrame, seasons: list,
         return pd.DataFrame(columns=[*PLAY_COLUMNS, "season", "week"])
     df = pd.concat(frames, ignore_index=True).rename(columns={"gameId": "game_id"})
     return add_garbage_flag(df)
+
+
+def load_passers(client: BudgetedCFBD, games: pd.DataFrame, seasons: list) -> pd.DataFrame:
+    """Per-passer attempts and efficiency, one row per (season, week, team, passer).
+
+    Two endpoints because neither carries both halves of what the QB adjustment needs
+    (`src/qb.py`): `games/players` gives C/ATT -- the sample size that drives shrinkage and
+    the zero-attempt reading that identifies a full absence -- and `ppa/players/games` gives
+    the efficiency. Both are paginated by week and neither accepts a year-only query
+    (`ppa/players/games` returns 400 for one), so the cost is two calls per played week,
+    permanently cached, with the live season on the usual TTL.
+
+    Weeks come from the schedule, so no call is spent on a week that has not been played --
+    the same discipline as `_plays_frame`, and the same reason: asking for a future week
+    returns an empty list while still spending a call.
+    """
+    hist, live = _split_live(client, seasons)
+    parts = []
+    if hist:
+        path = _parquet(f"passers_{min(hist)}_{max(hist)}")
+        cached = pd.read_parquet(path) if path.exists() else None
+        if cached is None or set(qb_mod.PASSER_COLUMNS) - set(cached.columns):
+            cached = _passers_frame(client, games, hist)
+            cached.to_parquet(path, index=False)
+        parts.append(cached)
+    if live is not None:
+        parts.append(_passers_frame(client, games, [live], ttl=_live_ttl(client)))
+    parts = [p for p in parts if len(p)]
+    if not parts:
+        return pd.DataFrame(columns=[*qb_mod.PASSER_COLUMNS, "game_id"])
+    return pd.concat(parts, ignore_index=True)
+
+
+def _passers_frame(client: BudgetedCFBD, games: pd.DataFrame, seasons: list,
+                   ttl: "float | None" = None) -> pd.DataFrame:
+    att_rows, ppa_rows = [], []
+    for year in seasons:
+        g = games[games["season"] == year]
+        if "completed" in g.columns:
+            g = g[g["completed"].fillna(False).astype(bool)]
+        for wk in sorted(int(w) for w in g["week"].dropna().unique()):
+            raw = client.call(
+                "games/players", f"games_players_{year}_{wk}", ttl_hours=ttl,
+                year=year, week=wk, seasonType="regular", classification="fbs",
+            ) or []
+            for game in raw:
+                for team in game.get("teams", []):
+                    for cat in team.get("categories", []):
+                        if cat.get("name") != "passing":
+                            continue
+                        for typ in cat.get("types", []):
+                            if typ.get("name") != "C/ATT":
+                                continue
+                            for ath in typ.get("athletes", []):
+                                stat = str(ath.get("stat", ""))
+                                try:
+                                    attempts = int(stat.split("/")[-1])
+                                except (TypeError, ValueError):
+                                    continue
+                                att_rows.append({
+                                    "game_id": game.get("id"), "season": year, "week": wk,
+                                    "team": team.get("team"),
+                                    "qb_id": str(ath.get("id")),
+                                    "qb_name": ath.get("name"), "attempts": attempts,
+                                })
+            praw = client.call(
+                "ppa/players/games", f"ppa_players_games_{year}_{wk}", ttl_hours=ttl,
+                year=year, week=wk, seasonType="regular", position="QB",
+            ) or []
+            for row in praw:
+                avg = row.get("averagePPA") or {}
+                ppa_rows.append({
+                    "season": year, "week": wk, "team": row.get("team"),
+                    "qb_id": str(row.get("id")), "ppa": avg.get("all"),
+                })
+    attempts = pd.DataFrame(att_rows)
+    ppa = pd.DataFrame(ppa_rows)
+    if attempts.empty:
+        return pd.DataFrame(columns=[*qb_mod.PASSER_COLUMNS, "game_id"])
+    return qb_mod.build_passer_games(attempts, ppa)
 
 
 def load_lines(client: BudgetedCFBD, cfg: Config, seasons: list) -> pd.DataFrame:

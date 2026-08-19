@@ -95,9 +95,14 @@ def _prepopulate(tmp_path, cfg, season, games, drive_table, walkforward, cache_k
         "drive_table": frame_signature(drive_table[drive_table["season"] <= season]),
         "walkforward": frame_signature(walkforward[walkforward["season"] <= season], [
             "season", "week", "as_of", "team", "off_rating", "def_rating", "pace_rating"]),
-    }, artifact_version=1)
+    }, artifact_version=2)
     path = tmp_path / f"backtest_calibration_{cache_key}_s{season}.parquet"
-    fake = pd.DataFrame([{"game_id": f"g{season}", "cover_prob_home": 0.5, "over_prob": 0.5}])
+    # Must carry every column `_season_calibration` reads back, or `read_cached_frame`
+    # correctly rejects the fixture as a stale schema and the "cache hit" under test never
+    # happens. `sim_margin`/`sim_total` were added 2026-08-19 (the simulator's own opinion,
+    # captured before recentering discards it) and the artifact_version bumped with them.
+    fake = pd.DataFrame([{"game_id": f"g{season}", "cover_prob_home": 0.5, "over_prob": 0.5,
+                          "sim_margin": 1.0, "sim_total": 50.0}])
     write_cached_frame(fake, path, signature)
     return fake
 

@@ -121,6 +121,43 @@ pace:
   # its half-life changes.
   lambda: 15.0
 
+qb:
+  # QUARTERBACK ADJUSTMENT (DECISIONS.md D17). NCAA-fitted throughout. Nothing here is
+  # copied from nfl-model's `qb:` block -- that build caps at 7.0 points off an nfeloqb
+  # signal with no college equivalent, and the two leagues differ sharply wherever both
+  # have been measured (wind 0.1867 vs 0.3339 points per mph, dome 1.31 vs 3.16).
+  #
+  # WHAT THIS IS FOR, AND WHAT IT IS NOT. Measured on 2,985 graded games: where a starter
+  # was ABSENT entirely -- announced, so knowable before kickoff -- the market was already
+  # right (-0.25 points, t = -0.37) while OUR model was 1.37 points too optimistic against
+  # a +0.61 baseline. This closes that ~2-point gap on the ~9% of games it touches. It is
+  # an accuracy fix and explicitly not an edge; the t = -0.37 is evidence against one.
+  enabled: true
+  # A bad depth-chart read must not be able to wreck a line. Deliberately well below
+  # nfl-model's 7.0: the college measurement is an absence effect averaging about 1.4
+  # points, not a per-quarterback points model like nfeloqb.
+  max_adjustment_points: 4.0
+  # Prior attempts before a passer's rating counts as established. Below this he still gets
+  # a rating, shrunk hard toward league average by `regression_attempts`.
+  min_attempts: 30
+  # Shrinkage denominator, mirroring nfl-model's `regression_dropbacks: 320` and existing
+  # for the same reason -- a freshman with 40 good attempts is not an elite quarterback --
+  # scaled to college volume, which is lower per game than the NFL's.
+  regression_attempts: 150
+  # Points of spread per starter-out. BINARY, not scaled by quarterback quality -- the
+  # quality version was built first, measured, and rejected: slope +5.12 per unit,
+  # t = +0.89, and it made spread RMSE WORSE (+0.020% overall). A college backup has almost
+  # no prior attempts, so shrinkage pulls his rating to league average and the "quality
+  # delta" is really just the incumbent's rating in disguise. nfl-model escapes this only
+  # because nfeloqb supplies per-quarterback point values from outside the model.
+  #
+  # 1.75 is corroborated twice, independently: the outcome-fitted slope is -1.758
+  # (t = -3.05), and the market's own implied adjustment -- how much further it moves than
+  # our pre-QB projection -- is +1.82 home-out / -1.62 away-out, i.e. about 1.72. Those two
+  # routes never share an input, and they agree to within 0.04 points. RMSE is flat between
+  # 1.35 and 2.0, so the exact value inside that band is not load-bearing.
+  points_per_starter_out: 1.75
+
 context:
   # NOT added to the spread. The drive multinomial's own `is_home_offense` term is the
   # league baseline; this is only the centre that per-venue deviations are measured

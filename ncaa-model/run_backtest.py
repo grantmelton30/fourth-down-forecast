@@ -41,11 +41,12 @@ from src.backtest import (
 from dataclasses import asdict
 
 from src.cfbd_client import BudgetedCFBD
-from src.config import CACHE_DIR,load_config
+from src.config import CACHE_DIR,MANUAL_DIR,load_config
 from src.market import clv,fit_blend,residual_fit,season_week_groups
 from src.ratings import build_walkforward, interaction_matchup, split_net_epa_matchup
 from src.venues import attach_venues, load_venues
 from src.weather import bulk_game_weather
+from src import qb
 from src.features import (load_free_preseason, matchup_feature_table,
                           normalize_preseason_sources)
 from src._shared import SHARED_DIR
@@ -246,6 +247,24 @@ def main() -> int:
     have = weather["indoor"].fillna(False) | weather["wind_mph"].notna()
     print(f"weather: {int(have.sum()):,} of {len(weather):,} games have a kickoff reading "
           f"({int(weather['indoor'].fillna(False).sum()):,} indoor)")
+
+    # QUARTERBACK (DECISIONS.md D17). Like weather, `qb_delta_gap` is deliberately not
+    # `_diff`/`_sum` suffixed -- it is applied directly in `project_walkforward`, not
+    # entered into the challenger bundle. `data/manual/qb_status.csv` overrides the
+    # box-score reading when present, which is how the live path (no box score yet) says a
+    # starter is out.
+    passers = ingest.load_passers(client, games, cfg.all_seasons)
+    qb_table = qb.qb_ratings_table(passers, cfg)
+    manual_qb = None
+    manual_path = MANUAL_DIR / "qb_status.csv"
+    if manual_path.exists():
+        manual_qb = pd.read_csv(manual_path)
+        qb_table = qb.apply_manual_status(qb_table, manual_qb)
+    challenger = challenger.merge(
+        qb.game_qb_delta(qb_table, games), on="game_id", how="left")
+    absent = int(qb_table["incumbent_absent"].fillna(False).sum()) if len(qb_table) else 0
+    print(f"quarterback: {len(qb_table):,} team-games rated, {absent:,} with the incumbent "
+          f"absent{' (manual overrides applied)' if manual_qb is not None else ''}")
 
     frame = walk_forward(cfg, market, wf, challenger_features=challenger)
     print(f"backtest frame: {len(frame):,} graded games")

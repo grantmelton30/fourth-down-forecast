@@ -957,6 +957,84 @@ test. Wind is the only weather term the data supports.
 above is direct evidence against that. It makes the projection more accurate on windy
 games, which is the stated goal.
 
+## D17. Quarterback availability, and an elaborate design that lost to a simple one, 2026-08-19
+
+`nfl-model` treats a quarterback change as its own explicit term because it is "the largest
+single source of NFL model error" (`nfl-model/src/qb.py`). The NCAA model had **no notion of
+who was playing quarterback at all**. Built as the first item on the D16 criterion: does an
+input improve the projection against actual outcomes, not does it beat the market.
+
+**The measurement, and why most of it is unusable.** On 2,985 graded games a team starting a
+different quarterback than its previous game underperformed the close by 3.21 points
+(t = -5.56) -- the largest effect found in this session. It decomposes, and the split is the
+entire design:
+
+| case | n | vs close | t |
+|---|---|---|---|
+| previous starter **absent entirely** (announced, knowable pre-kickoff) | 528 | -0.25 | -0.37 |
+| previous starter **played, lost the job mid-game** | 352 | **-6.46** | -7.56 |
+
+The whole effect lives in in-game events. Where an absence is knowable in advance the market
+prices it essentially perfectly, and a 95% CI of about [-1.6, +1.1] rules out any 3-point
+edge. Reverse causality is real too: the changed group loses by 21+ in 25.3% of games
+against a 14.4% baseline -- blowouts cause quarterback changes as much as the reverse.
+
+**But against OUR model** rather than the market, known absences cost 1.37 points against a
++0.61 baseline. That ~2-point gap is a real accuracy hole the market has closed and we had
+not, and closing it is the point.
+
+**The elaborate version was built first and lost.** Mirroring the NFL module, the adjustment
+was scaled by a quarterback QUALITY delta (`replacement_rating - incumbent_rating`, ratings
+attempts-weighted and shrunk toward an expanding league centre). Measured:
+
+| form | slope | t | overall RMSE | affected |
+|---|---|---|---|---|
+| quality-scaled | +5.12 / unit | +0.89 | **+0.020% (worse)** | +0.071% |
+| **binary starter-out** | **-1.758 / out** | **-3.05** | **-0.149%** | **-0.560%** |
+
+The reason is visible in the ratings: a college backup has almost no prior attempts, so
+shrinkage pulls him to league average and the "quality delta" is really the incumbent's own
+rating in disguise, not a read on the drop-off. `nfl-model` escapes this only because
+nfeloqb supplies per-quarterback point values maintained outside the model; CFBD has no
+equivalent. The better idea made the worse feature, so the simple one ships.
+
+**1.75 points, corroborated twice from sources sharing no input.** The outcome-fitted slope
+is -1.758 (t = -3.05). The market's own implied adjustment -- how much further it moves than
+our pre-QB projection -- is +1.82 home-out / -1.62 away-out, about 1.72. Agreement to 0.04
+points, one route never having seen an outcome and the other never having seen a line. RMSE
+is flat between 1.35 and 2.0, so the exact value inside that band is not load-bearing.
+
+**A silent no-op, caught only by a diagnostic count.** The first working version reported
+`0 with the incumbent absent` across 11,441 team-games while every unit test passed. CFBD's
+`games/players` returns only players who **appeared**, so an absent starter has no row at
+all -- he is not a zero-attempt line. Ranking passers within the rows a game happens to
+contain therefore cannot see an absence, and the fixtures had written an explicit
+`attempts: 0` row that real data never produces. Fixed by reconstructing the roster
+explicitly (every passer a team has used is carried into its later weeks with zero attempts
+when missing), and pinned by a regression test built on the real data shape. The `print` of
+the absence count in `run_backtest.py` is the only reason this surfaced; it stays.
+
+**Shipped result.** Spread RMSE improves in all three windows -- restricted 16.955 ->
+16.928, pre-committed 17.015 -> 16.985, full FBS 16.918 -> 16.899 -- and on the 806 affected
+games (27%) by 0.560%. Untouched games move by exactly 0.000%, and all five seasons improve
+individually (-0.05% to -1.04%). Two other gates moved with it: `GATE_CALIBRATED`'s worst bin
+34.33pp -> 29.31pp and `GATE_KEY_NUMBERS` 3.89pp -> 3.64pp, and the spread SD ratio rose
+0.8999 -> 0.9144, toward the market rather than away. Totals are untouched by construction --
+`nfl-model/src/injuries.py` measured the equivalent question there and found injuries move
+the spread and not the total, and nothing here contradicts that.
+
+**Live path, and its honest limitation.** Historically an absence is read off the box score;
+an upcoming game has no box score. CFBD has no injury or depth-chart endpoint (`/injuries`,
+`/depth`, `/depthchart`, `/player/injuries` all 404). ESPN's undocumented API does expose
+`status.name` and an `injuries[]` array per athlete and was confirmed to respond correctly,
+but every roster reads `Active` in August, so **it cannot be verified end to end until games
+start**. `data/manual/qb_status.csv` overrides in both directions. A missing reading, a
+failed pull, or no file at all resolves to zero adjustment -- identical to today's behaviour
+-- so a broken feed can never quietly move a line.
+
+**Not an edge, and not claimed as one.** The t = -0.37 against the market on exactly the
+knowable subset is direct evidence against one.
+
 ## D6. Spread sign convention
 
 CFBD quotes spreads negative = home favored; nflverse is the opposite. Normalized to

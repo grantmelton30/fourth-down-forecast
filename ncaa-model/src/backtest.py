@@ -24,6 +24,7 @@ from .config import CACHE_DIR,Config,build_cache_signature,frame_signature,read_
 from .context import build_context, estimate_venue_hfa
 from .drive_model import fit_drive_model, fit_endgame_table
 from .drives import build_drive_table, fit_start_field_position
+from . import qb as qb_mod
 from .ratings import net_epa_vec, ratings_at
 from .simulate import simulate_game
 
@@ -176,6 +177,25 @@ def project_walkforward(feats: pd.DataFrame, cfg: Config) -> pd.DataFrame:
         # repo has ever been computed on an uncontaminated projection. Any future claim of
         # edge must be measured on `*_pure` against the CLOSE, or it is measuring the
         # anchor again.
+        # QUARTERBACK (2026-08-19, DECISIONS.md D17). Same slot and same discipline as
+        # weather above: after the challenger block so a promotion cannot overwrite it,
+        # before the `*_pure` snapshot because who is playing quarterback is a feature of
+        # the game rather than a market input.
+        #
+        # Applied to the SPREAD only. `nfl-model/src/injuries.py` measured the equivalent
+        # question there and found injuries move the spread and not the total (-0.011,
+        # t = -0.05) -- "a banged-up team scores less AND concedes more, and the two cancel".
+        # The same test is run for NCAA quarterbacks before any total adjustment is
+        # considered; until it says otherwise the total is left alone.
+        #
+        # `qb_delta_gap` is deliberately NOT `_diff`-suffixed: it is a measured physical
+        # condition applied directly, not a challenger candidate competing for promotion in
+        # `_validated_challenger`'s suffix-driven bundle.
+        test["qb_points"] = 0.0
+        if "qb_delta_gap" in test.columns:
+            test["qb_points"] = qb_mod.qb_points(test["qb_delta_gap"], cfg)
+            test["model_spread"] = test["model_spread"] + test["qb_points"]
+
         test["model_spread_pure"] = test["model_spread"]
         test["model_total_pure"] = test["model_total"]
 
@@ -282,7 +302,7 @@ def walk_forward(
     path = CACHE_DIR / f"backtest_frame_{cache_key}.parquet"
     signature=build_cache_signature(builder=Path(__file__),config=asdict(cfg),inputs={
         "market":frame_signature(market,["game_id","kickoff","completed","spread_open","spread_close","total_open","total_close","actual_margin","actual_total"]),
-        "walkforward":frame_signature(walkforward,["season","week","as_of","team","off_rating","def_rating","pace_rating"])},artifact_version=3)
+        "walkforward":frame_signature(walkforward,["season","week","as_of","team","off_rating","def_rating","pace_rating"])},artifact_version=4)
     if cache_key:
         cached=read_cached_frame(path,["game_id","model_spread","model_total","model_spread_pure","model_total_pure"],signature)
         if cached is not None: return cached
@@ -736,7 +756,7 @@ def attach_calibration(
             for season, season_targets in targets.groupby("season")
         ],
         ignore_index=True,
-    ) if len(targets) else pd.DataFrame(columns=["game_id", "cover_prob_home", "over_prob"])
+    ) if len(targets) else pd.DataFrame(columns=["game_id", "cover_prob_home", "over_prob", "sim_margin", "sim_total"])
     return frame.merge(out, on="game_id", how="inner")
 
 
@@ -776,9 +796,9 @@ def _season_calibration(
         "drive_table": frame_signature(drive_table[drive_table["season"] <= season]),
         "walkforward": frame_signature(walkforward[walkforward["season"] <= season], [
             "season", "week", "as_of", "team", "off_rating", "def_rating", "pace_rating"]),
-    }, artifact_version=1)
+    }, artifact_version=2)
     if cache_key:
-        cached = read_cached_frame(path, ["game_id", "cover_prob_home", "over_prob"], signature)
+        cached = read_cached_frame(path, ["game_id", "cover_prob_home", "over_prob", "sim_margin", "sim_total"], signature)
         if cached is not None:
             return cached
 
@@ -813,6 +833,15 @@ def _season_calibration(
             context_adj=ctx, endgame=endgame, rng=rng,
             neutral_site=bool(g.get("neutralSite", False)),
         )
+        # The simulator's OWN opinion, captured BEFORE recentering overwrites it. The
+        # recentering is deliberate and stays (see this function's docstring) -- but it
+        # also discards the one genuinely semi-independent second estimate this repo
+        # produces. The drive simulator and the linear projection read the same ratings but
+        # combine them differently (drive-by-drive and non-linear vs a two-term OLS), so
+        # where they disagree is a real signal about how well the linear form fits that
+        # matchup. Recorded, not acted on: whether disagreement predicts error is an
+        # empirical question, and it cannot even be asked while the number is thrown away.
+        sim_margin, sim_total = float(sim.mean_margin), float(sim.mean_total)
         probs = sim.recentered(float(t.model_spread))
         try:
             probs = probs.retotaled(float(t.model_total))
@@ -826,9 +855,11 @@ def _season_calibration(
             "over_prob": (
                 probs.total_prob(float(t.total_close), "over")
                 if pd.notna(t.total_close) else np.nan),
+            "sim_margin": sim_margin,
+            "sim_total": sim_total,
         })
 
-    out = pd.DataFrame(rows, columns=["game_id", "cover_prob_home", "over_prob"])
+    out = pd.DataFrame(rows, columns=["game_id", "cover_prob_home", "over_prob", "sim_margin", "sim_total"])
     if cache_key:
         write_cached_frame(out, path, signature)
     return out

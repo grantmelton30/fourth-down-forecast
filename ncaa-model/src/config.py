@@ -125,6 +125,20 @@ class ContextCfg(_Section):
 
 
 @dataclass(frozen=True)
+class QbCfg(_Section):
+    """Quarterback adjustment (DECISIONS.md D17). NCAA-fitted; nothing is shared with
+    `nfl-model`'s `qb:` block -- the two leagues differ sharply wherever both have been
+    measured (wind 0.1867 vs 0.3339 points per mph, dome 1.31 vs 3.16), so a borrowed
+    constant would be a bug rather than a shortcut."""
+
+    enabled: bool
+    max_adjustment_points: float
+    min_attempts: int
+    regression_attempts: int
+    points_per_starter_out: float
+
+
+@dataclass(frozen=True)
 class SimulationCfg(_Section):
     """Constants the shared drive simulator reads off `cfg.simulation`.
 
@@ -203,6 +217,7 @@ class Config:
     ratings: RatingsCfg
     pace: PaceCfg
     context: ContextCfg
+    qb: QbCfg
     simulation: SimulationCfg
     market: MarketCfg
     betting: BettingCfg
@@ -274,6 +289,7 @@ def load_config(path: "str | Path" = DEFAULT_CONFIG_PATH) -> Config:
         ratings=RatingsCfg.from_dict(raw["ratings"]),
         pace=PaceCfg.from_dict(pace_raw),
         context=ContextCfg.from_dict(raw["context"]),
+        qb=QbCfg.from_dict(raw["qb"]),
         simulation=SimulationCfg.from_dict(raw["simulation"]),
         market=MarketCfg.from_dict(raw["market"]),
         betting=BettingCfg.from_dict(raw["betting"]),

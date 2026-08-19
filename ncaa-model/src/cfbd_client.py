@@ -39,10 +39,31 @@ class BudgetedCFBD:
 
     # -- budget ------------------------------------------------------------------------
 
+    def _read_state_file(self) -> "dict | None":
+        """Read the budget file, tolerating a transient lock from an external syncer.
+
+        This repo lives under OneDrive, and the budget file is rewritten after EVERY api
+        call -- by the time a week-paginated loader is a few hundred calls in, the file is
+        ~90KB and being re-synced constantly. A sync holding it open surfaces as
+        PermissionError on read and killed a 200-call ingest mid-run on 2026-08-19.
+
+        Retried rather than swallowed: returning "no state" on a failed read would reset the
+        counter to zero and silently uncap the monthly budget, which is the one outcome this
+        file exists to prevent. If every attempt fails the error propagates.
+        """
+        last = None
+        for attempt in range(5):
+            try:
+                return json.loads(self.budget_path.read_text())
+            except (PermissionError, OSError, json.JSONDecodeError) as exc:
+                last = exc
+                time.sleep(0.2 * (attempt + 1))
+        raise last
+
     def _state(self) -> dict:
         month = date.today().strftime("%Y-%m")
         if self.budget_path.exists():
-            state = json.loads(self.budget_path.read_text())
+            state = self._read_state_file()
             if state.get("month") == month:
                 return state
         return {"month": month, "calls": 0, "log": []}
@@ -56,7 +77,20 @@ class BudgetedCFBD:
             "params": dict(params),
         })
         self.budget_path.parent.mkdir(parents=True, exist_ok=True)
-        self.budget_path.write_text(json.dumps(state, indent=2))
+        payload = json.dumps(state, indent=2)
+        # Same lock, other direction. Write via a temp file and replace, so a syncer can
+        # never observe (or leave behind) a half-written budget file.
+        tmp = self.budget_path.with_suffix(".json.tmp")
+        last = None
+        for attempt in range(5):
+            try:
+                tmp.write_text(payload)
+                tmp.replace(self.budget_path)
+                return
+            except (PermissionError, OSError) as exc:
+                last = exc
+                time.sleep(0.2 * (attempt + 1))
+        raise last
 
     @property
     def calls_used(self) -> int:
