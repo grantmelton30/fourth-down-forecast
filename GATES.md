@@ -404,6 +404,37 @@ is the pooled spread interaction (t=+1.585 controlling for `net_diff`/`is_home`,
 this sample size. Not disproven, not detected; recorded as a real negative result and a
 possible direction for a wider search, not acted on.
 
+## Checked whether pooling seasons hides a `GATE_CALIBRATED` trend -- it doesn't, 2026-08-18
+
+Prompted by a direct parallel to `GATE_UNBIASED_BY_WEEK`'s own history: that gate exists
+because a full-season aggregate hid a bias that was actually growing steadily week to
+week, invisible until someone checked week-by-week instead of averaging. `GATE_CALIBRATED`
+pools 5 seasons (2020-2025) into one calibration table the same way -- worth checking
+whether it has the same blind spot across *seasons* instead of weeks, given how much about
+college football changed inside this window (transfer portal maturing, NIL, conference
+realignment). Cost nothing extra to check: the per-season caching fix above (D14) made
+reconstructing the full calibrated frame from cache take under 20 seconds.
+
+**Checked two ways. Neither shows a hidden trend the pooled number is covering up.**
+
+Two-era split (2020-2022 vs. 2023-2025, roughly bracketing the realignment/portal
+inflection): worst bin off by 32.47pp (n=2,188) in the early era, 28.99pp (n=3,428) in the
+late era -- both badly miscalibrated, the later era very slightly *better*, not worse.
+
+Season by season (widened to 20%-width bins so each season has enough observations per
+bin to read at all): every single season fails badly, 13.30pp to 23.31pp off, with no
+consistent direction -- 2023 reads best (13.30pp), 2025 (the most recent, fewest reasons to
+expect it's stale) is back up to 20.96pp, roughly the same territory as 2020-2022.
+
+**Read this as a different, arguably more informative finding than "hidden improving
+trend," not a null result.** The concern was reasonable and worth checking directly rather
+than assuming either way -- but what actually turned up is that the miscalibration isn't
+concentrated in an older, out-of-date era being dragged along by a pool; it's persistently
+bad in *every single season checked individually*. That argues against "the sport changed
+and the model hasn't caught up" as the primary story, and argues for something more
+structural in how the calibrated probabilities are produced -- a real, separate question
+from this one, not investigated here.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of
