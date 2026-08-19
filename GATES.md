@@ -444,6 +444,23 @@ and the model hasn't caught up" as the primary story, and argues for something m
 structural in how the calibrated probabilities are produced -- a real, separate question
 from this one, not investigated here.
 
+## Homegrown O-line/D-line proxy features from CFBD, tested and not promoted, 2026-08-18
+
+Prompted by PFF's own published numbers showing trench play is the strongest matchup
+correlation found anywhere in the literature (pass-block vs. pass-rush grade R^2=0.66,
+run-block vs. run-defense R^2=0.49) -- built a free substitute from CFBD's play-by-play:
+`pass_block_success` (sack-avoidance per dropback) and `run_block_success` (non-stuffed-run
+rate per carry), both new `PLAY_FEATURES` entries flowing through the existing rolling/
+matchup-diff pipeline with no new fit. Confirmed directly against CFBD's raw payload that
+no pass-breakup or tackle-for-loss field exists at all, so this covers only the sack/stuff
+half of a full PFF-style Havoc Rate, not all of it.
+
+**Result: neither promoted**, matching D12/D13. Closest signal: `run_block_success` on
+spread, full-FBS window, t=-1.90 -- still short of the bar, and notably the *opposite*
+sign from what the trench-matchup theory predicts (a better recent run-block edge weakly
+associated with a *smaller* home margin, not larger). Reported as-is, not rationalized
+away. Full numbers and cross-test reading in `DECISIONS.md` D15.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of

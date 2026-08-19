@@ -782,6 +782,78 @@ later season's data changing, and still correctly invalidated by a change to its
 The orphaned monolithic `backtest_calibration_default.parquet` was deleted; the new
 per-season files are the only cache this function reads or writes now.
 
+## D15. Homegrown O-line/D-line proxy features from CFBD, tested and not promoted, 2026-08-18
+
+Prompted by a research discussion on PFF's proprietary line grades: PFF's own published
+numbers show trench play carries the strongest matchup correlation found anywhere in the
+literature (pass-block vs. pass-rush grade R^2=0.66, run-block vs. run-defense R^2=0.49),
+much stronger than any team-level offense/defense stat, because it is a direct,
+single-opponent battle every snap rather than a blend of many sub-battles. PFF's grading
+itself is proprietary, paid, and subjectively human-charted. The question: can CFBD's free
+play-by-play build a usable substitute.
+
+Inspected the real cached play data (`plays_2019_2025.parquet`, 1.44M rows) and the raw
+CFBD JSON schema directly before writing any code. `playType` cleanly distinguishes `Sack`,
+and `Rush` plays carry `yardsGained`, enough to build standard sack-rate and stuff-rate
+proxies. **No pass-breakup or tackle-for-loss field exists anywhere in CFBD's payload** --
+checked the raw JSON keys, not just the columns this repo keeps -- so a full PFF-style
+Havoc Rate (TFL + sack + forced fumble + PBU) cannot be fully replicated; only the
+sack-rate and stuff-rate halves can. (This inspection also surfaced a pre-existing, unrelated
+bug in `_havoc_avoidance`, `features.py:111-113`: its regex includes `"Tackle for Loss"`,
+a playType that does not exist in CFBD's data and can never match, and its blanket
+`"Fumble"` match does not distinguish a forced turnover (`Fumble Recovery (Opponent)`) from
+a team recovering its own bobble (`Fumble Recovery (Own)`). Left alone this round -- flagged
+here for whoever next touches that feature, not fixed as part of this change.)
+
+**Implementation**: two new entries in `PLAY_FEATURES` (`features.py`) --
+`pass_block_success` (1 - is_sack, masked to dropback plays only) and `run_block_success`
+(1 - is_stuffed, masked to rush attempts only), using the same `.where()`-then-`mean()`
+masking technique `_early_eff` already used, so the rate's denominator is dropbacks/rush
+attempts, not every play in the game. Both follow the existing sign convention (higher =
+better for the offense). No new function, no new walk-forward fit, no new merge step in
+`run_backtest.py` was needed -- `matchup_feature_table` (already the first thing that seeds
+`challenger`) automatically produces the opponent-allowed swap and the `_matchup_diff`/
+`_matchup_sum` challenger candidates for any `PLAY_FEATURES` entry, and
+`_validated_challenger` already auto-picks up any `_diff`/`_sum` suffixed column. This is
+the lightweight EWM-rolling route (half-life 5 games, `shift(1)` before the EWM), not the
+heavier ridge-fit route `interaction_matchup`/D13 used -- the right fit, since a rate stat
+is exactly what `PLAY_FEATURES` already exists to hold.
+
+**Result: neither promoted.** `feature_spread_promoted`/`feature_total_promoted` remain
+False on all 5,621 graded rows. Controlled regression (same method as D13), both windows:
+
+| feature | market | window | n | b | t |
+|---|---|---|---|---|---|
+| pass_block_success | spread | restricted | 1542 | -7.71 | -1.181 |
+| pass_block_success | spread | full FBS | 2984 | -7.81 | -1.676 |
+| run_block_success | spread | restricted | 1542 | -6.13 | -1.805 |
+| run_block_success | spread | full FBS | 2984 | -4.65 | **-1.900** |
+| pass_block_success | total | restricted | 1542 | +6.64 | +1.155 |
+| pass_block_success | total | full FBS | 2984 | -1.40 | -0.339 |
+| run_block_success | total | restricted | 1542 | +1.47 | +0.414 |
+| run_block_success | total | full FBS | 2984 | -2.24 | -0.907 |
+
+`run_block_success` on spread comes closest (t=-1.90 on the larger window) but does not
+clear t=1.96 on either window, and neither total result is close. **Worth stating plainly:
+where a coefficient approaches significance, the sign is the opposite of what the trench-
+matchup theory predicts** -- a home team with a *better* recent run-blocking edge over its
+opponent's run defense is (weakly, not significantly) associated with a *smaller* home
+margin, not a larger one. Reported as-is rather than rationalized away, since it does not
+clear significance either direction; if a future, larger-sample test finds the same
+negative sign hold up, that would be a genuinely surprising result worth its own
+investigation, not evidence the current test's methodology is wrong.
+
+**Reading across D12/D13/D15 together**: three separate attempts this session to find a
+trench/style/matchup-specific signal beyond the model's existing additive off/def ratings
+-- rush-vs-pass linear split (D12), a genuine off x def product interaction (D13), and now
+CFBD-derived O-line/D-line proxies (D15) -- have each come back negative or unconvincing.
+That is a real, cumulative finding, not three independent coin flips: the additive
+`net_epa_vec` formulation appears to already capture what these more granular features were
+trying to add, at least at this data source's resolution and this sample size. PFF's own
+R^2 numbers (cited above) suggest the underlying trench signal is real at the professional-grading
+level of detail CFBD's free play-by-play does not resolve -- box-score-derived sack/stuff
+rates are evidently too coarse a proxy for it, not proof the signal itself doesn't exist.
+
 ## D6. Spread sign convention
 
 CFBD quotes spreads negative = home favored; nflverse is the opposite. Normalized to

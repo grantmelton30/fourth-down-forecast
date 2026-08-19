@@ -9,7 +9,7 @@ import pandas as pd
 
 PLAY_FEATURES = (
     "early_down_efficiency", "success_rate", "explosive_rate", "havoc_avoidance",
-    "red_zone_td_rate", "starting_field_position",
+    "red_zone_td_rate", "starting_field_position", "pass_block_success", "run_block_success",
 )
 PRESEASON_FEATURES = (
     "prior_power_rating", "returning_production", "portal_net_rating", "recruiting_rating",
@@ -111,6 +111,13 @@ def build_team_game_features(plays: pd.DataFrame) -> pd.DataFrame:
     havoc = kind.str.contains("Sack|Interception|Fumble|Tackle for Loss", case=False,
                               regex=True)
     frame["_havoc_avoidance"] = (~havoc).astype(float)
+    # Trench-play proxies: a sack/stuff is a direct, single-opponent battle each snap
+    # (unlike whole-offense vs whole-defense stats, which blend many sub-battles), the
+    # closest free equivalent to PFF's pass-block/run-block grades. `.where()`-masked to
+    # NaN outside their own play-type context so `groupby(...).agg("mean")` divides by
+    # dropbacks/rush-attempts, not every play in the game -- same technique as `_early_eff`.
+    frame["_pass_block_success"] = (~kind.eq("Sack")).astype(float).where(is_pass)
+    frame["_run_block_success"] = (~yards.le(0)).astype(float).where(is_rush)
     red_zone = pd.to_numeric(frame["yardsToGoal"], errors="coerce").le(20)
     touchdown = kind.str.contains("Touchdown", case=False, regex=False)
     frame["_rz_td"] = touchdown.astype(float).where(red_zone)
@@ -136,6 +143,8 @@ def build_team_game_features(plays: pd.DataFrame) -> pd.DataFrame:
         success_rate=("_success", "mean"), explosive_rate=("_explosive", "mean"),
         havoc_avoidance=("_havoc_avoidance", "mean"),
         red_zone_td_rate=("_rz_td", "mean"),
+        pass_block_success=("_pass_block_success", "mean"),
+        run_block_success=("_run_block_success", "mean"),
     ).rename(columns={"offense": "team", "defense": "opponent"})
     out = out.merge(starts.reset_index().rename(columns={"offense": "team"}),
                     on=["game_id", "team"], how="left")

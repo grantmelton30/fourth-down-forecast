@@ -119,6 +119,58 @@ def test_matchup_feature_is_strictly_prior():
     assert row.home_success_rate == 1.0
 
 
+def _trench_plays():
+    """Game 1: a sack, a stuffed run, a positive run, and a clean completion -- enough to
+    hand-compute both trench rates and confirm each is masked to its own play-type context
+    rather than diluted by the other. Game 2 gives team A a second appearance so the
+    strictly-prior shift in rolling_team_features has something to carry forward, mirroring
+    _plays()'s two-game shape above."""
+    return pd.DataFrame([
+        {"game_id": 1, "season": 2025, "week": 1, "offense": "A", "defense": "B",
+         "playType": "Sack", "yardsGained": -7, "yardsToGoal": 60,
+         "ppa": -.9, "driveId": 1, "down": 2, "garbage": False},
+        {"game_id": 1, "season": 2025, "week": 1, "offense": "A", "defense": "B",
+         "playType": "Pass Reception", "yardsGained": 9, "yardsToGoal": 53,
+         "ppa": .3, "driveId": 1, "down": 3, "garbage": False},
+        {"game_id": 1, "season": 2025, "week": 1, "offense": "A", "defense": "B",
+         "playType": "Rush", "yardsGained": -2, "yardsToGoal": 53,
+         "ppa": -.4, "driveId": 1, "down": 1, "garbage": False},
+        {"game_id": 1, "season": 2025, "week": 1, "offense": "A", "defense": "B",
+         "playType": "Rush", "yardsGained": 5, "yardsToGoal": 55,
+         "ppa": .2, "driveId": 1, "down": 2, "garbage": False},
+        {"game_id": 2, "season": 2025, "week": 2, "offense": "A", "defense": "C",
+         "playType": "Pass Reception", "yardsGained": 4, "yardsToGoal": 40,
+         "ppa": .1, "driveId": 2, "down": 1, "garbage": False},
+    ])
+
+
+def test_pass_block_and_run_block_success_are_hand_computed_and_denominator_masked():
+    game = build_team_game_features(_trench_plays())
+    row = game[game.game_id.eq(1)].iloc[0]
+    # pass_block_success: 1 sack out of 2 dropbacks (Sack + Pass Reception) -- not diluted
+    # by the two Rush plays.
+    assert row.pass_block_success == pytest.approx(0.5)
+    # run_block_success: 1 non-stuffed run out of 2 rush attempts -- not diluted by the
+    # dropback plays.
+    assert row.run_block_success == pytest.approx(0.5)
+
+
+def test_trench_matchup_columns_are_produced_and_strictly_prior():
+    games = pd.DataFrame([
+        {"game_id": 1, "season": 2025, "week": 1, "homeTeam": "A", "awayTeam": "B"},
+        {"game_id": 2, "season": 2025, "week": 2, "homeTeam": "C", "awayTeam": "A"},
+    ])
+    out = matchup_feature_table(_trench_plays(), games)
+    assert {"pass_block_success_matchup_diff", "pass_block_success_matchup_sum",
+            "run_block_success_matchup_diff", "run_block_success_matchup_sum"} <= set(out)
+    # Week 2: A's week-1 rates (0.5/0.5) should carry forward as its own prior form, the
+    # same shift-by-one contract test_matchup_feature_is_strictly_prior checks for
+    # success_rate above -- game 2's own plays must not leak into this value.
+    row = out.query("game_id == 2").iloc[0]
+    assert row.away_pass_block_success == pytest.approx(0.5)
+    assert row.away_run_block_success == pytest.approx(0.5)
+
+
 def test_optional_preseason_endpoint_rate_limit_stays_missing_instead_of_blocking_refresh():
     class Client:
         def frame(self, endpoint, cache_key, **params):
