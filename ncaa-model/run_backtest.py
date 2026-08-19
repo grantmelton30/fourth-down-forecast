@@ -212,9 +212,15 @@ def main() -> int:
     # multiplicative interaction the current additive off_weight*off + def_weight*def
     # formula cannot represent at all. Pooled (general form) and rush-only (the specific
     # "this rushing style beats this front" claim raised in review) versions, both free --
-    # `wf`/`wf_rush` are already fit above.
+    # `wf`/`wf_rush`/`wf_pass` are already fit above. Pass-specific added 2026-08-18 as a
+    # follow-up (GATES.md D13 flagged it, not run at the time): the pooled and rush-only
+    # interactions were tested but not the pass one, and passing is where the pass/rush
+    # split test found the stronger standalone signal -- worth checking whether that
+    # extends to an interaction term too, not just assumed either way.
     interactions = interaction_matchup(wf, games, prefix="pooled_").merge(
-        interaction_matchup(wf_rush, games, prefix="rush_"), on="game_id", how="left")
+        interaction_matchup(wf_rush, games, prefix="rush_"), on="game_id", how="left"
+    ).merge(
+        interaction_matchup(wf_pass, games, prefix="pass_"), on="game_id", how="left")
     challenger = challenger.merge(interactions, on="game_id", how="left")
 
     frame = walk_forward(cfg, market, wf, challenger_features=challenger)

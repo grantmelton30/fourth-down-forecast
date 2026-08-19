@@ -707,6 +707,48 @@ functional form. Worth a wider search (e.g. testing interactions built from pass
 ratings too, or a larger n via a less-restricted window) if this is worth pursuing further,
 not concluded here either way.
 
+**Follow-up, same day: pass-specific interaction + full-FBS window.** Both suggestions from
+the note above were run. `wf_pass` (already built and cached for D12) added a third
+`pass_interaction_diff`/`_sum` candidate the same way as pooled/rush. All three interactions
+were then re-run with the same controlled regression, on both the pre-committed restricted
+window (n=1,543) and the larger full-FBS window (n=2,985, `fbs_only`):
+
+| interaction | market | window | n | b | t |
+|---|---|---|---|---|---|
+| pooled | spread | restricted | 1543 | +1598.5 | +1.585 |
+| pooled | spread | full FBS | 2985 | +1424.6 | **+2.422** |
+| rush-only | spread | restricted | 1543 | +1551.4 | +0.648 |
+| rush-only | spread | full FBS | 2985 | +1664.8 | +1.045 |
+| pass-only | spread | restricted | 1543 | +700.5 | +0.398 |
+| pass-only | spread | full FBS | 2985 | +1033.6 | +0.940 |
+| pooled | total | restricted | 1543 | +358.4 | +0.370 |
+| pooled | total | full FBS | 2985 | +1172.7 | **+2.075** |
+| rush-only | total | restricted | 1543 | +2156.7 | +0.936 |
+| rush-only | total | full FBS | 2985 | +2610.4 | +1.618 |
+| pass-only | total | restricted | 1543 | -428.7 | -0.260 |
+| pass-only | total | full FBS | 2985 | +1697.9 | +1.643 |
+
+`feature_spread_promoted`/`feature_total_promoted` remained False on all 5,621 graded rows
+for every version (all six new `_diff`/`_sum` columns), same as the initial pooled/rush
+result -- nothing auto-promoted.
+
+The extra power helped exactly one candidate: pooled spread and pooled total both cross
+t=1.96 on the full-FBS window (2.42 and 2.08) while staying sub-significance on the
+restricted, pre-committed window (1.59 and 0.37). Rush-only and pass-only never clear the
+bar in either window, on either market -- the user's specific claim (rushing offense vs.
+d-line matchup) is not supported at this sample size by either the rush-specific or
+pass-specific product term. The pooled result strengthening with n, while the split
+versions don't move the same way, is itself informative: whatever interaction signal exists
+looks like a general "good offense vs. bad defense, beyond the additive formula" effect, not
+one specific to run-heavy or pass-heavy matchups.
+
+Per this project's own established methodology, the full-FBS window is the "contrast" set,
+not the evaluation set -- the restricted, pre-committed window is what promotion decisions
+are made on (see GATE tables in every backtest run), specifically to avoid picking whichever
+window happens to look best. Judged on that basis, pooled interaction is still not
+promotion-worthy: t=1.59/0.37 on the window that counts. Recorded here as a real,
+directionally-interesting-but-not-actionable result, not treated as a pass on a technicality.
+
 ## D14. Per-season caching for `attach_calibration`, 2026-08-18
 
 `attach_calibration` (D9, GATE_CALIBRATED) cached its result as one blob for all graded

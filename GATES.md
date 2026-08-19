@@ -404,6 +404,15 @@ is the pooled spread interaction (t=+1.585 controlling for `net_diff`/`is_home`,
 this sample size. Not disproven, not detected; recorded as a real negative result and a
 possible direction for a wider search, not acted on.
 
+**Follow-up same day: added pass-only interaction, and re-ran all three (pooled/rush/pass)
+on the larger full-FBS window (n=2,985) alongside the original restricted window (n=1,543).**
+Pass-only never approaches significance in either window (spread t=+0.398 / +0.940, total
+t=-0.260 / +1.643). Pooled crosses conventional significance on the larger full-FBS window
+(spread t=+2.422, total t=+2.075) but stays sub-significance on the restricted,
+pre-committed window this project actually promotes on (t=+1.585 / +0.370) -- so still not
+promotion-worthy by this repo's own standard of evaluating on the pre-committed set, not
+whichever window looks best. Full numbers in `DECISIONS.md` D13.
+
 ## Checked whether pooling seasons hides a `GATE_CALIBRATED` trend -- it doesn't, 2026-08-18
 
 Prompted by a direct parallel to `GATE_UNBIASED_BY_WEEK`'s own history: that gate exists
