@@ -949,6 +949,24 @@ cannot harm a calm, indoor, or missing-reading game, because all three resolve t
 zero adjustment. That last property is what makes it safe to ship: a failed fetch degrades
 to today's behaviour rather than quietly moving a line.
 
+**AMENDED 2026-08-19 -- this reached the backtest and nothing else, same bug as D17.**
+`bulk_game_weather` writes a cache keyed on `game_id`; `weather_for_game` read only its own
+cache keyed on lat/lon/date/hour, in a different file the bulk path never writes. The shared
+viewer calls `build_context(..., allow_network=False)`, so it found an empty hourly cache,
+returned "unavailable", and **every outdoor game on the page was silently projected as
+though wind did not exist** -- the exact failure this module's docstring warns about for the
+NFL build. Fixed by having `weather_for_game` consult the game-keyed cache first (memoised
+per process, since the backtest asks once per graded game and the viewer once per render).
+Verified offline with no `weather.parquet` present: a 17.4mph game now resolves to
+`total_points = -1.94` with `data_incomplete = False`, where it previously resolved to
+nothing at all.
+
+Also fixed while there: `bulk_game_weather` skipped any `game_id` already in the cache,
+which would have frozen a FORECAST taken two weeks out and served it at kickoff. Only
+`archive` and `indoor` rows are permanent now; forecasts refetch on every allowed refresh.
+Same failure class as the live-season TTL in `cfbd_client.call` -- a cache with no notion of
+recency that from the outside looks exactly like a working model.
+
 **Rain and snow: not implemented.** 152 wet games showed nothing against the market
 (t = +0.23) and actual totals were 53.09 wet vs 53.95 dry; snow had 9 games, too few to
 test. Wind is the only weather term the data supports.

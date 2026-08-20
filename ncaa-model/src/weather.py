@@ -61,6 +61,55 @@ class GameWeather:
         return self.indoor or self.wind_mph is not None
 
 
+_GAME_CACHE: "dict | None" = None
+
+
+def _game_cache_lookup(game_id, cache_key: str = "default") -> "GameWeather | None":
+    """Resolve one game from the game-keyed cache written by `bulk_game_weather`.
+
+    Held in a module-level dict rather than re-read per call: the backtest asks for this
+    once per graded game and the viewer once per rendered game, and re-reading a parquet
+    thousands of times is how a cheap lookup turns into a visibly slow page.
+
+    Returns None for "not in the cache", which is distinct from "cached as having no
+    reading" -- the caller falls through to its own hourly cache and, if allowed, the
+    network.
+    """
+    global _GAME_CACHE
+    if game_id is None or pd.isna(game_id):
+        return None
+    if _GAME_CACHE is None:
+        path = CACHE_DIR / f"game_weather_{cache_key}.parquet"
+        rows: dict = {}
+        if path.exists():
+            try:
+                frame = pd.read_parquet(path)
+                for r in frame.itertuples(index=False):
+                    rows[str(getattr(r, "game_id"))] = r
+            except Exception:  # noqa: BLE001 - a bad cache must not stop a projection
+                rows = {}
+        _GAME_CACHE = rows
+    hit = _GAME_CACHE.get(str(game_id))
+    if hit is None:
+        return None
+    if bool(getattr(hit, "indoor", False)):
+        return GameWeather(None, None, None, True, "indoor")
+    wind = getattr(hit, "wind_mph", None)
+    if wind is None or pd.isna(wind):
+        return None
+    def _num(name):
+        v = getattr(hit, name, None)
+        return None if v is None or pd.isna(v) else float(v)
+    return GameWeather(_num("temp_f"), float(wind), _num("precip_in"), False,
+                       str(getattr(hit, "source", "cache")))
+
+
+def reset_game_weather_cache() -> None:
+    """Drop the memo. For tests, and for a long-lived process that refetches mid-run."""
+    global _GAME_CACHE
+    _GAME_CACHE = None
+
+
 def _cache_read() -> pd.DataFrame:
     path = CACHE_DIR / "weather.parquet"
     if path.exists():
@@ -128,6 +177,17 @@ def weather_for_game(game: pd.Series, allow_network: bool = True) -> GameWeather
     """
     if bool(game.get("dome", False)):
         return GameWeather(None, None, None, True, "indoor")
+
+    # THE GAME-KEYED CACHE COMES FIRST, and it is the only reason weather reaches anything
+    # a user sees. `bulk_game_weather` writes `game_weather_{key}.parquet` keyed on
+    # `game_id`; this function's own cache below is keyed on lat/lon/date/hour and lives in
+    # a different file that the bulk path never writes. The shared viewer calls
+    # `build_context(..., allow_network=False)`, so before this lookup existed it found an
+    # empty hourly cache, returned "unavailable", and every projection on the page was
+    # silently computed as though wind did not exist (DECISIONS.md D16/D17).
+    cached_game = _game_cache_lookup(game.get("game_id"))
+    if cached_game is not None:
+        return cached_game
 
     lat, lon = game.get("lat"), game.get("lon")
     if pd.isna(lat) or pd.isna(lon):
@@ -197,7 +257,13 @@ def bulk_game_weather(
         if not set(GAME_WEATHER_COLUMNS) - set(disk.columns):
             cached = disk
 
-    need = games[~games["game_id"].isin(cached["game_id"])].copy()
+    # A FORECAST GOES STALE; AN ARCHIVE READING DOES NOT. Caching by game_id alone would
+    # freeze a forecast taken two weeks out and serve it at kickoff, which is the same
+    # "cached forever, still looks like it works" failure the live-season TTL in
+    # `cfbd_client.call` exists to prevent. Only `archive` and `indoor` rows are permanent;
+    # forecasts are refetched every time a refresh is allowed.
+    permanent = cached[cached["source"].isin(("archive", "indoor"))] if len(cached) else cached
+    need = games[~games["game_id"].isin(permanent["game_id"])].copy()
     indoor = need[need["dome"].fillna(False).astype(bool)]
     fresh = [pd.DataFrame({
         "game_id": indoor["game_id"], "indoor": True, "wind_mph": np.nan,

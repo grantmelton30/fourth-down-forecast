@@ -107,3 +107,82 @@ def test_missing_reading_produces_no_adjustment_not_a_penalty():
     assert penalty.iloc[0] == pytest.approx(0.0)   # missing -> neutral
     assert penalty.iloc[1] == pytest.approx(0.0)   # calm    -> neutral
     assert penalty.iloc[2] < -2.0                  # windy   -> real penalty
+
+
+# --------------------------------------------------------------------------------------
+# THE LIVE PATH. `bulk_game_weather` writes a game-keyed cache; `weather_for_game` used to
+# read only its own lat/lon/date/hour cache, so the shared viewer -- which calls
+# build_context(allow_network=False) -- found nothing and silently projected every outdoor
+# game as calm. These pin the bridge between the two.
+# --------------------------------------------------------------------------------------
+
+def test_game_keyed_cache_is_found_offline(tmp_path, monkeypatch):
+    import src.weather as weather_mod
+
+    monkeypatch.setattr(weather_mod, "CACHE_DIR", tmp_path)
+    weather_mod.reset_game_weather_cache()
+    pd.DataFrame([{
+        "game_id": 42, "indoor": False, "wind_mph": 19.0, "temp_f": 41.0,
+        "precip_in": 0.0, "source": "archive",
+    }])[GAME_WEATHER_COLUMNS].to_parquet(tmp_path / "game_weather_default.parquet",
+                                         index=False)
+
+    def _explode(*a, **k):  # noqa: ANN002, ANN003
+        raise AssertionError("network was used when a cached reading existed")
+
+    monkeypatch.setattr(weather_mod, "_fetch", _explode)
+    got = weather_mod.weather_for_game(
+        pd.Series({"game_id": 42, "lat": 41.7, "lon": -91.6, "tz": "America/Chicago",
+                   "dome": False, "kickoff": pd.Timestamp("2025-11-01T18:00", tz="UTC")}),
+        allow_network=False,
+    )
+    assert got.available is True
+    assert got.wind_mph == pytest.approx(19.0)
+    weather_mod.reset_game_weather_cache()
+
+
+def test_a_game_absent_from_the_cache_stays_unavailable(tmp_path, monkeypatch):
+    """Absence must not resolve to "calm" -- a silent zero is indistinguishable from a
+    measured zero, which is exactly how the NFL build ran for its whole life."""
+    import src.weather as weather_mod
+
+    monkeypatch.setattr(weather_mod, "CACHE_DIR", tmp_path)
+    weather_mod.reset_game_weather_cache()
+    got = weather_mod.weather_for_game(
+        pd.Series({"game_id": 999, "lat": 41.7, "lon": -91.6, "tz": "America/Chicago",
+                   "dome": False, "kickoff": pd.Timestamp("2025-11-01T18:00", tz="UTC")}),
+        allow_network=False,
+    )
+    assert got.available is False
+    weather_mod.reset_game_weather_cache()
+
+
+def test_forecast_rows_are_refetched_but_archive_rows_are_permanent(tmp_path, monkeypatch):
+    """A forecast taken two weeks out must not be served at kickoff."""
+    import src.weather as weather_mod
+
+    monkeypatch.setattr(weather_mod, "CACHE_DIR", tmp_path)
+    pd.DataFrame([
+        {"game_id": 1, "indoor": False, "wind_mph": 5.0, "temp_f": 60.0,
+         "precip_in": 0.0, "source": "archive"},
+        {"game_id": 2, "indoor": False, "wind_mph": 5.0, "temp_f": 60.0,
+         "precip_in": 0.0, "source": "forecast"},
+    ])[GAME_WEATHER_COLUMNS].to_parquet(tmp_path / "game_weather_default.parquet",
+                                        index=False)
+
+    asked: list = []
+
+    def _spy(url, lat, lon, tz, start, end):  # noqa: ANN001
+        asked.append((start, end))
+        return pd.DataFrame({"hour_key": [], "temp_f": [], "wind_mph": [], "precip_in": []})
+
+    monkeypatch.setattr(weather_mod, "_fetch_range", _spy)
+    games = pd.DataFrame([
+        {"game_id": 1, "season": 2025, "lat": 41.7, "lon": -91.6, "tz": "America/Chicago",
+         "dome": False, "kickoff": pd.Timestamp("2025-11-01T18:00", tz="UTC")},
+        {"game_id": 2, "season": 2025, "lat": 41.7, "lon": -91.6, "tz": "America/Chicago",
+         "dome": False, "kickoff": pd.Timestamp("2025-11-08T18:00", tz="UTC")},
+    ])
+    bulk_game_weather(games, allow_network=True, cache_key="default")
+    # game 1 (archive) must not be refetched; game 2 (forecast) must be.
+    assert len(asked) == 1, f"expected only the forecast row refetched, got {asked}"

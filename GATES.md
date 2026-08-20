@@ -540,6 +540,14 @@ unplayed game is never mistaken for a missing starter. **A general lesson worth 
 input that only moves a backtest column changes no output, and "the tests pass" does not
 establish otherwise.**
 
+**Weather had the same disease, found and fixed the same day.** `bulk_game_weather` writes
+a cache keyed on `game_id`; `weather_for_game` read a different file keyed on
+lat/lon/date/hour. The viewer calls `build_context(allow_network=False)`, found nothing, and
+**projected every outdoor game as though wind did not exist**. Fixed by consulting the
+game-keyed cache first; a 17.4mph game now resolves to -1.94 points on the total offline,
+where it previously resolved to nothing. Also stopped `bulk_game_weather` treating a
+FORECAST as permanently cached -- one taken two weeks out would have been served at kickoff.
+
 **Simulator decoupled (negative, but informative).** `_season_calibration` now records the
 simulator's own mean before `recentered()`/`retotaled()` overwrite it. Its disagreement with
 the OLS projection does **not** predict error -- correlation +0.020 (spread), +0.019 (total),
