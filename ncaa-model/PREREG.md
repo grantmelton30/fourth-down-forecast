@@ -160,6 +160,27 @@ accumulate honest out-of-sample record at a rate no backtest slice can fake.
   disqualified itself.
 * **Reported either way**, in full, whatever it says.
 
+### How it is recorded
+
+`track_p1.py` implements the rule and owns the log (`data/p1_log.csv`):
+
+    python track_p1.py record      # log this week's qualifying games, at today's number
+    python track_p1.py grade       # settle finished bets
+    python track_p1.py report      # running out-of-sample record
+
+The log is **append-only**: `record` refuses to rewrite a game already present, and
+settlement uses the line the bet was RECORDED at, not the close. Both properties are
+pinned by tests, and both exist for the same reason -- a line remembered later is the same
+class of error as the opener anchoring that produced this repo's only false positive.
+
+`model_total` is the walk-forward OLS projection with weather applied, which is the exact
+quantity the P1 baseline was measured on -- deliberately not the raw simulator mean, a
+different and measurably worse estimate (16.412 vs 16.396 RMSE, D17). The rule constants
+live in `track_p1.py` as module-level values with a test asserting they still match this
+registration, so a silent edit cannot quietly redefine what is being tracked.
+
+As of declaration, 2026 week 1 lines are already posted and **26 games would qualify**.
+
 ### Status of the model itself, unchanged by this
 
 `bets_allowed()` remains **False** -- five promotion gates fail (`GATE_UNBIASED_BY_WEEK`,
