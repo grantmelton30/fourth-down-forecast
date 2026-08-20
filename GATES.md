@@ -622,6 +622,65 @@ upgraded on this**: its by-era split (50.8% then 56.2%) is post-hoc and inside n
 registered rule stays pooled exactly as declared. The objection is removed, not answered in
 its favour.
 
+## NFL improvement candidates, tested 2026-08-20 -- one survives, one fails validation
+
+Everything below is stated as distance from the 52.38% breakeven at -110, because RMSE in
+points does not translate obviously into whether a thing is worth betting.
+
+**Where NFL actually stands.** Betting the side each estimator disagrees with the market on:
+
+| | bets | win% | vs breakeven | units |
+|---|---|---|---|---|
+| our model, spread | 1,345 | 47.3% | **-5.1pp** | -143.9u |
+| Elo baseline, spread | 1,327 | 48.9% | -3.5pp | -96.8u |
+| our model, total | 1,360 | 49.7% | -2.7pp | -76.4u |
+| *(NCAA totals, P1 rule, for contrast)* | *1,063* | *54.0%* | *+1.6pp* | *+36.1u* |
+
+Everything NFL loses money, including the baseline. "The simulator does not beat Elo" is a
+contest between two losing estimators, which is worth remembering before treating
+`GATE_BEATS_ELO` as the thing standing between this build and a bet.
+
+**WIND SURVIVES FORECAST ERROR -- the strongest candidate edge found in either league.**
+The market misses wind (t = -3.51 with temperature controlled, so not a cold-weather effect
+wearing a wind label). The obvious objection was that nflverse `wind` is the OBSERVED
+game-time reading, not the forecast available at bet time -- the same class of error as the
+opener anchoring behind this repo's only false positive. Tested by adding Gaussian noise to
+the observed value, selecting on the noisy "forecast" and grading on the real outcome,
+200 seeds per level:
+
+| forecast error | wind >=10 | wind >=12 |
+|---|---|---|
+| 0 mph (observed) | +5.3pp | +5.7pp |
+| 2 mph | +4.4pp | +4.7pp |
+| 3 mph | +3.4pp | +4.0pp |
+| 4 mph | +2.4pp | +3.2pp |
+
+At realistic 1-3 day error (~2-4 mph RMSE) the edge holds at **+2.4 to +4.7pp**. It degrades
+and does not die. NOT yet actionable: ~60 bets a season, the threshold came from a sweep,
+and the noise model is unbiased Gaussian where real forecast error may be biased and worse
+in precisely the high-wind games that carry the signal. A real forecast pipeline and a
+pre-registration would be the next steps, not a bet.
+
+**THE ELO BLEND FAILS WALK-FORWARD VALIDATION -- do not implement it.** Sweeping the blend
+weight in-sample gave RMSE 13.153 at 25% model / 75% Elo, beating both our model (13.464)
+and Elo (13.208). Refitting the weight on prior seasons only and applying it to the held-out
+season gives **13.410** -- better than our model, WORSE than plain Elo, winning 2 of 5
+seasons. The in-sample number was a lucky cell.
+
+**What the blend weights do establish, and it is not flattering.** The walk-forward fit is
+strikingly stable across every season it runs: **model 0.22-0.27, Elo 0.66-0.79.** Least
+squares consistently wants about a quarter of our model and three quarters of a plain
+538-style Elo. The entire NFL pipeline -- EPA ratings, drive simulator, context adjustments,
+nfelo QB layer -- is worth roughly a quarter of the baseline this repo computes purely as a
+control. That is the real answer to "why does the simulator not beat Elo", and it is more
+fundamental than dispersion, which was the previous hypothesis and was wrong.
+
+**Temperature: real, measured, and deliberately NOT implemented.** The config records
++0.072 pts/degF (t = +2.69) against the model residual and calls it the next weather term
+worth having. Confirmed here that it is an ACCURACY item and not an edge item: against the
+MARKET residual it reads +0.0086/degF, **t = +0.49** -- the market already prices temperature
+correctly. Same shape as the NCAA weather result.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of
