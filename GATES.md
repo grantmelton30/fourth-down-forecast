@@ -557,6 +557,71 @@ OLS projection (spread 16.785 vs 16.506, total 16.412 vs 16.396), so "the simula
 the mean path" now rests on direct NCAA evidence instead of the NFL measurement
 `backtest.py`'s header has always cited.
 
+## NFL examined for the same effects, 2026-08-19/20 -- and it diverges on every one
+
+Prompted by asking whether the day's NCAA work applied to NFL. It mostly does not, and two
+of the three checks reversed a conclusion I had already stated.
+
+**Weather: the NCAA one-sided fix must NOT be ported.** NCAA's positive (calm-game) half was
+harmful -- it made calm games 0.42% and dome games 1.81% worse. On NFL the same half is
+REAL: calm games (<8.17mph) come in **+1.014** above the market (se 0.416) against a config
+that adds **+1.08**. Measured, not assumed, and almost exactly right. NFL keeps the
+two-sided centred line.
+
+**Dome constant retained, and my objection to it was wrong.** I measured domes at +1.395
+against the MARKET and called the +3.16 config value overstated by 2.3x. That was a category
+error: the constant is calibrated against the MODEL residual, which the config comment had
+already done properly. Re-measured on the backtest frame against the model: indoor residual
+**+0.451** (se 0.630), outdoor -0.874, gap +1.325 (t=+1.75, not significant). If anything
++3.16 is slightly small. Unchanged.
+
+**No lean in either market.** Betting the side the model favours, vs the market: totals
+**49.7%**, spreads **47.3%**, both below the 52.4% breakeven. The NCAA P1 rule shape applied
+to NFL returns 49.1% / 46.0% -- a losing rule. It does not transfer.
+
+**The market under-prices wind (t = -3.57) but it is not usable as measured.** Betting unders
+at wind >= 10mph returns 57.7% over 603 games with a CI clearing breakeven, holding across
+all three eras while the market's own calm-to-windy spread doubled (1.18 -> 2.35). BUT
+nflverse's `wind` is the OBSERVED game-time reading, not the forecast available at bet time.
+That is the same class of error as the opener anchoring that produced this repo's only false
+positive, so 57.7% is an upper bound and the honest version needs forecast data.
+
+## A post-2022 efficiency regime change in the NFL market, and NOT in college
+
+Chased as a suspected bug in the `linear` spread estimator, which showed
+`b = -0.364, t = -2.85` -- deviations from the market being reliably WRONG, not merely
+uninformative. It is not a bug, and two intermediate diagnoses were also wrong (a sign
+error, ruled out by `actual ~ model` slope +1.004; then compression, ruled out because the
+model loses equally pulling toward even (46.0%) and away from it (46.2%)).
+
+**The control settled it: Elo shows the same thing.** By season, our model and an
+independently-built Elo move together:
+
+| era | our model | Elo |
+|---|---|---|
+| 2019-2021 | +0.057 | +0.242 |
+| 2022-2025 | **-0.316** (t=-2.64) | **-0.197** (t=-1.73) |
+
+`linear` looked guilty only because it is confounded with era -- it covers 2021 and 2023-25,
+and the negative years are 2023+. 2021 is also `linear` and reads -0.105; 2022 is the ridge
+and reads +0.035. The estimator was never the variable. Since roughly 2023 the NFL market
+appears efficient enough that ANY independent rating system's deviations from it are
+systematically wrong.
+
+**This kills the fade idea.** Fading our own NFL spread returns 52.7% [50.0, 55.4], not
+clearing breakeven, inconsistent across seasons (4 of 7, 11.7pp range) -- and it would mean
+betting on market efficiency, which is the one thing that cannot be exploited.
+
+**College shows no such break**, which is why the same day's P1 registration survives the
+question. NCAA's blend stays positive throughout (2021-22 +0.170, 2023-25 +0.108) where NFL
+goes sharply negative. Plausible mechanism, and it matches the small-conference result from
+the same session: P1 deliberately targets the `restricted` universe -- G5 and cross-tier
+games, explicitly excluding marquee P5 matchups -- which is the least-watched segment of
+college football, while the NFL is the most heavily bet market there is. **P1 is NOT
+upgraded on this**: its by-era split (50.8% then 56.2%) is post-hoc and inside noise, and the
+registered rule stays pooled exactly as declared. The objection is removed, not answered in
+its favour.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of
