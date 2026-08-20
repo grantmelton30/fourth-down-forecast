@@ -88,3 +88,81 @@ settles the question: **evidence of absence, not absence of evidence.**
 
 Appendix A **Test 1 is untouched** and was always the decisive one. The null stands, and
 now stands on a stronger footing than when it was written.
+
+---
+
+## P1. FORWARD TRACKING RULE — totals, edge-capped. Declared 2026-08-19.
+
+Declared **before the 2026 season has played a single game**, so every graded result under
+it is genuinely out of sample. This is the only evidence source this build has not already
+exhausted: five seasons of backtest have been sliced repeatedly, and slicing them again
+cannot settle anything.
+
+### The rule, stated so December cannot reinterpret it
+
+* **Market:** totals only. Spreads are excluded — they measured 50.1% on edges >= 4, below
+  breakeven, and the mechanism (team-specific news moves the spread and cancels in the
+  total) is documented in D17.
+* **Universe:** the `restricted` window — FBS vs FBS, excluding P5-vs-P5. Unchanged from the
+  backtest that produced the baseline below.
+* **Trigger:** bet when `0.5 <= |model_total - market_total| < 6.0`.
+* **Side:** OVER if `model_total > market_total`, UNDER if below.
+* **Excluded:** edge < 0.5 (no opinion) and edge >= 6.0 (the cap).
+* **Stakes:** flat. One unit per qualifying game, no sizing, no Kelly, no discretion.
+* **Grading:** at the number actually available when the bet is recorded, which is the real
+  money question. The closing number is recorded alongside for comparability with the
+  close-anchored baseline. Pushes are no action.
+* **No mid-season changes.** Any adjustment to trigger, cap, universe or stake voids the
+  test and starts a new one under a new id.
+
+### What is being tested, and what may NOT be cited
+
+Backtest baseline, 2021-2025, restricted, close-anchored: **54.0% over 1,063 bets**
+(95% CI 51.0-57.0), against a 52.4% breakeven at -110.
+
+**That number is not evidence and may not be cited as support.** Two reasons, both by this
+ledger's own rule:
+
+1. **The cap of 6.0 was chosen after seeing the table it was chosen from.** Flag: `false`.
+   Win rate by cap was 53.6% (4), 54.0% (6), 53.3% (8), 53.3% (10), 53.1% (uncapped) --
+   6 is the best-looking cell of five examined, and the differences between them are well
+   inside noise. Per the ledger's standing rule, a decision made after seeing its own
+   outcome may not support a positive result.
+2. **Edge size carries no measured information.** A logistic fit of win rate on edge size
+   across all 1,405 totals bets gives slope -0.012, **t = -0.70**. There is no detectable
+   relationship, which means there is no principled place to cut and the cap is a judgment
+   call rather than a finding. An earlier claim in this session that ">= 10 points should be
+   ignored" rested on n=52 and was overstated; it is withdrawn.
+
+Pre-registering the rule now is precisely what converts a post-hoc threshold into a
+legitimate test: the choice is frozen, and the 2026 games it will be graded on did not exist
+when it was made.
+
+### Why this cannot be settled the usual way
+
+To establish with 95% confidence that the true rate exceeds 52.4%, given an observed 53.1%,
+requires roughly **19,500 bets -- about 14 seasons at this volume**. The margin under test
+is 0.7 percentage points; no realistic sample resolves it. This tracking exercise therefore
+**cannot prove the rule works.** What it can do is detect a rule that is clearly broken, and
+accumulate honest out-of-sample record at a rate no backtest slice can fake.
+
+### Pre-committed evaluation
+
+* **First checkpoint:** end of the 2026 regular season, or 200 graded bets, whichever comes
+  later.
+* **Kill condition:** below **50.0%** at the checkpoint. That is roughly 1.2 standard errors
+  under the 54% baseline at n=200 and, more importantly, below breakeven -- a rule losing
+  money out of sample does not get a second season on the argument that the sample was
+  small. Consistent with the ledger's asymmetry: a post-hoc choice may kill a result even
+  though it may not support one.
+* **Continue condition:** at or above 50.0%. Continuing is NOT a claim that it works; the
+  arithmetic above says one season cannot establish that. It means the rule has not yet
+  disqualified itself.
+* **Reported either way**, in full, whatever it says.
+
+### Status of the model itself, unchanged by this
+
+`bets_allowed()` remains **False** -- five promotion gates fail (`GATE_UNBIASED_BY_WEEK`,
+`GATE_SCALE`, `GATE_RMSE_TOTAL`, `GATE_RMSE_SPREAD`, `GATE_KEY_NUMBERS`, `GATE_CALIBRATED`).
+This is a measurement protocol for tracking a declared rule, not an authorisation to stake
+money, and it does not alter any gate or promotion decision.
