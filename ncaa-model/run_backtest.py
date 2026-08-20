@@ -158,6 +158,10 @@ def main() -> int:
         help="return success after a valid build even when betting gates remain closed",
     )
     ap.add_argument(
+        "--qb-refresh", action="store_true",
+        help="fetch quarterback availability from ESPN for upcoming games (free, no key)",
+    )
+    ap.add_argument(
         "--weather-refresh", action="store_true",
         help="fetch kickoff weather for games not already cached (Open-Meteo, free)",
     )
@@ -254,17 +258,15 @@ def main() -> int:
     # box-score reading when present, which is how the live path (no box score yet) says a
     # starter is out.
     passers = ingest.load_passers(client, games, cfg.all_seasons)
-    qb_table = qb.qb_ratings_table(passers, cfg)
-    manual_qb = None
-    manual_path = MANUAL_DIR / "qb_status.csv"
-    if manual_path.exists():
-        manual_qb = pd.read_csv(manual_path)
-        qb_table = qb.apply_manual_status(qb_table, manual_qb)
+    qb_table = qb.qb_ratings_table(passers, cfg, games=games)
+    qb_table, qb_report = qb.resolve_status(
+        qb_table, MANUAL_DIR, allow_network=args.qb_refresh)
+    print(qb.format_status_report(qb_report))
     challenger = challenger.merge(
         qb.game_qb_delta(qb_table, games), on="game_id", how="left")
     absent = int(qb_table["incumbent_absent"].fillna(False).sum()) if len(qb_table) else 0
     print(f"quarterback: {len(qb_table):,} team-games rated, {absent:,} with the incumbent "
-          f"absent{' (manual overrides applied)' if manual_qb is not None else ''}")
+          "absent")
 
     frame = walk_forward(cfg, market, wf, challenger_features=challenger)
     print(f"backtest frame: {len(frame):,} graded games")

@@ -1066,9 +1066,38 @@ The adjustment stays in `project_walkforward` as well, and that is not double-co
 `model_spread` and the simulator mean are separate estimates, and `_season_calibration`
 recenters one onto the other by replacement rather than addition.
 
-**Remaining limitation, stated plainly.** Historically an absence is read off the box score;
-an upcoming game has none, so it depends on `data/manual/qb_status.csv` until an automated
-feed exists. CFBD has no injury or depth-chart endpoint (`/injuries`, `/depth`,
+**ESPN wired in the same day, because a manual file nobody fills in is a silent no-op.**
+That is the same failure class as the two above, so leaving the live path dependent on a
+CSV was leaving a third one in place. `src/espn.py` reads `status.name` per athlete, and the
+join is free: **CFBD's player ids ARE ESPN athlete ids** (verified on the four
+highest-volume 2025 passers, all resolving to the right person at the right position), so
+there is no name matching and none of its collision risk.
+
+Two guards, both added after the first live test failed:
+
+* **`Inactive` is NOT an absence.** Every graduated passer reads `Inactive` -- it means "not
+  on an active roster", which for a former player is permanent and says nothing about this
+  week. Scoring it as unavailable produced **66 spurious absences** on the first run. It is
+  now classed available and pinned by a regression test.
+* **Only unplayed games consult the feed.** A completed game's truth is its box score, and
+  asking a live API whether a 2021 starter is available today is meaningless. Verified:
+  historical absences are unchanged at 2,008 before and after a live fetch.
+
+Precedence is ESPN, then the manual file, so a human can always correct a stale or wrong
+feed. `Questionable` is treated as playing, mirroring `nfl-model/src/injuries.py` -- most
+questionable players play and a false absence moves the line the full 1.75 the wrong way.
+An **unrecognised** status produces no override and is printed loudly, because nothing but
+`Active`/`Inactive` has been observed yet and the first real injury week will produce codes
+this module has never seen.
+
+Every run now prints a status line (`espn checked N, espn absences N, manual absences N`)
+including the explicit `no availability data -- every starter assumed to be playing` case,
+because "no absences" and "the feed is broken" are otherwise indistinguishable in a
+projection.
+
+**Remaining limitation, stated plainly.** The absence code path still cannot be verified
+end to end until games are played -- every roster reads `Active` in preseason, so nothing
+has ever exercised the branch that turns a status into points. CFBD has no injury or depth-chart endpoint (`/injuries`, `/depth`,
 `/depthchart`, `/player/injuries` all 404). ESPN's undocumented API exposes `status.name`
 and an `injuries[]` array per athlete and responds correctly, but every roster reads
 `Active` in August, so **it cannot be verified end to end until games start** and is not

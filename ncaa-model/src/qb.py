@@ -55,7 +55,7 @@ PASSER_COLUMNS = ["season", "week", "team", "qb_id", "qb_name", "attempts", "ppa
 
 QB_TABLE_COLUMNS = [
     "game_id", "season", "week", "team", "incumbent_id", "incumbent_rating",
-    "replacement_id", "replacement_rating", "incumbent_absent", "qb_delta",
+    "replacement_id", "replacement_rating", "incumbent_absent", "qb_delta", "played",
 ]
 
 
@@ -248,6 +248,7 @@ def qb_ratings_table(passers: pd.DataFrame, cfg, games: "pd.DataFrame | None" = 
     # The ratings above are retained because they identify the incumbent, and as the record
     # of what was tried; they no longer scale the adjustment.
     out["qb_delta"] = np.where(out["incumbent_absent"], -1.0, 0.0)
+    out["played"] = out["_played"].fillna(False).astype(bool)
     return out.reindex(columns=QB_TABLE_COLUMNS)
 
 
@@ -297,11 +298,89 @@ def game_qb_delta(table: pd.DataFrame, games: pd.DataFrame) -> pd.DataFrame:
     return g[["game_id", "qb_delta_gap"]]
 
 
+def resolve_status(
+    table: pd.DataFrame, manual_dir, allow_network: bool = False,
+    cache_key: str = "default",
+) -> tuple:
+    """Apply ESPN availability, then the manual file, and report what happened.
+
+    PRECEDENCE IS DELIBERATE: ESPN first, the manual file last, so a human can always
+    correct a feed that is wrong or stale. Returns `(table, report)` where `report` is a
+    dict the caller PRINTS -- the whole point of this feature is that it must be visible.
+    An adjustment that quietly does nothing is the failure this module and the weather one
+    both already shipped once.
+    """
+    report = {"espn_absences": 0, "manual_absences": 0, "unrecognised": [],
+              "espn_checked": 0, "source": "none"}
+    if table is None or table.empty:
+        return table, report
+
+    try:
+        from . import espn
+
+        # ONLY UNPLAYED GAMES CONSULT THE FEED. A completed game's truth is its box score --
+        # asking ESPN whether a 2021 starter is available today is meaningless, and it is
+        # actively harmful: every graduated passer reads `Inactive`, which on the first live
+        # test turned into 66 spurious absences across historical games. History is settled;
+        # only the future needs a feed.
+        upcoming = table[~table["played"].fillna(False).astype(bool)] if (
+            "played" in table.columns) else table.iloc[0:0]
+        report["upcoming_games"] = int(len(upcoming))
+        if upcoming.empty:
+            raise StopIteration  # nothing to ask about; fall through to the manual file
+        incumbents = upcoming["incumbent_id"].dropna().astype(str).unique()
+        status = espn.fetch_athlete_status(
+            incumbents, allow_network=allow_network, cache_key=cache_key)
+        report["espn_checked"] = int(len(status))
+        report["unrecognised"] = espn.unrecognised_statuses(status)
+        overrides = espn.qb_status_overrides(upcoming, status)
+        if len(overrides):
+            table = apply_manual_status(table, overrides)
+            report["espn_absences"] = int(len(overrides))
+            report["source"] = "espn"
+    except StopIteration:
+        pass  # no upcoming games in this table -- not an error, just nothing to ask
+    except Exception as exc:  # noqa: BLE001 - a feed must never break a projection
+        report["error"] = str(exc)
+
+    manual = load_manual_status(manual_dir)
+    if manual is not None and len(manual):
+        table = apply_manual_status(table, manual)
+        report["manual_absences"] = int(
+            pd.Series(manual["starter_out"]).astype(bool).sum())
+        report["source"] = "manual" if report["source"] == "none" else "espn+manual"
+    return table, report
+
+
+def format_status_report(report: dict) -> str:
+    """One line for the run output. Says plainly when nothing was found, because "no
+    absences" and "the feed is not working" look identical in a projection otherwise."""
+    if not report:
+        return "quarterback status: unavailable"
+    bits = [f"espn checked {report.get('espn_checked', 0)}",
+            f"espn absences {report.get('espn_absences', 0)}",
+            f"manual absences {report.get('manual_absences', 0)}"]
+    line = "quarterback status: " + ", ".join(bits)
+    if report.get("error"):
+        line += f"   [feed error: {report['error']}]"
+    if report.get("unrecognised"):
+        line += ("\n  UNRECOGNISED ESPN STATUSES (treated as available, add to "
+                 f"espn.py if real): {report['unrecognised']}")
+    if not report.get("espn_checked") and not report.get("manual_absences"):
+        line += "\n  (no availability data -- every starter assumed to be playing)"
+    return line
+
+
 def load_manual_status(manual_dir) -> "pd.DataFrame | None":
     """Read `qb_status.csv` if it exists. Absent file is not an error -- it is the normal
     state, and means no overrides."""
     from pathlib import Path
-    path = Path(manual_dir) / "qb_status.csv"
+    if manual_dir is None:
+        return None
+    try:
+        path = Path(manual_dir) / "qb_status.csv"
+    except TypeError:
+        return None
     if not path.exists():
         return None
     try:
@@ -357,5 +436,6 @@ def qb_points(delta_diff, cfg) -> np.ndarray:
 
 
 __all__ = ["QBAdjustment", "PASSER_COLUMNS", "QB_TABLE_COLUMNS", "apply_manual_status",
-           "build_passer_games", "game_qb_delta", "load_manual_status", "qb_points",
+           "build_passer_games", "format_status_report", "game_qb_delta",
+           "load_manual_status", "qb_points", "resolve_status",
            "qb_points_for_game", "qb_ratings_table", "scheduled_team_weeks"]

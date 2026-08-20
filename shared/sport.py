@@ -1275,9 +1275,11 @@ class NCAAAdapter(SportAdapter):
                 return None
             passers = pd.concat([pd.read_parquet(h) for h in hits], ignore_index=True)
             table = qb.qb_ratings_table(passers, cfg, games=self._games_with_venues())
-            manual = qb.load_manual_status(self._module("config").MANUAL_DIR)
-            if manual is not None:
-                table = qb.apply_manual_status(table, manual)
+            # allow_network=False, same reason weather uses it here: a live HTTP call per
+            # render would make the tab feel broken. Statuses already fetched by
+            # `run_backtest.py --qb-refresh` are used; nothing is fetched on demand.
+            table, self._qb_report = qb.resolve_status(
+                table, self._module("config").MANUAL_DIR, allow_network=False)
             self._qb_table_cache = table
         except Exception:  # noqa: BLE001
             self._qb_table_cache = None

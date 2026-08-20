@@ -143,9 +143,12 @@ def main() -> None:
         try:
             passers = ingest.load_passers(client, games, cfg.all_seasons)
             qb_table = QB.qb_ratings_table(passers, cfg, games=games)
-            manual = QB.load_manual_status(MANUAL_DIR)
-            if manual is not None:
-                qb_table = QB.apply_manual_status(qb_table, manual)
+            # `--weather` doubles as the "you may use the network" switch: both feeds are
+            # free and keyless, and a projection should not make surprise HTTP calls.
+            qb_table, qb_report = QB.resolve_status(
+                qb_table, MANUAL_DIR, allow_network=args.weather)
+            for status_line in QB.format_status_report(qb_report).splitlines():
+                print(f"  {status_line}")
             adj = QB.qb_points_for_game(
                 row["game_id"], row["homeTeam"], row["awayTeam"], qb_table, cfg)
             ctx = ctx.with_qb(adj.points, adj.note)
