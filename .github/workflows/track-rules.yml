@@ -113,9 +113,16 @@ jobs:
 
       - name: Commit the log
         run: |
-          TRACKED="nfl-model/data/w1_log.csv ncaa-model/data/p1_log.csv web/api/v1/tracker.json"
-          git add -- $TRACKED 2>/dev/null || true
-          if git diff --cached --quiet -- $TRACKED; then
+          # Stage each path SEPARATELY and only if it exists. `git add a b c` aborts
+          # atomically when any one pathspec matches nothing, so listing a log that has not
+          # been created yet silently stages NOTHING -- which is exactly what happened on
+          # 2026-08-21: 26 P1 bets were recorded, w1_log.csv did not exist yet, and the step
+          # reported success having committed nothing.
+          staged=0
+          for f in nfl-model/data/w1_log.csv ncaa-model/data/p1_log.csv                    web/api/v1/tracker.json; do
+            if [ -f "$f" ]; then git add -- "$f"; staged=1; fi
+          done
+          if [ "$staged" = "0" ] || git diff --cached --quiet; then
             echo "no change to either log"; exit 0
           fi
           git config user.name "fourth-down-bot"
