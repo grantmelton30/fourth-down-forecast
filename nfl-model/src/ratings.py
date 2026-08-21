@@ -497,9 +497,23 @@ def tune_lambdas(
 ) -> pd.DataFrame:
     """Walk-forward grid search over `lambda_grid` x `lambda_grid`.
 
-    Scored by out-of-sample RMSE of predicted margin vs actual margin across
-    backtest_start..current-1. Margin is predicted with a points-per-net-EPA scale fit on
-    an expanding window of *earlier* seasons only, so the scoring is walk-forward too.
+    SCORED ON A PROXY, NOT ON WHAT SHIPS -- read this before adopting its answer.
+
+    `_predict_margins_from_ratings` predicts margin from the RATINGS ALONE through a
+    points-per-net-EPA scale. The shipped `model_spread` does none of that: it is an L1
+    least-squares fit on (net_diff, context_points), after a context adjustment carrying
+    HFA, rest, travel, injuries and the quarterback layer. And this scores MARGIN ONLY,
+    while the lambdas it writes feed the totals path too.
+
+    That divergence is not hypothetical. On 2026-08-20 this search minimised its own
+    objective at 2400/1600 (13.5287 -> 13.5062) and made the shipped model WORSE on both
+    markets: spread RMSE 13.464 -> 13.495, total 13.627 -> 13.727, and the totals SD ratio
+    collapsed 0.707 -> 0.519. The result was reverted; see the `tuned:` block in
+    config/nfl.yaml.
+
+    Use `tune_lambdas_shipped` instead when the answer is going to be adopted. This is
+    retained because it is cheap, and a cheap proxy is genuinely useful for seeing the
+    SHAPE of the penalty surface -- just not for choosing the point on it.
     """
     graded = schedules[
         schedules["season"].isin(cfg.backtest_seasons)
@@ -580,3 +594,71 @@ def _predict_margins_from_ratings(
         out["pred_margin"] = scale * out["net_diff"] + hfa * out["is_home"]
         preds.append(out)
     return pd.concat(preds, ignore_index=True)
+
+
+def tune_lambdas_shipped(
+    cfg: Config,
+    schedules: pd.DataFrame,
+    pbp: pd.DataFrame,
+    qb_adj_table: "pd.DataFrame | None" = None,
+    grid: "list | None" = None,
+    n_sims: int = 2000,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """Grid search scored on the SHIPPED projection, both markets.
+
+    Why this exists: `tune_lambdas` scores a ratings-only margin proxy, and on 2026-08-20
+    that proxy chose penalties which degraded the real model on both markets (see its
+    docstring). A hyperparameter must be chosen against the thing it will actually be used
+    to produce.
+
+    Runs the real `walk_forward` per grid cell, so `model_spread` carries its L1 fit and
+    context adjustment and `model_total` comes off the simulator exactly as it ships. Both
+    markets are scored and reported; NEITHER is optimised alone, because the previous
+    failure was precisely a margin-only objective silently wrecking totals.
+
+    `n_sims` defaults low (2000 vs the shipped 20000) because a cell is ranked on the MEAN
+    of the simulated distribution, which converges far faster than its tails. Verify the
+    winner at full `n_sims` before adopting it -- ranking cheaply and confirming expensively
+    is the point, not a shortcut around the confirmation.
+
+    Deliberately NOT cached: `walk_forward` keys its cache on the config, and the lambdas
+    vary per cell rather than through the config, so a cached frame would be served for
+    every cell after the first and the whole search would silently return one number.
+    """
+    from .backtest import walk_forward
+
+    values = [float(x) for x in (grid if grid is not None else cfg.ratings.lambda_grid)]
+    records = []
+    for lo in values:
+        for ld in values:
+            cell_cfg = cfg.with_lambdas(lo, ld)
+            frame = walk_forward(
+                cell_cfg, schedules, pbp, qb_adj_table=qb_adj_table,
+                n_sims=n_sims, verbose=False, cache=False,
+            )
+            f = frame.dropna(subset=["model_spread", "actual_margin",
+                                     "model_total", "actual_total"])
+            if f.empty:
+                continue
+            spread_rmse = float(np.sqrt(np.mean(
+                (f["model_spread"] - f["actual_margin"]) ** 2)))
+            total_rmse = float(np.sqrt(np.mean(
+                (f["model_total"] - f["actual_total"]) ** 2)))
+            rec = {
+                "lambda_off": lo, "lambda_def": ld,
+                "spread_rmse": spread_rmse, "total_rmse": total_rmse,
+                # Reported, never optimised on its own -- see the docstring.
+                "combined_rmse": float(np.sqrt((spread_rmse ** 2 + total_rmse ** 2) / 2)),
+                "spread_sd_ratio": float(
+                    f["model_spread"].std() / f["market_spread"].std()),
+                "total_sd_ratio": float(
+                    f["model_total"].std() / f["market_total"].std()),
+                "n": int(len(f)),
+            }
+            records.append(rec)
+            if verbose:
+                print(f"  lo={lo:>6.0f} ld={ld:>6.0f}  spread={spread_rmse:.4f}  "
+                      f"total={total_rmse:.4f}  sd(sp)={rec['spread_sd_ratio']:.3f}  "
+                      f"sd(to)={rec['total_sd_ratio']:.3f}", flush=True)
+    return pd.DataFrame(records).sort_values("combined_rmse").reset_index(drop=True)

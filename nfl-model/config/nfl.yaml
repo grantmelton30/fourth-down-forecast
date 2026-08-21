@@ -166,6 +166,26 @@ projection:
   # fall back to the simulator and say so in `model_spread_source`.
   min_train_games: 300
 tuned:
+  # REVERTED 2026-08-20 from a 2400/1600 result written by `--tune-lambdas`. That search
+  # genuinely minimised its own objective (13.5287 -> 13.5062) and made the SHIPPED model
+  # WORSE on both markets: spread RMSE 13.464 -> 13.495, total 13.627 -> 13.727, and the
+  # totals SD ratio collapsed 0.707 -> 0.519 (GATE_SCALE deviation 0.293 -> 0.481).
+  #
+  # Cause: `ratings.tune_lambdas` scores `_predict_margins_from_ratings` -- ratings alone,
+  # through a points-per-net-EPA scale -- with no context adjustment, no simulator and no
+  # L1 projection, none of which the shipped `model_spread` does without. It also scores
+  # MARGIN ONLY while the lambdas it writes feed the totals path as well, which is why
+  # totals degraded hardest. The tuner optimises a proxy that diverges from what ships.
+  #
+  # 750/550 is restored as the status quo, NOT as a validated optimum -- it was chosen by
+  # the same misaligned objective and is merely the better of two measured options on the
+  # metric that matters. Do not re-run `--tune-lambdas` and adopt its answer; use
+  # `ratings.tune_lambdas_shipped`, which scores the real projection on both markets.
+  #
+  # NOTE ON THIS FILE: `write_tuned_block()` rewrites nfl.yaml through a YAML serialiser,
+  # which DROPS EVERY COMMENT ABOVE. That is how the provenance in this file was lost once
+  # already on 2026-08-20 and had to be restored from git. If you run a tuner that writes
+  # here, diff the result before committing.
   lambda_off: 750.0
   lambda_def: 550.0
   rmse: 13.528734376885922
