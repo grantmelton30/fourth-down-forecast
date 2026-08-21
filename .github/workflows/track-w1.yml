@@ -1,0 +1,90 @@
+name: track-w1
+# Forward tracking for the pre-registered NFL wind rule (nfl-model/PREREG.md W1).
+#
+# W1 only means anything if the bet is written down BEFORE kickoff, at the forecast and the
+# number available then. A rule nobody logs produces no record, and a record assembled in
+# December is not evidence. This runs the log so no human has to remember to.
+#
+# NOT AN AUTHORISATION TO BET. `bets_allowed()` is False and six gates fail. This records
+# what the declared rule would have done.
+on:
+  workflow_dispatch:
+  schedule:
+    # Thursday 15:00 UTC (~11:00 ET): the mid-week record slot PREREG W1 names. Thursday
+    # night games are ~9h out and Sunday's slate ~3 days -- all inside Open-Meteo's ~16-day
+    # horizon, with the posted total still live.
+    - cron: "0 15 * 9-12,1,2 4"
+    # Tuesday 13:00 UTC: after Monday night finishes, so the week grades in one pass.
+    - cron: "0 13 * 9-12,1,2 2"
+    # Months are restricted to September-February. Outside the season every step is a
+    # harmless no-op, but running it weekly for nothing is noise in the Actions log.
+permissions:
+  contents: write
+concurrency:
+  # Separate from `publish-ledger` so a 3-hour model rebuild cannot delay a bet-time
+  # forecast past the games it is meant to price. Both push to main; the rebase below is
+  # what makes that safe, exactly as publish.yml does for its own overlapping schedules.
+  group: track-w1
+  cancel-in-progress: false
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --dev
+
+      # The log is append-only and committed. Writing to it from a build whose own tests
+      # fail would put an unfixable bad row into a permanent record, so this gates it.
+      - name: Verify the W1 tracker before it is allowed to write
+        run: cd nfl-model && uv run pytest -q tests/test_track_w1.py
+
+      # NFL_MODEL_CACHE_DIR is deliberately NOT set: the default repo-local cache is what
+      # the Actions cache below restores. `track_w1.py` anchors its log to the repo rather
+      # than the cache dir, so the log location does not depend on this either way.
+      - name: Restore source cache
+        uses: actions/cache/restore@v4
+        with:
+          path: nfl-model/data/cache
+          key: w1-nfl-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: w1-nfl-${{ runner.os }}-
+
+      # Grade first, then record. Both are idempotent and append-only -- `grade` settles
+      # only finished games, `record` refuses to rewrite a game already logged -- so running
+      # both on every trigger is safe and removes any need to branch on which cron fired.
+      # It also means a missed run self-heals on the next one, for games still ungraded.
+      - name: Grade finished bets
+        run: cd nfl-model && uv run python track_w1.py grade
+
+      # Never `continue-on-error`. A silent failure here loses a bet-time forecast that
+      # cannot be reconstructed afterwards -- the whole point of the exercise -- so a broken
+      # run must be a red X in the Actions tab, not a quiet no-op.
+      - name: Record this week's qualifying games
+        run: cd nfl-model && uv run python track_w1.py record
+
+      - name: Print the running record
+        run: cd nfl-model && uv run python track_w1.py report
+
+      - name: Save refreshed cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: nfl-model/data/cache
+          key: w1-nfl-${{ runner.os }}-${{ github.run_id }}
+
+      - name: Commit the log
+        run: |
+          if git diff --quiet -- nfl-model/data/w1_log.csv; then
+            echo "no change to the W1 log"; exit 0
+          fi
+          git config user.name "fourth-down-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add nfl-model/data/w1_log.csv
+          git commit -m "W1: record and grade the pre-registered wind rule"
+          # publish-ledger pushes to main on its own schedule; rebase onto whatever it
+          # landed rather than clobbering it.
+          git pull --rebase --autostash origin main
+          git push

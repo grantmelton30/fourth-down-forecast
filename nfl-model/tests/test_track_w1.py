@@ -166,3 +166,19 @@ def test_rule_constants_match_the_registration():
     assert track_w1.MAX_WIND_MPH == 40.0
     assert track_w1.SIDE == "UNDER"
     assert track_w1.UNIVERSE == "outdoor"
+
+
+def test_the_log_lives_in_the_repo_not_the_cache_dir(monkeypatch):
+    """`CACHE_DIR` follows $NFL_MODEL_CACHE_DIR, which operators are told to point at
+    ~/.cache/nfl-model. A log derived from it would land outside the repo locally and inside
+    it in CI, so no single copy would hold the whole record -- and CI could not commit it."""
+    import importlib
+    from src.config import REPO_ROOT
+    monkeypatch.setenv("NFL_MODEL_CACHE_DIR", "/somewhere/else/entirely")
+    mod = importlib.reload(importlib.import_module("track_w1"))
+    try:
+        assert mod.LOG_PATH == REPO_ROOT / "data" / "w1_log.csv"
+        assert "cache" not in str(mod.LOG_PATH)
+    finally:
+        monkeypatch.delenv("NFL_MODEL_CACHE_DIR", raising=False)
+        importlib.reload(mod)

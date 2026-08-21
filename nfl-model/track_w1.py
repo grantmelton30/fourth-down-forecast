@@ -44,10 +44,16 @@ import numpy as np
 import pandas as pd
 
 from src import ingest
-from src.config import CACHE_DIR, load_config
+from src.config import REPO_ROOT, load_config
 from src.weather import forecast_at_bet_time
 
-LOG_PATH = CACHE_DIR.parent / "w1_log.csv"
+# ANCHORED TO THE REPO, NEVER TO THE CACHE DIR. `CACHE_DIR` follows $NFL_MODEL_CACHE_DIR,
+# which NEXT_SESSION.md tells every operator to point at ~/.cache/nfl-model -- deriving the
+# log path from it would put this permanent, append-only record outside the repository on a
+# developer machine and inside it in CI, so the two would silently diverge and neither would
+# hold the whole history. The log is evidence, not cache: it is committed, and it lives at a
+# fixed path regardless of environment.
+LOG_PATH = REPO_ROOT / "data" / "w1_log.csv"
 
 # The rule, from PREREG.md W1. These are frozen -- changing one voids the test and starts a
 # new registration under a new id, which is why they are constants and not CLI flags.
@@ -71,8 +77,14 @@ def _slate(cfg) -> pd.DataFrame:
     Deliberately NOT `walk_forward`, which keeps only graded games and so cannot answer
     "what do we think about Sunday". W1 consults no projection at all, so schedules plus a
     live forecast is the entire input.
+
+    ALWAYS REFRESHES, and it must. `ingest._cached` serves an existing parquet forever
+    unless told otherwise, so a cached copy would freeze both halves of this script: `record`
+    would price bets off last week's totals, and `grade` would never see a result or an
+    observed wind and would settle nothing, silently, forever. One schedules pull a week is
+    a trivial cost against a tracker that quietly stops working.
     """
-    return ingest.load_schedules([int(cfg.seasons.current)])
+    return ingest.load_schedules([int(cfg.seasons.current)], refresh=True)
 
 
 def _qualifying(slate: pd.DataFrame, season: int, week: int, *,
