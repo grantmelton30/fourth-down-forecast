@@ -681,6 +681,66 @@ worth having. Confirmed here that it is an ACCURACY item and not an edge item: a
 MARKET residual it reads +0.0086/degF, **t = +0.49** -- the market already prices temperature
 correctly. Same shape as the NCAA weather result.
 
+## NFL opening lines recovered, and the wind rule is better EARLY, 2026-08-21
+
+**The data gap is closed for 2007-2021.** nflverse publishes closing lines only, which made
+"opener or close" unanswerable for NFL while NCAA could answer it from CFBD. Sportsbook
+Reviews Online publishes both, free. `scripts/fetch_sbr_odds.py` fetches and parses it.
+
+**Validated before use.** Joined to nflverse on (date, both scores): 800 of 821 games for
+2019-2021. SBR's CLOSE agrees with nflverse's independently sourced closing total at
+**r = 0.9943**, 93.9% within half a point. Two independent sources agreeing that closely on
+the close are unlikely to disagree about the open. Independently, the win rate this source
+produces against the CLOSE on wind >= 10 is **+6.4pp**, against the **+5.3pp** already in
+this file from nflverse data -- a different sample and a different feed reproducing the same
+effect.
+
+**COVERAGE STOPS AT 2021-22.** Later season pages return HTTP 200 with no table. So this
+says nothing about the post-2022 regime documented above, which is the era any live claim
+would need. The fetch script refuses seasons past 2021 rather than silently writing zero rows.
+
+### The market DOES price wind, late
+
+Mean total move from open to close, 548 outdoor games 2019-2021:
+
+| | n | mean move |
+|---|---|---|
+| wind < 10 mph | 337 | -0.228 pts |
+| wind >= 10 mph | 211 | **-1.012 pts** |
+
+Difference **-0.783 pts, t = -3.03**. The total comes down about a point further in windy
+games. The market is not blind to wind -- it prices it, and it prices it between the opener
+and the close.
+
+### So W1 should be bet EARLY, not late
+
+Betting UNDER on wind >= 10, same games, graded at each number:
+
+| bet at | bets | wins per 100 | vs breakeven | units |
+|---|---|---|---|---|
+| **OPENER** | 208 | **63.9** | **+11.6** | +50.5 |
+| CLOSE | 211 | 58.8 | +6.4 | +28.3 |
+
+Paired on the 208 games settled at both: opener-only wins 15, close-only wins 3.
+**McNemar z = 2.59, p = 0.010.** Consistent in direction across all three seasons
+(+4.1, +10.3, +2.2).
+
+**THIS CONTRADICTS THE 48-HOUR RECORDING WINDOW** set in PREREG W1 the same day, which was
+chosen to maximise FORECAST accuracy. It buys roughly 2 points of win rate from a sharper
+forecast and appears to give back about 5 to the market's own wind correction.
+
+**It does not settle the question, and must not be read as doing so.** This test selects on
+the OBSERVED kickoff wind at both prices. Betting the opener in real life means forecasting
+wind one to two weeks out, where error is far worse than the 1-2 mph a 48-hour horizon gives
+-- and the +11.6pp above contains none of that penalty. The honest reading is that price and
+forecast pull in OPPOSITE directions and the optimum is somewhere between the opener and
+48 hours, not at either end.
+
+**What would actually settle it:** when the wind correction happens. Open-and-close alone
+cannot time it. If the market moves in the last 48 hours, as the forecast firming, then
+betting 3-5 days out captures the price AND a usable forecast. The 6-hourly market quote
+archive started 2026-08-13 is the instrument that answers this, and it needs a season.
+
 ## Previously: NO GATE HAD A CURRENT READING
 
 `data/evidence/manifest.json` is the authoritative record of what has been measured. As of
