@@ -22,6 +22,7 @@
     <button class="active" data-view="projections">Projections</button>
     <button data-view="league">League overview</button>
     <button data-view="teams">Teams & schedules</button>
+    <button data-view="record">Record</button>
   </nav>
 
   <main id="workspace">
@@ -82,6 +83,21 @@
       <div><span>Consensus rule</span><strong>Minimum 3 independent books</strong></div>
       <div><span>Missing-data rule</span><strong>Unknown is never assumed healthy</strong></div>
       <div><span>Promotion rule</span><strong>Held-out seasons must improve</strong></div>
+    </section>
+    </div>
+
+
+    <div id="record-view" class="workspace-view">
+      <section class="view-heading">
+        <p class="eyebrow">Forward record</p>
+        <div><h1>What the rules actually did.</h1><p>Every bet the two pre-registered rules logged before kickoff, graded once the game finished. Written at bet time and never edited &mdash; that is what separates this from another backtest.</p></div>
+      </section>
+      <section class="rule-cards" id="rule-cards"></section>
+      <section class="matchups">
+        <div class="table-head record-head"><span>Game</span><span>Rule</span><span>Bet</span><span>Line</span><span>Actual</span><span>Result</span></div>
+        <div id="bet-list"></div>
+        <div id="bet-empty" class="panel-empty">No bets logged yet. The trackers append here automatically once the season starts.</div>
+      </section>
     </section>
     </div>
 

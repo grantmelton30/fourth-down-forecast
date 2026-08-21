@@ -1,4 +1,4 @@
-const state={records:[],explorer:null,league:'all',week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',explorerLeague:'nfl',teamLeague:'nfl',team:null};
+const state={records:[],explorer:null,league:'all',week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',tracker:null,explorerLeague:'nfl',teamLeague:'nfl',team:null};
 const $=selector=>document.querySelector(selector);
 const $$=selector=>[...document.querySelectorAll(selector)];
 const list=$('#game-list'),empty=$('#empty-state'),weekFilter=$('#week-filter'),sortFilter=$('#sort-filter'),groupFilter=$('#group-filter'),teamFilter=$('#team-filter'),dialog=$('#detail-dialog');
@@ -36,6 +36,38 @@ function renderProjections(){
     button.innerHTML=`<div class="matchup-id"><span class="league-tag">${r.league.toUpperCase()}</span><div class="teams"><strong>${esc(r.away_team)} at ${esc(r.home_team)} ${warning}</strong><small>W${r.week} · ${date(r.kickoff)}</small><span class="quality ${r.confidence}">${esc(r.confidence)}</span></div></div>${forecast(r.independent)}${forecast(r.market,'','No line posted yet')}<div class="forecast diff"><strong>${signed(r.model_market_difference?.spread)} · ${signed(r.model_market_difference?.total)}</strong><span>spread · total</span></div>${ruleCell(r)}`;
     button.addEventListener('click',()=>openDetail(r));list.append(button);
   });
+}
+
+function renderRecord(){
+  const t=state.tracker,cards=$('#rule-cards'),list=$('#bet-list'),blank=$('#bet-empty');
+  if(!cards)return;
+  if(!t){cards.replaceChildren();return}
+  const pct=v=>v==null?'—':`${Number(v).toFixed(1)}%`;
+  cards.innerHTML=Object.values(t.rules).map(r=>{
+    // Colour tracks the only comparison that matters: the break-even rate, not zero.
+    const dir=r.win_pct==null?'':(r.win_pct>=t.breakeven?'up':'down');
+    const vs=r.win_pct==null?'—':`${r.win_pct>=t.breakeven?'+':''}${(r.win_pct-t.breakeven).toFixed(1)} pts vs break-even`;
+    const ci=r.ci_low==null?'not enough settled bets':`${pct(r.ci_low)} to ${pct(r.ci_high)}`;
+    return `<article class="rule-card ${dir}"><h3>${esc(r.rule)} · ${esc(r.league.toUpperCase())}</h3>
+      <p class="sub">${esc(r.headline)}</p>
+      <div class="big"><strong>${pct(r.win_pct)}</strong><em>${esc(vs)}</em></div>
+      <dl><dt>Record</dt><dd>${r.wins}-${r.losses}${r.pushes?` (${r.pushes} push)`:''}</dd>
+      <dt>Units @ -110</dt><dd>${r.units>=0?'+':''}${Number(r.units).toFixed(1)}</dd>
+      <dt>95% interval</dt><dd>${esc(ci)}</dd>
+      <dt>Pending</dt><dd>${r.pending}</dd></dl>
+      <p class="status">${esc(r.status)}<br>${esc(r.prereg)}</p></article>`}).join('');
+  const bets=t.bets||[];
+  blank.hidden=bets.length>0;
+  list.innerHTML=bets.map(b=>{
+    const res=(b.result||'').toLowerCase()||'pending';
+    const label=res==='pending'?'PENDING':b.result;
+    const extra=b.forecast_wind_mph!=null?`${Number(b.forecast_wind_mph).toFixed(0)} mph forecast`
+      :(b.edge!=null?`${signed(b.edge)} pt edge`:'');
+    return `<div class="bet-row"><div><b>${esc(b.away_team)} at ${esc(b.home_team)}</b>
+      <small>W${b.week} · ${date(b.kickoff)}${extra?` · ${esc(extra)}`:''}</small></div>
+      <span class="tag">${esc(b.rule)}</span><span>${esc(b.side||'—')}</span>
+      <span>${number(b.market_total_at_bet)}</span><span>${number(b.actual_total)}</span>
+      <span class="res ${res}">${esc(label)}</span></div>`}).join('');
 }
 function populateProjectionFilters(){
   const leagues=state.league==='all'?['nfl','ncaa']:[state.league];
@@ -131,10 +163,13 @@ $('#clear-filters').addEventListener('click',()=>{state.league='all';state.week=
 Promise.all([
   fetch('api/v1/predictions.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`predictions HTTP ${r.status}`);return r.json()}),
   fetch('api/v1/explorer.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`explorer HTTP ${r.status}`);return r.json()}),
-]).then(([feed,explorer])=>{
+  // The record is additive: an older deploy without tracker.json still renders everything
+  // else rather than failing the whole page on one missing artifact.
+  fetch('api/v1/tracker.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null),
+]).then(([feed,explorer,tracker])=>{
   if(feed.schema_version!==2)throw new Error('Unsupported prediction schema');
   state.records=feed.records||[];state.explorer=explorer;
   [...new Set(state.records.map(r=>r.week))].sort((a,b)=>a-b).forEach(w=>weekFilter.add(new Option(`Week ${w}`,w)));
   $('#data-status').textContent=feed.generated_at?`Updated ${date(feed.generated_at)}`:'Awaiting first slate';
-  populateProjectionFilters();renderProjections();renderLeague();renderTeam();
+  state.tracker=tracker;populateProjectionFilters();renderProjections();renderLeague();renderTeam();renderRecord();
 }).catch(error=>{$('#data-status').textContent='Data unavailable';empty.hidden=false;empty.querySelector('p:last-child').textContent=`The publication artifacts could not be loaded (${error.message}).`;});

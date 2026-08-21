@@ -1,5 +1,7 @@
-name: track-w1
-# Forward tracking for the pre-registered NFL wind rule (nfl-model/PREREG.md W1).
+name: track-rules
+# Forward tracking for BOTH pre-registered rules:
+#   ncaa-model/PREREG.md P1 -- totals, restricted universe, model-market gap 0.5-6.0
+#   nfl-model/PREREG.md  W1 -- totals, outdoor, forecast wind >= 10 mph, UNDER only
 #
 # W1 only means anything if the bet is written down BEFORE kickoff, at the forecast and the
 # number available then. A rule nobody logs produces no record, and a record assembled in
@@ -24,21 +26,22 @@ on:
     # chances, so one red X does not automatically cost that week's bets.
     #
     # 13:00 UTC is ~09:00 ET, before any kickoff on any day of the week.
-    - cron: "0 13 * 9-12,1,2 *"
+    - cron: "0 13 * 8-12,1,2 *"
 permissions:
   contents: write
 concurrency:
   # Separate from `publish-ledger` so a 3-hour model rebuild cannot delay a bet-time
   # forecast past the games it is meant to price. Both push to main; the rebase below is
   # what makes that safe, exactly as publish.yml does for its own overlapping schedules.
-  group: track-w1
+  group: track-rules
   cancel-in-progress: false
 jobs:
   track:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       PYTHONUNBUFFERED: "1"
+      CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
@@ -47,17 +50,23 @@ jobs:
       # The log is append-only and committed. Writing to it from a build whose own tests
       # fail would put an unfixable bad row into a permanent record, so this gates it.
       - name: Verify the W1 tracker before it is allowed to write
-        run: cd nfl-model && uv run pytest -q tests/test_track_w1.py
+        run: |
+          uv run pytest -q shared/tests/test_tracked_rules.py
+          (cd nfl-model && uv run pytest -q tests/test_track_w1.py)
+          (cd ncaa-model && uv run pytest -q tests/test_track_p1.py)
 
       # NFL_MODEL_CACHE_DIR is deliberately NOT set: the default repo-local cache is what
       # the Actions cache below restores. `track_w1.py` anchors its log to the repo rather
       # than the cache dir, so the log location does not depend on this either way.
-      - name: Restore source cache
+      - name: Restore source caches
         uses: actions/cache/restore@v4
         with:
-          path: nfl-model/data/cache
-          key: w1-nfl-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: w1-nfl-${{ runner.os }}-
+          path: |
+            nfl-model/data/cache
+            ncaa-model/data/cache
+            ncaa-model/data/api_budget.json
+          key: track-rules-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: track-rules-${{ runner.os }}-
 
       # Grade first, then record. Both are idempotent and append-only -- `grade` settles
       # only finished games, `record` refuses to rewrite a game already logged -- so running
@@ -72,25 +81,46 @@ jobs:
       - name: Record games kicking off within 48h
         run: cd nfl-model && uv run python track_w1.py record
 
-      - name: Print the running record
-        run: cd nfl-model && uv run python track_w1.py report
+      # NCAA P1. Separate rule, separate log, same discipline. It has no recording window
+      # of its own -- unlike W1 the open/close price difference was measured and is inside
+      # noise (p = 0.137), so there is nothing for a window to buy.
+      - name: Grade finished P1 bets
+        run: cd ncaa-model && uv run python track_p1.py grade
 
-      - name: Save refreshed cache
+      - name: Record this week's P1 bets
+        run: cd ncaa-model && uv run python track_p1.py record
+
+      - name: Print the running records
+        run: |
+          (cd nfl-model && uv run python track_w1.py report)
+          (cd ncaa-model && uv run python track_p1.py report)
+
+      # Publishes both logs to web/api/v1/tracker.json for the site's Record tab. Reads the
+      # logs and never recomputes them -- re-deriving what "would have" qualified from
+      # today's model would replace the bet-time number and turn the record into a backtest.
+      - name: Publish the forward record to the site
+        run: uv run python scripts/build_tracker.py
+
+      - name: Save refreshed caches
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: nfl-model/data/cache
-          key: w1-nfl-${{ runner.os }}-${{ github.run_id }}
+          path: |
+            nfl-model/data/cache
+            ncaa-model/data/cache
+            ncaa-model/data/api_budget.json
+          key: track-rules-${{ runner.os }}-${{ github.run_id }}
 
       - name: Commit the log
         run: |
-          if git diff --quiet -- nfl-model/data/w1_log.csv; then
-            echo "no change to the W1 log"; exit 0
+          TRACKED="nfl-model/data/w1_log.csv ncaa-model/data/p1_log.csv web/api/v1/tracker.json"
+          git add -- $TRACKED 2>/dev/null || true
+          if git diff --cached --quiet -- $TRACKED; then
+            echo "no change to either log"; exit 0
           fi
           git config user.name "fourth-down-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add nfl-model/data/w1_log.csv
-          git commit -m "W1: record and grade the pre-registered wind rule"
+          git commit -m "track: record and grade the pre-registered rules (P1, W1)"
           # publish-ledger pushes to main on its own schedule; rebase onto whatever it
           # landed rather than clobbering it.
           git pull --rebase --autostash origin main
