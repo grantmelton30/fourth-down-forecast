@@ -1,8 +1,28 @@
 {
  "schema_version": 1,
- "generated_at": "2026-08-21T16:36:35+00:00",
+ "generated_at": "2026-08-21T17:09:42+00:00",
  "breakeven": 52.38,
  "disclaimer": "Forward record of two pre-registered tracking rules. bets_allowed() is False for both leagues and neither rule is an authorisation to stake money. Units assume one flat unit at -110.",
+ "combined": {
+  "rule": "ALL",
+  "league": "all",
+  "headline": "Both pre-registered rules pooled",
+  "prereg": "NCAA P1 + NFL W1",
+  "logged": 26,
+  "settled": 0,
+  "pending": 26,
+  "pushes": 0,
+  "wins": 0,
+  "losses": 0,
+  "win_pct": null,
+  "units": 0.0,
+  "ci_low": null,
+  "ci_high": null,
+  "breakeven": 52.38,
+  "checkpoint_n": null,
+  "kill_below": null,
+  "status": "no bets logged yet"
+ },
  "rules": {
   "P1": {
    "rule": "P1",
@@ -17,9 +37,9 @@
    "losses": 0,
    "win_pct": null,
    "units": 0.0,
-   "breakeven": 52.38,
    "ci_low": null,
    "ci_high": null,
+   "breakeven": 52.38,
    "checkpoint_n": 200,
    "kill_below": 50.0,
    "status": "200 more settled bets to the first checkpoint"

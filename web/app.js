@@ -1,4 +1,4 @@
-const state={records:[],explorer:null,league:'all',week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',tracker:null,explorerLeague:'nfl',teamLeague:'nfl',team:null};
+const state={records:[],explorer:null,league:'all',week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',tracker:null,recordLeague:'all',explorerLeague:'nfl',teamLeague:'nfl',team:null};
 const $=selector=>document.querySelector(selector);
 const $$=selector=>[...document.querySelectorAll(selector)];
 const list=$('#game-list'),empty=$('#empty-state'),weekFilter=$('#week-filter'),sortFilter=$('#sort-filter'),groupFilter=$('#group-filter'),teamFilter=$('#team-filter'),dialog=$('#detail-dialog');
@@ -43,12 +43,18 @@ function renderRecord(){
   if(!cards)return;
   if(!t){cards.replaceChildren();return}
   const pct=v=>v==null?'—':`${Number(v).toFixed(1)}%`;
-  cards.innerHTML=Object.values(t.rules).map(r=>{
+  // 'all' shows the pooled bankroll FIRST, then each rule, so the breakout is one glance
+  // away rather than one click. A single league shows only that rule.
+  const lg=state.recordLeague;
+  const shown=lg==='all'
+    ? [{...t.combined,total:true},...Object.values(t.rules)]
+    : Object.values(t.rules).filter(r=>r.league===lg);
+  cards.innerHTML=shown.map(r=>{
     // Colour tracks the only comparison that matters: the break-even rate, not zero.
     const dir=r.win_pct==null?'':(r.win_pct>=t.breakeven?'up':'down');
     const vs=r.win_pct==null?'—':`${r.win_pct>=t.breakeven?'+':''}${(r.win_pct-t.breakeven).toFixed(1)} pts vs break-even`;
     const ci=r.ci_low==null?'not enough settled bets':`${pct(r.ci_low)} to ${pct(r.ci_high)}`;
-    return `<article class="rule-card ${dir}"><h3>${esc(r.rule)} · ${esc(r.league.toUpperCase())}</h3>
+    return `<article class="rule-card ${dir} ${r.total?'total':''}"><h3>${r.total?'Combined · both rules':`${esc(r.rule)} · ${esc(r.league.toUpperCase())}`}</h3>
       <p class="sub">${esc(r.headline)}</p>
       <div class="big"><strong>${pct(r.win_pct)}</strong><em>${esc(vs)}</em></div>
       <dl><dt>Record</dt><dd>${r.wins}-${r.losses}${r.pushes?` (${r.pushes} push)`:''}</dd>
@@ -56,8 +62,9 @@ function renderRecord(){
       <dt>95% interval</dt><dd>${esc(ci)}</dd>
       <dt>Pending</dt><dd>${r.pending}</dd></dl>
       <p class="status">${esc(r.status)}<br>${esc(r.prereg)}</p></article>`}).join('');
-  const bets=t.bets||[];
+  const bets=(t.bets||[]).filter(b=>lg==='all'||b.league===lg);
   blank.hidden=bets.length>0;
+  blank.textContent=(t.bets||[]).length?`No ${lg.toUpperCase()} bets logged yet.`:'No bets logged yet. The trackers append here automatically once the season starts.';
   list.innerHTML=bets.map(b=>{
     const res=(b.result||'').toLowerCase()||'pending';
     const label=res==='pending'?'PENDING':b.result;
@@ -150,6 +157,7 @@ function renderTeam(){
 $('.dialog-close').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 $$('[data-view]').forEach(button=>button.addEventListener('click',()=>showView(button.dataset.view)));
+$$('[data-record]').forEach(button=>button.addEventListener('click',()=>{state.recordLeague=button.dataset.record;setButtonGroup('[data-record]',state.recordLeague,'record');renderRecord()}));
 $$('[data-league]').forEach(button=>button.addEventListener('click',()=>{setButtonGroup('[data-league]',button.dataset.league,'league');state.league=button.dataset.league;populateProjectionFilters();renderProjections()}));
 $$('[data-explorer-league]').forEach(button=>button.addEventListener('click',()=>{state.explorerLeague=button.dataset.explorerLeague;setButtonGroup('[data-explorer-league]',state.explorerLeague,'explorerLeague');renderLeague()}));
 $$('[data-team-league]').forEach(button=>button.addEventListener('click',()=>{state.teamLeague=button.dataset.teamLeague;state.team=null;renderTeam()}));

@@ -68,6 +68,21 @@ def _clean(value):
     return value
 
 
+
+def _stats(wins: int, losses: int) -> dict:
+    """Win rate, units and interval from a W-L pair. One place, so the combined view and
+    the per-rule cards cannot drift apart on the arithmetic."""
+    n = wins + losses
+    if not n:
+        return {"win_pct": None, "units": 0.0, "ci_low": None, "ci_high": None}
+    r = wins / n
+    se = math.sqrt(r * (1 - r) / n)
+    return {"win_pct": round(100 * r, 1),
+            "units": round(wins - losses * 1.1, 1),
+            "ci_low": round(100 * (r - 1.96 * se), 1) if n > 1 else None,
+            "ci_high": round(100 * (r + 1.96 * se), 1) if n > 1 else None}
+
+
 def summarise(rule: str, spec: dict) -> tuple[dict, list]:
     if not spec["log"].exists():
         return ({"rule": rule, "league": spec["league"], "headline": spec["headline"],
@@ -84,12 +99,7 @@ def summarise(rule: str, spec: dict) -> tuple[dict, list]:
     n = len(settled)
     losses = n - wins
     pct = (100.0 * wins / n) if n else None
-    units = wins - losses * 1.1
-    ci_low = ci_high = None
-    if n > 1 and pct is not None:
-        r = wins / n
-        se = math.sqrt(r * (1 - r) / n)
-        ci_low, ci_high = 100 * (r - 1.96 * se), 100 * (r + 1.96 * se)
+    st = _stats(wins, losses)
 
     if n >= spec["checkpoint_n"]:
         status = ("KILL — below the pre-committed floor at the checkpoint"
@@ -109,11 +119,7 @@ def summarise(rule: str, spec: dict) -> tuple[dict, list]:
     return ({"rule": rule, "league": spec["league"], "headline": spec["headline"],
              "prereg": spec["prereg"], "logged": int(len(log)), "settled": n,
              "pending": int((result == "").sum()), "pushes": int((result == "PUSH").sum()),
-             "wins": wins, "losses": losses,
-             "win_pct": round(pct, 1) if pct is not None else None,
-             "units": round(float(units), 1), "breakeven": BREAKEVEN,
-             "ci_low": round(ci_low, 1) if ci_low is not None else None,
-             "ci_high": round(ci_high, 1) if ci_high is not None else None,
+             "wins": wins, "losses": losses, **st, "breakeven": BREAKEVEN,
              "checkpoint_n": spec["checkpoint_n"], "kill_below": spec["kill_below"],
              "status": status}, rows)
 
@@ -127,6 +133,26 @@ def main() -> int:
         print(f"  {rule}: {summary['logged']} logged, {summary['settled']} settled, "
               f"{summary['win_pct'] if summary['win_pct'] is not None else '—'}%")
 
+    # Combined is a BANKROLL view, not a rule: two different rules pooled, which is what a
+    # person actually wants to know about their own record. Labelled as such in the UI so it
+    # is never mistaken for evidence about either rule on its own.
+    tw = sum(r["wins"] for r in rules.values())
+    tl = sum(r["losses"] for r in rules.values())
+    combined = {
+        "rule": "ALL", "league": "all",
+        "headline": "Both pre-registered rules pooled",
+        "prereg": "NCAA P1 + NFL W1",
+        "logged": sum(r["logged"] for r in rules.values()),
+        "settled": tw + tl, "pending": sum(r["pending"] for r in rules.values()),
+        "pushes": sum(r["pushes"] for r in rules.values()),
+        "wins": tw, "losses": tl, **_stats(tw, tl), "breakeven": BREAKEVEN,
+        "checkpoint_n": None, "kill_below": None,
+        "status": ("no bets logged yet" if tw + tl == 0 else
+                   "combined bankroll across both rules; each rule has its own checkpoint"),
+    }
+    print(f"  ALL: {combined['logged']} logged, {combined['settled']} settled, "
+          f"{combined['win_pct'] if combined['win_pct'] is not None else '--'}%")
+
     payload = {
         "schema_version": 1,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -134,6 +160,7 @@ def main() -> int:
         "disclaimer": ("Forward record of two pre-registered tracking rules. "
                        "bets_allowed() is False for both leagues and neither rule is an "
                        "authorisation to stake money. Units assume one flat unit at -110."),
+        "combined": combined,
         "rules": rules,
         "bets": bets,
     }
