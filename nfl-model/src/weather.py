@@ -24,6 +24,7 @@ from .stadiums import venue_for_game
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 _HOURLY = "temperature_2m,wind_speed_10m,precipitation"
+ET = "America/New_York"   # nflverse kickoffs are naive US/Eastern (ingest)
 _TIMEOUT = 20
 
 
@@ -180,3 +181,105 @@ def backfill_from_schedules(schedules: pd.DataFrame) -> pd.DataFrame:
         "missing_temp": int(outdoor_done["temp"].isna().sum()),
         "pct_missing_wind": round(float(outdoor_done["wind"].isna().mean()) * 100, 2),
     }])
+
+
+# --- Bet-time forecast (PREREG W1) ---------------------------------------------------
+
+@dataclass(frozen=True)
+class ForecastReading:
+    """A forecast captured at a known moment, for a game that has not been played.
+
+    Distinct from `GameWeather` on purpose. `GameWeather` answers "what was the weather",
+    preferring the observed kickoff reading and falling back to a forecast; this answers
+    "what did the forecast say WHEN THE BET WAS PLACED", which is a different question and
+    the only one a prospective rule may ask.
+    """
+    wind_mph: "float | None"
+    temp_f: "float | None"
+    precip_in: "float | None"
+    indoor: bool
+    issued_at: str            # UTC ISO-8601, when this forecast was retrieved
+    hours_before_kickoff: "float | None"
+    source: str               # forecast | indoor | unavailable
+
+
+def forecast_at_bet_time(
+    game: pd.Series, *, now: "pd.Timestamp | None" = None
+) -> ForecastReading:
+    """The live forecast for an upcoming game, fetched fresh and stamped with the time.
+
+    NEVER READS THE CACHE, AND NEVER WRITES IT. `weather.parquet` is keyed on
+    (lat, lon, date) with no column recording when a forecast was issued, so a cache hit
+    would silently substitute a reading fetched days earlier for the one available now --
+    turning a 3-hour-horizon forecast into a 6-day one with no visible difference. That is
+    the "cache that ignores its own inputs" bug class NEXT_SESSION.md records hitting three
+    times in a single day. A prospective bet log is exactly where it would do the most
+    damage, because the error would look like an edge.
+
+    NEVER FALLS BACK TO THE OBSERVED READING either. `schedules.wind` is the game-time
+    observation and does not exist before kickoff; if it is somehow populated, using it
+    would be lookahead of the plainest kind.
+
+    Returns `source="unavailable"` rather than raising, so one failed venue does not stop a
+    slate from being recorded. An unavailable forecast means the game does not qualify -- it
+    is never treated as calm.
+    """
+    now = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
+    issued_at = now.isoformat(timespec="seconds")
+
+    roof = game.get("roof")
+    venue = venue_for_game(
+        game.get("home_team"), game.get("location", "Home"), game.get("stadium")
+    )
+    indoor = roof in ("dome", "closed") or (
+        not isinstance(roof, str) and venue.get("roof") == "dome"
+    )
+    if indoor:
+        return ForecastReading(None, None, None, True, issued_at, None, "indoor")
+
+    # A RETRACTABLE ROOF WHOSE GAME-DAY STATE IS NOT PUBLISHED YET IS UNKNOWN, NOT OPEN.
+    # `schedules.roof` carries the per-game state (`open`/`closed`) but is null for games
+    # that have not been played, which is every game this function is ever called on. Five
+    # venues are retractable (ARI, ATL, DAL, HOU, IND), ~15% of the slate. Betting an under on wind at a stadium that may be sealed shut
+    # is betting on nothing, so an unresolved roof disqualifies the game -- the same
+    # "absence of a report is unknown, never healthy" rule src/availability.py runs on.
+    if not isinstance(roof, str) and venue.get("roof") == "retractable":
+        return ForecastReading(None, None, None, False, issued_at, None, "roof_unknown")
+
+    kickoff = game.get("kickoff")
+    if pd.isna(kickoff):
+        return ForecastReading(None, None, None, False, issued_at, None, "unavailable")
+    # nflverse kickoffs are NAIVE US/EASTERN (ingest._kickoff_timestamp), not UTC. Reading
+    # them as UTC would misplace every game by 4-5 hours, which silently shifts the hourly
+    # forecast picked for a night game and quietly corrupts the horizon.
+    kickoff = pd.Timestamp(kickoff)
+    ko_et = (kickoff.tz_localize(ET, ambiguous=True, nonexistent="shift_forward")
+             if kickoff.tzinfo is None else kickoff)
+    horizon = (ko_et.tz_convert("UTC") - now).total_seconds() / 3600.0
+
+    try:
+        hourly = fetch_forecast(venue["lat"], venue["lon"], venue["tz"], kickoff)
+    except Exception as exc:  # noqa: BLE001 - a missing forecast must not stop the run
+        # Open-Meteo reaches ~16 days ahead and answers 400 past that. That is the ordinary
+        # case for a slate recorded early, not an error worth a stack of URLs, so it is
+        # named rather than dumped. Either way the game does not qualify.
+        beyond = "400" in str(exc)
+        why = "beyond forecast horizon" if beyond else str(exc)[:120]
+        print(f"  weather: no forecast for {game.get('game_id')} "
+              f"({horizon:.0f}h out): {why}")
+        return ForecastReading(None, None, None, False, issued_at, horizon, "unavailable")
+
+    # The hourly reading nearest kickoff in the VENUE's local time, because `fetch_forecast`
+    # requests the venue timezone and returns naive local timestamps. A 4:05pm ET kickoff in
+    # Seattle is 1:05pm local, and matching hour-to-hour without converting would read the
+    # forecast three hours late -- on the west coast that is the sea-breeze ramp.
+    local_hour = ko_et.tz_convert(venue["tz"]).hour
+    nearest = hourly.iloc[(hourly["time"].dt.hour - local_hour).abs().argmin()]
+
+    def _f(value):
+        return float(value) if pd.notna(value) else None
+
+    return ForecastReading(
+        _f(nearest["wind_mph"]), _f(nearest["temp_f"]), _f(nearest["precip_in"]),
+        False, issued_at, horizon, "forecast",
+    )
