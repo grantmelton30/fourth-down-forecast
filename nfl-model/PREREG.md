@@ -163,21 +163,34 @@ returns HTTP 400 at a 19-23 day horizon, and `forecast_at_bet_time` correctly re
 `unavailable`, which does not qualify. There is therefore no way to record a season in
 advance, and no temptation to try.
 
-**Record once per game week, mid-week.** Practically: Wednesday or Thursday, before the
-Sunday slate, which puts every game inside the reliable forecast window while leaving the
-posted total still live. This is an operating instruction, not a rule constant — missing a
-week costs those bets and biases nothing, because the log records what was actually captured
-rather than reconstructing what should have been.
+**Recorded inside 48 hours of kickoff, checked daily.** `track_w1.MAX_HOURS_BEFORE_KICKOFF`
+is 48; the GitHub Actions job runs every day in season and logs each game on the first pass
+that finds it inside its own window. The window, not the calendar, decides what records.
+
+**Why not a fixed weekday.** The first version ran Thursdays, which gave Thursday-night games
+a ~9-hour horizon and Monday-night games ~4 days — worse on average and inconsistent across
+the slate. Forecast error grows with horizon and this rule's edge shrinks with it: roughly
+2-3 mph at three days (~55.8-56.8 wins per 100) against ~1-2 mph at one to two days
+(~56.8-57.7). The uneven version was leaving about two points of win rate unclaimed for no
+reason but scheduling convenience.
+
+Changed 2026-08-21, **before a single bet had been recorded and with no outcome visible**, so
+it cannot be outcome-driven. Flag: `outcome-blind`. It is an **operating parameter, not a
+rule constant** — it changes when the forecast is taken, never the trigger, side, universe or
+stake, none of which moved.
 
 **The horizon is stored per bet, not assumed.** `hours_before_kickoff` is written on every
-row precisely because a disciplined Wednesday and a hurried Sunday morning are different
-experiments, and pooling them without recording which is which would hide the difference.
-If the season's bets end up spread across horizons, that is measurable after the fact — and
-worth measuring, since forecast skill decays with horizon and the edge depends on it.
+row because the window is an intention and the realised horizon is the measurement. If runs
+are missed and bets land at mixed horizons, that is visible afterwards rather than hidden.
 
-**A game missed at record time is gone.** It is never back-filled. Back-filling would mean
-choosing a forecast in hindsight, which is the entire failure mode this file exists to
-prevent.
+**Not recorded later than this deliberately.** A tighter window (say 24h) would buy a
+slightly sharper forecast, but it bets into a line that has had longer to price the weather,
+and it leaves no slack: one failed run would permanently lose that game. At 48 hours most
+games get two daily passes, so a single red X is recoverable.
+
+**A game already under way is never recorded**, and a game missed entirely is never
+back-filled. Back-filling would mean choosing a forecast in hindsight, which is the entire
+failure mode this file exists to prevent.
 
 ### Status of the model itself, unchanged by this
 

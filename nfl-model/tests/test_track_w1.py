@@ -20,6 +20,11 @@ import track_w1
 from src.weather import ForecastReading
 
 
+# All fixture kickoffs are 2026-09-13; NOW is fixed a day earlier so the slate sits inside
+# the 48h recording window. Passed explicitly so these tests never depend on the wall clock.
+NOW = pd.Timestamp("2026-09-12 13:00", tz="US/Eastern").tz_convert("UTC")
+
+
 def _slate():
     """One outdoor game per side of the declared boundary, plus a dome and a played game."""
     return pd.DataFrame([
@@ -61,13 +66,13 @@ def _patch_forecast(monkeypatch):
 
 
 def test_declared_threshold_is_enforced_exactly():
-    q = track_w1._qualifying(_slate(), 2026, 1, verbose=False)
+    q = track_w1._qualifying(_slate(), 2026, 1, now=NOW, verbose=False)
     assert set(q["game_id"]) == {"g2", "g3"}, "10.0 mph is inclusive, 9.9 is not"
     assert q["forecast_wind_mph"].min() >= track_w1.MIN_WIND_MPH
 
 
 def test_domes_are_excluded():
-    q = track_w1._qualifying(_slate(), 2026, 1, verbose=False)
+    q = track_w1._qualifying(_slate(), 2026, 1, now=NOW, verbose=False)
     assert "g4" not in set(q["game_id"])
 
 
@@ -88,7 +93,7 @@ def test_a_retractable_roof_of_unknown_state_does_not_qualify():
 def test_played_games_are_never_recorded():
     """A finished game has an observed wind. Selecting on it would be the exact lookahead
     the whole exercise exists to avoid -- and would reproduce the backtest, not test it."""
-    q = track_w1._qualifying(_slate(), 2026, 1, verbose=False)
+    q = track_w1._qualifying(_slate(), 2026, 1, now=NOW, verbose=False)
     assert "g5" not in set(q["game_id"])
 
 
@@ -105,14 +110,14 @@ def test_implausible_forecasts_are_rejected_not_treated_as_calm():
                        if game.get("roof") == "dome" else
                        ForecastReading(monkey.get(game["game_id"], 5.0), 60.0, 0.0,
                                        False, "x", 49.0, "forecast")))
-        q = track_w1._qualifying(slate, 2026, 1, verbose=False)
+        q = track_w1._qualifying(slate, 2026, 1, now=NOW, verbose=False)
     assert set(q["game_id"]) == {"g2"}, "71 mph is rejected, and is not a bet"
 
 
 def test_the_side_is_always_under():
     """W1 is one-sided by construction. A rule that can fire either way is a different and
     untested hypothesis (PREREG W1)."""
-    q = track_w1._qualifying(_slate(), 2026, 1, verbose=False)
+    q = track_w1._qualifying(_slate(), 2026, 1, now=NOW, verbose=False)
     assert (q["side"] == "UNDER").all()
     assert track_w1.SIDE == "UNDER"
 
@@ -120,7 +125,7 @@ def test_the_side_is_always_under():
 def test_the_forecast_and_its_horizon_are_recorded():
     """Without these the log cannot distinguish a 3-hour forecast from a 6-day one, and the
     forecast-error measurement PREREG W1 calls the primary output is impossible."""
-    q = track_w1._qualifying(_slate(), 2026, 1, verbose=False)
+    q = track_w1._qualifying(_slate(), 2026, 1, now=NOW, verbose=False)
     assert q["forecast_issued_at"].notna().all()
     assert q["hours_before_kickoff"].notna().all()
 
@@ -139,7 +144,7 @@ def test_the_log_is_append_only(tmp_path, monkeypatch):
     }])
     track_w1._write_log(existing)
 
-    q = track_w1._qualifying(_slate(), 2026, 1, verbose=False)
+    q = track_w1._qualifying(_slate(), 2026, 1, now=NOW, verbose=False)
     log = track_w1._read_log()
     already = set(log["game_id"].astype(str))
     fresh = q[~q["game_id"].astype(str).isin(already)]
@@ -182,3 +187,27 @@ def test_the_log_lives_in_the_repo_not_the_cache_dir(monkeypatch):
     finally:
         monkeypatch.delenv("NFL_MODEL_CACHE_DIR", raising=False)
         importlib.reload(mod)
+
+
+def test_games_outside_the_recording_window_are_not_logged():
+    """The window is what buys the forecast accuracy: ~1-2 days out is ~1-2 mph of error,
+    ~4 days is 3-4 mph, and the edge moves about two points of win rate with it. A game a
+    week away must wait rather than be recorded at a horizon the rule does not want."""
+    early = pd.Timestamp("2026-09-06 13:00", tz="US/Eastern").tz_convert("UTC")  # 7 days out
+    q = track_w1._qualifying(_slate(), 2026, 1, now=early, verbose=False)
+    assert q.empty, "nothing may record a week ahead of kickoff"
+
+
+def test_a_game_already_underway_is_never_recorded():
+    """A negative horizon means the game has kicked off. Its 'forecast' would be a nowcast
+    of a game in progress, and the bet could not have been placed."""
+    late = pd.Timestamp("2026-09-13 18:00", tz="US/Eastern").tz_convert("UTC")
+    q = track_w1._qualifying(_slate(), 2026, 1, now=late, verbose=False)
+    assert set(q["game_id"]) <= {"g3"}, "only the 16:25 game is still ahead at 18:00 ET"
+    assert "g2" not in set(q["game_id"]), "the 13:00 game has already started"
+
+
+def test_the_window_is_an_operating_parameter_not_a_rule_constant():
+    """PREREG W1 freezes trigger/side/universe/stake. The horizon is explicitly an operating
+    instruction, and the realised value is stored per row regardless."""
+    assert track_w1.MAX_HOURS_BEFORE_KICKOFF == 48.0

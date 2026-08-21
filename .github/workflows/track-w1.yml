@@ -10,14 +10,21 @@ name: track-w1
 on:
   workflow_dispatch:
   schedule:
-    # Thursday 15:00 UTC (~11:00 ET): the mid-week record slot PREREG W1 names. Thursday
-    # night games are ~9h out and Sunday's slate ~3 days -- all inside Open-Meteo's ~16-day
-    # horizon, with the posted total still live.
-    - cron: "0 15 * 9-12,1,2 4"
-    # Tuesday 13:00 UTC: after Monday night finishes, so the week grades in one pass.
-    - cron: "0 13 * 9-12,1,2 2"
-    # Months are restricted to September-February. Outside the season every step is a
-    # harmless no-op, but running it weekly for nothing is noise in the Actions log.
+    # DAILY in season, paired with track_w1.MAX_HOURS_BEFORE_KICKOFF = 48h. The window, not
+    # the calendar, decides what records: a game is logged on the first daily pass that finds
+    # it inside 48 hours of its own kickoff, so every game gets a similar short horizon
+    # instead of whatever a fixed weekday happened to give it.
+    #
+    # A fixed Thursday gave Thursday-night games ~9h and Monday-night games ~4 days. Forecast
+    # error grows with horizon and the edge shrinks with it -- roughly two points of win rate
+    # between a 1-day and a 4-day forecast -- so the uneven version was leaving measurable
+    # edge on the table.
+    #
+    # Daily also means a failed run is recoverable: with a 48h window most games get two
+    # chances, so one red X does not automatically cost that week's bets.
+    #
+    # 13:00 UTC is ~09:00 ET, before any kickoff on any day of the week.
+    - cron: "0 13 * 9-12,1,2 *"
 permissions:
   contents: write
 concurrency:
@@ -62,7 +69,7 @@ jobs:
       # Never `continue-on-error`. A silent failure here loses a bet-time forecast that
       # cannot be reconstructed afterwards -- the whole point of the exercise -- so a broken
       # run must be a red X in the Actions tab, not a quiet no-op.
-      - name: Record this week's qualifying games
+      - name: Record games kicking off within 48h
         run: cd nfl-model && uv run python track_w1.py record
 
       - name: Print the running record

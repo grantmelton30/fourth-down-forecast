@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """W1 forward tracking -- the pre-registered NFL wind rule (PREREG.md W1).
 
-    python track_w1.py record            # log this week's qualifying games
+    python track_w1.py record            # log games kicking off within 48h
     python track_w1.py record --week 5
     python track_w1.py grade             # settle logged bets that have finished
     python track_w1.py report            # running record + forecast-error measurement
@@ -45,7 +45,7 @@ import pandas as pd
 
 from src import ingest
 from src.config import REPO_ROOT, load_config
-from src.weather import forecast_at_bet_time
+from src.weather import ET, forecast_at_bet_time
 
 # ANCHORED TO THE REPO, NEVER TO THE CACHE DIR. `CACHE_DIR` follows $NFL_MODEL_CACHE_DIR,
 # which NEXT_SESSION.md tells every operator to point at ~/.cache/nfl-model -- deriving the
@@ -62,6 +62,19 @@ MIN_WIND_MPH = 10.0
 MAX_WIND_MPH = 40.0          # above this the forecast is rejected, never treated as calm
 SIDE = "UNDER"               # one-sided by construction; wind suppresses scoring
 UNIVERSE = "outdoor"
+
+# RECORD CLOSE TO KICKOFF, NOT EARLY. A game is only logged once it is inside this window.
+# Forecast skill decays with horizon and the edge decays with it: ~3 days out is 2-3 mph of
+# error and ~55.8-56.8 wins per 100, while ~1-2 days is ~1-2 mph and ~56.8-57.7. Recording
+# on a fixed weekday gave Thursday-night games a 9-hour horizon and Monday-night games four
+# days, which is both worse on average and inconsistent across the slate.
+#
+# This is an OPERATING parameter, not one of the frozen rule constants above: it changes
+# when the forecast is taken, never the trigger, side, universe or stake. Set 2026-08-21,
+# before a single bet existed and with no outcome visible, so it cannot be outcome-driven.
+# `hours_before_kickoff` is still stored per row, because the window is an intention and the
+# realised horizon is the measurement.
+MAX_HOURS_BEFORE_KICKOFF = 48.0
 
 LOG_COLUMNS = [
     "game_id", "season", "week", "away_team", "home_team", "kickoff",
@@ -87,20 +100,46 @@ def _slate(cfg) -> pd.DataFrame:
     return ingest.load_schedules([int(cfg.seasons.current)], refresh=True)
 
 
-def _qualifying(slate: pd.DataFrame, season: int, week: int, *,
+def _hours_to_kickoff(kickoff, now: pd.Timestamp) -> float:
+    """Hours from `now` until kickoff. Negative once the game has started.
+
+    nflverse kickoffs are NAIVE US/EASTERN, not UTC (ingest._kickoff_timestamp). Comparing
+    them to a UTC clock without converting would shift every game by 4-5 hours -- enough to
+    record a Sunday 1pm game as though it were still two days out, or to admit one that had
+    already kicked off.
+    """
+    ko = pd.Timestamp(kickoff)
+    ko = (ko.tz_localize(ET, ambiguous=True, nonexistent="shift_forward")
+          if ko.tzinfo is None else ko)
+    return (ko.tz_convert("UTC") - now).total_seconds() / 3600.0
+
+
+def _qualifying(slate: pd.DataFrame, season: int, week: "int | None" = None, *,
+                now: "pd.Timestamp | None" = None,
                 verbose: bool = True) -> pd.DataFrame:
     """Games meeting W1's trigger. Every filter here is quoted from the registration."""
-    sub = slate[(slate["season"] == season) & (slate["week"] == week)].copy()
+    now = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
+    sub = slate[slate["season"] == season].copy()
+    if week is not None:
+        sub = sub[sub["week"] == int(week)]
     # Ungraded only. A finished game has an observed wind and cannot be forecast.
     sub = sub[sub["result"].isna()]
-    sub = sub.dropna(subset=["total_line"])
+    sub = sub.dropna(subset=["total_line", "kickoff"])
+
+    # Inside the recording window, and NOT already started. A game that has kicked off can
+    # no longer be bet, and its "forecast" would be a nowcast of a game in progress.
+    if len(sub):
+        hours = sub["kickoff"].map(lambda k: _hours_to_kickoff(k, now))
+        sub = sub[(hours > 0) & (hours <= MAX_HOURS_BEFORE_KICKOFF)]
+
+    empty = sub.iloc[0:0].assign(forecast_wind_mph=[], forecast_issued_at=[],
+                                 hours_before_kickoff=[], side=[])
     if sub.empty:
-        return sub.assign(forecast_wind_mph=[], forecast_issued_at=[],
-                          hours_before_kickoff=[], side=[])
+        return empty
 
     rows = []
     for _, game in sub.iterrows():
-        fc = forecast_at_bet_time(game)
+        fc = forecast_at_bet_time(game, now=now)
         if fc.indoor or fc.source != "forecast" or fc.wind_mph is None:
             if verbose and not fc.indoor:
                 print(f"  skip {game['away_team']} at {game['home_team']}: "
@@ -115,8 +154,7 @@ def _qualifying(slate: pd.DataFrame, season: int, week: int, *,
                 if fc.hours_before_kickoff is not None else np.nan),
         })
     if not rows:
-        return sub.iloc[0:0].assign(forecast_wind_mph=[], forecast_issued_at=[],
-                                    hours_before_kickoff=[], side=[])
+        return empty
 
     out = pd.DataFrame(rows)
     out = out[(out["forecast_wind_mph"] >= MIN_WIND_MPH)
@@ -139,21 +177,19 @@ def _write_log(frame: pd.DataFrame) -> None:
 def cmd_record(cfg, args) -> int:
     slate = _slate(cfg)
     season = args.season or int(cfg.seasons.current)
-    if args.week:
-        week = int(args.week)
-    else:
-        upcoming = slate[(slate["season"] == season) & slate["result"].isna()]
-        if upcoming.empty:
-            print(f"no ungraded {season} games found -- nothing to record")
-            return 0
-        week = int(upcoming["week"].min())
 
-    picks = _qualifying(slate, season, week)
+    # No week is selected by default. The recording window, not the calendar, decides what
+    # is eligible -- a fixed week filter would strand games that sit either side of a week
+    # boundary inside the same 48 hours, and a daily job has no reason to care which week a
+    # kickoff belongs to. `--week` stays available for inspecting one week by hand.
+    picks = _qualifying(slate, season, args.week)
     log = _read_log()
     already = set(log["game_id"].astype(str)) if len(log) else set()
     fresh = picks[~picks["game_id"].astype(str).isin(already)] if len(picks) else picks
 
-    print(f"W1 {season} week {week}: {len(picks)} qualifying "
+    scope = f"week {args.week}" if args.week else (
+        f"next {MAX_HOURS_BEFORE_KICKOFF:.0f}h")
+    print(f"W1 {season} ({scope}): {len(picks)} qualifying "
           f"(forecast wind >= {MIN_WIND_MPH:.0f} mph), {len(fresh)} new")
     if len(picks) and not len(fresh):
         print("  (all already logged -- the log is append-only and will not be rewritten)")
@@ -161,7 +197,7 @@ def cmd_record(cfg, args) -> int:
         return 0
 
     rows = pd.DataFrame({
-        "game_id": fresh["game_id"], "season": season, "week": week,
+        "game_id": fresh["game_id"], "season": season, "week": fresh["week"],
         "away_team": fresh["away_team"], "home_team": fresh["home_team"],
         "kickoff": fresh["kickoff"],
         "forecast_wind_mph": fresh["forecast_wind_mph"].round(1),
