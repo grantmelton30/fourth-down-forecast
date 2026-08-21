@@ -103,6 +103,10 @@ class PredictionRecord:
     quality_reasons: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
     pick_eligible: bool = False
+    # The pre-registered tracked rule for this league (P1 / W1) and whether it
+    # fires on this game, with a reason. See shared/tracked_rules.py. Advisory
+    # only: bets_allowed() is False for both leagues.
+    tracked_rule: dict | None = None
     out_of_distribution: bool = False
     calibration_status: dict[str, bool] | None = None
     games_observed: dict[str, int] | None = None
@@ -140,6 +144,7 @@ def build_prediction_record(
     market_evidence: MarketEvidence | None = None,
     quality_reasons: tuple[str, ...] = (), warnings: tuple[str, ...] = (),
     pick_eligible: bool = False, out_of_distribution: bool = False,
+    tracked_rule: dict | None = None,
     calibration_status: dict[str, bool] | None = None,
     games_observed: dict[str, int] | None = None,
 ) -> PredictionRecord:
@@ -172,7 +177,7 @@ def build_prediction_record(
         unavailable_features=tuple(sorted(set(unavailable_features))),
         market_evidence=market_evidence,
         quality_reasons=tuple(quality_reasons), warnings=tuple(warnings),
-        pick_eligible=bool(pick_eligible),
+        pick_eligible=bool(pick_eligible), tracked_rule=tracked_rule,
         out_of_distribution=bool(out_of_distribution),
         calibration_status=calibration_status,
         games_observed=games_observed,

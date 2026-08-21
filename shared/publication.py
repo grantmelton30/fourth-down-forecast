@@ -107,6 +107,7 @@ def build_public_record(
     out_of_distribution: bool = False,
     calibration_status: dict[str, bool] | None = None,
     games_observed: dict[str, int] | None = None,
+    tracked_rule: dict | None = None,
 ) -> PredictionRecord:
     return build_prediction_record(
         league=league, game_id=game_id, season=season, week=week, kickoff=kickoff,
@@ -121,6 +122,7 @@ def build_public_record(
         quality_reasons=quality_reasons, warnings=warnings,
         pick_eligible=pick_eligible, out_of_distribution=out_of_distribution,
         calibration_status=calibration_status, games_observed=games_observed,
+        tracked_rule=tracked_rule,
     )
 
 

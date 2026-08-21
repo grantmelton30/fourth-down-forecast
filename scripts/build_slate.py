@@ -19,6 +19,7 @@ from slate_builder import (calibration_from_weights, calibration_permissions,
                            forecast_from_projection, forecast_from_sim, market_for_game,
                            source_digest)  # noqa: E402
 from sport import load_adapter  # noqa: E402
+from tracked_rules import evaluate as evaluate_tracked_rule  # noqa: E402
 
 
 def manual_lines(path: Path) -> pd.DataFrame:
@@ -142,6 +143,24 @@ def main() -> int:
             spread_difference = (
                 independent.spread - market.spread if market is not None else None
             )
+            # The pre-registered tracked rule (PREREG P1 / W1), evaluated for display.
+            # Advisory only -- bets_allowed() is False for both leagues. It exists so the
+            # rule's preconditions do not have to be remembered by hand; the P5-vs-P5
+            # exclusion in particular is worth 3.8 points of win rate and is exactly the
+            # clause a person skips when a marquee game looks mispriced.
+            if league == "nfl":
+                fc = (adapter.wind_forecast(game)
+                      if hasattr(adapter, "wind_forecast") else {})
+                rule = evaluate_tracked_rule(
+                    "nfl", wind_mph=fc.get("wind_mph"), roof=game.get("roof"),
+                    venue_roof=fc.get("venue_roof"))
+            else:
+                rule = evaluate_tracked_rule(
+                    "ncaa",
+                    model_total=(independent.total if independent is not None else None),
+                    market_total=(market.total if market is not None else None),
+                    restricted=game.get("restricted"))
+
             quality = assess_quality(
                 league=league, week=week,
                 home_games_observed=observed["home"],
@@ -165,6 +184,7 @@ def main() -> int:
                 pick_eligible=quality.pick_eligible,
                 out_of_distribution=quality.out_of_distribution,
                 calibration_status=permissions, games_observed=observed,
+                tracked_rule=rule.to_dict(),
             )
             built += int(ledger.append(record))
     print(f"appended {built} predictions; skipped {skipped} unavailable/past games")

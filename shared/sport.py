@@ -341,6 +341,31 @@ class NFLAdapter(SportAdapter):
         )
         self._package = _load_model_package(self.profile.repo, self.profile.key)
 
+    def wind_forecast(self, game) -> dict:
+        """Live forecast wind for one upcoming game, for the W1 tracked-rule display.
+
+        Uses `weather.forecast_at_bet_time`, which fetches fresh and never reads the weather
+        cache -- the cache is keyed without an issue time, so a hit would silently present a
+        days-old reading as current. `schedules.wind` is deliberately NOT used as a fallback:
+        it is the observed kickoff value and does not exist before the game.
+
+        Returns the venue's structural roof too, so the caller can tell a dome from a
+        retractable whose game-day state has not been published yet.
+        """
+        venue_roof = None
+        try:
+            stadiums = self._module("stadiums")
+            venue_roof = stadiums.venue_for_game(
+                game.get("home_team"), game.get("location", "Home"),
+                game.get("stadium")).get("roof")
+        except Exception:  # noqa: BLE001 - a display field must not break the slate build
+            pass
+        try:
+            fc = self._module("weather").forecast_at_bet_time(game)
+            return {"wind_mph": fc.wind_mph, "source": fc.source, "venue_roof": venue_roof}
+        except Exception:  # noqa: BLE001 - same; an absent forecast simply does not qualify
+            return {"wind_mph": None, "source": "unavailable", "venue_roof": venue_roof}
+
     # -- lazy machinery -----------------------------------------------------------------
 
     def _cfg(self):
