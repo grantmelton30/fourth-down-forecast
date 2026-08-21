@@ -227,6 +227,31 @@ class Config:
         per game than the weekly slate does)."""
         return replace(self, simulation=replace(self.simulation, n_sims=n_sims))
 
+    def with_ratings(self, **overrides) -> "Config":
+        """A copy with named `ratings:` fields replaced, for sweeping memory parameters.
+
+        `prior_weight_games`, `offseason_regression` and `half_life_games` have never been
+        swept on this build -- they carry no provenance comment, unlike the lambdas. The
+        NCAA build swept its equivalents and moved 0.42/5.0 -> 1.00/8.0 for 0.155 of RMSE,
+        with the largest gain in the early-season weeks where priors dominate. This model
+        shows the same early-season weakness (weeks 4-6 run a 1.079 ratio against the
+        market versus ~1.055 later), which is what makes the knobs worth testing.
+        """
+        return replace(self, ratings=replace(self.ratings, **overrides))
+
+    def with_lambdas(self, lambda_off: float, lambda_def: float) -> "Config":
+        """A copy pinned to specific ridge penalties, for a grid search that scores the
+        SHIPPED projection (`ratings.tune_lambdas_shipped`).
+
+        Overrides the `tuned:` block rather than `ratings:`, because `effective_lambdas`
+        prefers `tuned:` -- setting only the seed values would be silently ignored whenever
+        a tuned block exists, which it does.
+        """
+        merged = dict(self.tuned or {})
+        merged["lambda_off"] = float(lambda_off)
+        merged["lambda_def"] = float(lambda_def)
+        return replace(self, tuned=merged)
+
     @property
     def effective_lambdas(self) -> tuple[float, float]:
         """Tuned lambdas from §5c if tune_lambdas() has been run, else the seed values."""
