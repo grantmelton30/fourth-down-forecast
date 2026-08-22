@@ -33,9 +33,25 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from src.odds_api import (COUNT_MARKETS, OddsApiError, Usage, fetch_event_odds,  # noqa: E402
-                          flatten_props, list_events, verify_access)
-from src.prop_ledger import PropLedger  # noqa: E402
+try:
+    from src.odds_api import (COUNT_MARKETS, OddsApiError, Usage,  # noqa: E402
+                              fetch_event_odds, flatten_props, list_events, verify_access)
+    from src.prop_ledger import PropLedger  # noqa: E402
+except ModuleNotFoundError as exc:
+    # Running under the system interpreter instead of the repo's venv is the first thing
+    # that goes wrong here, and a bare ImportError traceback does not say so. This is a
+    # weekly command; it should tell you the fix rather than the symptom.
+    _venv = Path(__file__).resolve().parents[1] / ".venv" / "Scripts" / "python.exe"
+    if not _venv.exists():
+        _venv = Path(__file__).resolve().parents[1] / ".venv" / "bin" / "python"
+    sys.exit(
+        f"{exc}\n\n"
+        f"That usually means this ran under the system Python rather than the repo's\n"
+        f"virtual environment, which is where the dependencies live. Use either:\n\n"
+        f"    {_venv} capture_props.py {' '.join(sys.argv[1:]) or 'verify'}\n"
+        f"    uv run python prop-model/capture_props.py {' '.join(sys.argv[1:]) or 'verify'}"
+        f"   (from the repo root)\n"
+    )
 
 LEDGER = Path(__file__).resolve().parent / "data" / "prop_quotes.jsonl"
 
