@@ -48,8 +48,21 @@ data.
 - Cover probabilities condition on the bet resolving: `P(win) / (P(win) + P(loss))`.
 - Never use `nfl_data_py` (deprecated). Use `nflreadpy`; `.to_pandas()` at the ingest
   boundary and stay in pandas thereafter.
-- Out of scope, permanently: props, parlays, teasers, live betting, public-betting
-  features, H2H-history features, neural networks, auto bet placement, a database.
+- Out of scope, permanently: parlays, teasers, same-game parlays, live betting,
+  public-betting features, H2H-history features, neural networks, auto bet placement, a
+  database.
+- **Player props were on that list and were removed from it on 2026-08-21.** The reason is
+  recorded rather than assumed: this model does not beat the market on sides or totals and
+  cannot be made to by being more accurate — Elo is *more* accurate and still returns 48.9
+  per 100 — while the two things that do clear breakeven (the wind rule, the restricted NCAA
+  universe) both sit where the market is not looking. Props are the largest remaining market
+  of that kind. Scoping them in is a deliberate reversal of a written constraint, not an
+  oversight.
+  **It does not relax anything else.** Props live in their own `prop-model/` sibling, must
+  not modify `shared/sim_core.py`, `PBP_COLUMNS`, the market ledger, or `track-rules.yml`,
+  and are bound by every rule in this file — §1 no-lookahead on kickoff timestamps above all.
+  Parlays and SGPs stay permanently out: pricing them needs high-dimensional dependence
+  against a very high-hold market, and single props have to demonstrate forward value first.
 
 ## Environment
 
