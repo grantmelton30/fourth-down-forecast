@@ -56,7 +56,7 @@ UNIVERSE = "restricted"
 
 LOG_COLUMNS = [
     "game_id", "season", "week", "away_team", "home_team", "kickoff",
-    "model_total", "market_total_at_bet", "edge", "side", "recorded_at",
+    "model_total", "market_total_at_bet", "line_basis", "edge", "side", "recorded_at",
     "actual_total", "market_total_close", "result", "graded_at",
 ]
 
@@ -93,10 +93,29 @@ def _qualifying(frame: pd.DataFrame, season: int, week: int) -> pd.DataFrame:
     sub = frame[(frame["season"] == season) & (frame["week"] == week)].copy()
     if UNIVERSE == "restricted" and "restricted" in sub.columns:
         sub = sub[sub["restricted"].fillna(False).astype(bool)]
-    sub = sub.dropna(subset=["model_total", "total_open"])
-    # The number available now. `total_open` is what this repo carries for an ungraded
-    # game; the close does not exist yet and must never be used to select a bet.
-    sub["market_total_at_bet"] = sub["total_open"]
+    sub = sub.dropna(subset=["model_total"])
+    # THE NUMBER AVAILABLE NOW IS `total_close`, NOT `total_open`.
+    #
+    # Fixed 2026-08-21. This previously used `total_open`, which is CFBD's `overUnderOpen`
+    # -- the HISTORICAL OPENER, set whenever the book first hung the game, often weeks
+    # earlier. `total_close` is `overUnder`, the currently displayed number, and for an
+    # unplayed game that is exactly the quote you could bet right now; it only becomes "the
+    # close" once the game kicks off. On the live 2026 week 1 slate the two differ on 31 of
+    # 51 priced games, mean 0.70 points and up to 4.
+    #
+    # This is a BUG FIX, not a rule change. PREREG P1 says "graded at the number actually
+    # available when the bet is recorded, which is the real money question", and the code
+    # was not doing that. It also made the forward record test a materially different and
+    # historically LOSING strategy: selected and priced at the opener the same rule reads
+    # 52.07% and -7.1 units across 2021-2025, against 54.13% and +39.1 at the current line.
+    #
+    # The 26 bets logged before this fix keep their recorded numbers -- the log is
+    # append-only -- and carry `line_basis="opener"` so they can never be silently pooled
+    # with what follows.
+    has_current = sub["total_close"].notna()
+    sub["market_total_at_bet"] = sub["total_close"].where(has_current, sub["total_open"])
+    sub["line_basis"] = np.where(has_current, "current", "opener_fallback")
+    sub = sub.dropna(subset=["market_total_at_bet"])
     sub["edge"] = sub["model_total"] - sub["market_total_at_bet"]
     sub = sub[(sub["edge"].abs() >= MIN_EDGE) & (sub["edge"].abs() < MAX_EDGE)]
     sub["side"] = np.where(sub["edge"] > 0, "OVER", "UNDER")
@@ -105,7 +124,15 @@ def _qualifying(frame: pd.DataFrame, season: int, week: int) -> pd.DataFrame:
 
 def _read_log() -> pd.DataFrame:
     if LOG_PATH.exists():
-        return pd.read_csv(LOG_PATH)
+        log = pd.read_csv(LOG_PATH)
+        # Rows written before the 2026-08-21 line-basis fix were priced at the OPENER.
+        # Label them rather than repair them: the numbers recorded are what they are, and
+        # rewriting a logged bet is the one thing an append-only ledger may never do.
+        if "line_basis" not in log.columns:
+            log["line_basis"] = "opener"
+        else:
+            log["line_basis"] = log["line_basis"].fillna("opener")
+        return log
     return pd.DataFrame(columns=LOG_COLUMNS)
 
 
@@ -144,6 +171,7 @@ def cmd_record(cfg, client, args) -> int:
         "model_total": fresh["model_total"].round(2),
         "market_total_at_bet": fresh["market_total_at_bet"],
         "edge": fresh["edge"].round(2), "side": fresh["side"],
+        "line_basis": fresh["line_basis"],
         "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "actual_total": np.nan, "market_total_close": np.nan,
         "result": "", "graded_at": "",

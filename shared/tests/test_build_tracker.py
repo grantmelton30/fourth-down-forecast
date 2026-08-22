@@ -56,3 +56,36 @@ def test_breakeven_constant_matches_minus_110():
     """-110 both sides: 110/210. If this drifts, every 'vs break-even' figure on the site
     silently moves with it."""
     assert bt.BREAKEVEN == pytest.approx(100 * 110 / 210, abs=0.01)
+
+
+# --- real prices, not an assumed -110 -------------------------------------------------
+
+def test_loss_cost_and_breakeven_track_the_actual_price():
+    """-110 is an assumption, not a fact. The rate you must beat moves with the price, and a
+    rule measured at 54% is profitable at -105 and losing at -120 -- so the price, not the
+    model, decides the sign of that edge."""
+    assert bt._loss_units(-110) == pytest.approx(1.10)
+    assert bt._loss_units(-105) == pytest.approx(1.05)
+    assert bt._loss_units(-120) == pytest.approx(1.20)
+    assert bt._loss_units(+120) == pytest.approx(100 / 120)
+    assert 100 * bt._breakeven(-110) == pytest.approx(52.38, abs=0.01)
+    assert 100 * bt._breakeven(-105) == pytest.approx(51.22, abs=0.01)
+    assert 100 * bt._breakeven(-120) == pytest.approx(54.55, abs=0.01)
+
+
+def test_missing_price_costs_the_assumed_vig_not_nothing():
+    """A bet with no recorded price is unknown, never free."""
+    assert bt._loss_units(None) == pytest.approx(1.10)
+    assert bt._loss_units(float("nan")) == pytest.approx(1.10)
+
+
+def test_priced_units_use_the_same_convention_as_the_headline_units():
+    """`_stats` reports wins - losses*1.1 and every figure in GATES.md and both
+    registrations is on that basis. If the priced number used risk-one-unit instead, every
+    total would shift about 10% and the site would contradict its own documentation."""
+    wins, losses = 347, 254
+    assert _stats_units(wins, losses) == pytest.approx(wins - losses * bt._loss_units(-110))
+
+
+def _stats_units(w, l):
+    return bt._stats(w, l)["units"]

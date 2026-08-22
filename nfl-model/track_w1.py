@@ -79,7 +79,7 @@ MAX_HOURS_BEFORE_KICKOFF = 48.0
 LOG_COLUMNS = [
     "game_id", "season", "week", "away_team", "home_team", "kickoff",
     "forecast_wind_mph", "forecast_issued_at", "hours_before_kickoff",
-    "market_total_at_bet", "side", "recorded_at",
+    "market_total_at_bet", "price_under", "side", "recorded_at",
     "actual_total", "market_total_close", "observed_wind_mph", "result", "graded_at",
 ]
 
@@ -204,6 +204,12 @@ def cmd_record(cfg, args) -> int:
         "forecast_issued_at": fresh["forecast_issued_at"],
         "hours_before_kickoff": fresh["hours_before_kickoff"],
         "market_total_at_bet": fresh["total_line"],
+        # THE PRICE, NOT AN ASSUMPTION. Every win-rate figure in this repo assumed -110,
+        # where break-even is 52.38%. Real NFL unders price around -108 on median, and the
+        # break-even moves with them: 51.2% at -105, 54.5% at -120. A rule measured at 54%
+        # is profitable at one and losing at the other, so a record without the price cannot
+        # say which. nflverse carries `under_odds` on the live slate as well as history.
+        "price_under": fresh.get("under_odds"),
         "side": fresh["side"],
         "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "actual_total": np.nan, "market_total_close": np.nan,

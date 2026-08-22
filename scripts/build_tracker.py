@@ -49,7 +49,8 @@ RULES = {
 }
 
 COMMON = ["game_id", "season", "week", "away_team", "home_team", "kickoff",
-          "market_total_at_bet", "side", "recorded_at", "actual_total",
+          "market_total_at_bet", "price_under", "line_basis", "side", "recorded_at",
+          "actual_total",
           "market_total_close", "result", "graded_at"]
 EXTRA = {"P1": ["model_total", "edge"],
          "W1": ["forecast_wind_mph", "observed_wind_mph", "hours_before_kickoff"]}
@@ -67,6 +68,33 @@ def _clean(value):
         return None
     return value
 
+
+
+
+def _loss_units(odds) -> float:
+    """What a LOSS costs, in units, on the "stake to win one unit" convention.
+
+    This repo states every result as `wins - losses * 1.1`, i.e. you risk 1.1 to win 1 at
+    -110. Everything in GATES.md and both registrations is on that basis, so the priced
+    version must be too -- mixing it with the risk-one-unit convention silently changes
+    every figure by about 10% and makes the site disagree with its own documentation.
+
+    At -110 a loss costs 1.10, at -105 it costs 1.05, at -120 it costs 1.20. That spread is
+    not cosmetic: break-even runs 51.2% at -105 and 54.5% at -120, so a rule measured at 54%
+    is profitable at one price and losing at the other.
+    """
+    if odds is None or (isinstance(odds, float) and not math.isfinite(odds)):
+        odds = -110.0
+    odds = float(odds)
+    return abs(odds) / 100.0 if odds < 0 else 100.0 / odds
+
+
+def _breakeven(odds) -> float:
+    """Win rate needed to break even at this price. -110 when the price was not recorded."""
+    if odds is None or (isinstance(odds, float) and not math.isfinite(odds)):
+        odds = -110.0
+    odds = float(odds)
+    return abs(odds) / (abs(odds) + 100.0) if odds < 0 else 100.0 / (odds + 100.0)
 
 
 def _stats(wins: int, losses: int) -> dict:
@@ -89,6 +117,7 @@ def summarise(rule: str, spec: dict) -> tuple[dict, list]:
                  "prereg": spec["prereg"], "logged": 0, "settled": 0, "pending": 0,
                  "pushes": 0, "wins": 0, "losses": 0, "win_pct": None, "units": 0.0,
                  "breakeven": BREAKEVEN, "ci_low": None, "ci_high": None,
+                 "priced_units": 0.0, "priced_bets": 0, "real_breakeven": None,
                  "checkpoint_n": spec["checkpoint_n"], "kill_below": spec["kill_below"],
                  "status": "no bets logged yet"}, [])
 
@@ -108,6 +137,17 @@ def summarise(rule: str, spec: dict) -> tuple[dict, list]:
     else:
         status = f"{spec['checkpoint_n'] - n} more settled bets to the first checkpoint"
 
+    # Units at the price actually recorded, where one was. Reported ALONGSIDE the -110
+    # figure rather than replacing it, so the two can be compared and neither is hidden.
+    priced_units, priced_n, be_sum = 0.0, 0, 0.0
+    if n:
+        for _, r in settled.iterrows():
+            odds = r.get("price_under") if "price_under" in settled.columns else None
+            if odds is not None and isinstance(odds, float) and math.isfinite(odds):
+                priced_n += 1
+            be_sum += _breakeven(odds)
+            priced_units += (1.0 if r["result"] == "WIN" else -_loss_units(odds))
+
     cols = [c for c in COMMON + EXTRA[rule] if c in log.columns]
     rows = []
     for rec in log[cols].to_dict("records"):
@@ -120,6 +160,9 @@ def summarise(rule: str, spec: dict) -> tuple[dict, list]:
              "prereg": spec["prereg"], "logged": int(len(log)), "settled": n,
              "pending": int((result == "").sum()), "pushes": int((result == "PUSH").sum()),
              "wins": wins, "losses": losses, **st, "breakeven": BREAKEVEN,
+             "priced_units": round(priced_units, 1) if n else 0.0,
+             "priced_bets": priced_n,
+             "real_breakeven": round(100 * be_sum / n, 2) if n else None,
              "checkpoint_n": spec["checkpoint_n"], "kill_below": spec["kill_below"],
              "status": status}, rows)
 
@@ -146,6 +189,9 @@ def main() -> int:
         "settled": tw + tl, "pending": sum(r["pending"] for r in rules.values()),
         "pushes": sum(r["pushes"] for r in rules.values()),
         "wins": tw, "losses": tl, **_stats(tw, tl), "breakeven": BREAKEVEN,
+        "priced_units": round(sum(r["priced_units"] for r in rules.values()), 1),
+        "priced_bets": sum(r["priced_bets"] for r in rules.values()),
+        "real_breakeven": None,
         "checkpoint_n": None, "kill_below": None,
         "status": ("no bets logged yet" if tw + tl == 0 else
                    "combined bankroll across both rules; each rule has its own checkpoint"),

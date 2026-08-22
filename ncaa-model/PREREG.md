@@ -181,6 +181,44 @@ registration, so a silent edit cannot quietly redefine what is being tracked.
 
 As of declaration, 2026 week 1 lines are already posted and **26 games would qualify**.
 
+
+### CORRECTION 2026-08-21 — the tracker was logging the opener, not the available number
+
+`track_p1.py` set `market_total_at_bet = total_open`. That is CFBD's `overUnderOpen`, the
+**historical opener**, set whenever the book first hung the game. The number actually
+available when a bet is recorded is `overUnder` (`total_close` in this repo), which only
+becomes "the close" once the game kicks off. On the live 2026 week 1 slate the two differ on
+31 of 51 priced games, mean 0.70 points and up to 4.
+
+**This was a bug against this registration, not a change to it.** The rule above already
+says "graded at the number actually available when the bet is recorded, which is the real
+money question." The code was not doing that.
+
+**It mattered.** Selected and priced at the opener, the same rule reads **52.07% and −7.1
+units** across 2021–2025, against **54.13% and +39.1** at the number actually available. The
+forward record was therefore testing a materially different and historically losing strategy.
+
+**The 26 bets logged before the fix keep their recorded numbers** — the log is append-only
+and a logged bet is never repriced. They carry `line_basis="opener"`; everything after
+carries `"current"`. The two may not be pooled into one win rate, and `report` keeps them
+apart. Treat the first 26 as a separate, already-compromised batch.
+
+**Found by an external audit**, and confirmed here against the live slate before acting.
+
+### What this registration still cannot claim
+
+Also recorded 2026-08-21, from the same audit and verified independently: the backtest
+behind P1 is **not statistically significant**. 577–489 is 54.13%, one-sided p = **0.133**
+against the 52.38% break-even — and the ±6 cap was chosen from roughly 34 min/max
+combinations, which pushes the multiplicity-adjusted figure to about **0.30**. Edge size
+carries no information either: 0.5–2 pts returns 55.65%, 2–4 returns 52.19%, 4–6 returns
+55.20%, and the trend test reads p = 0.72.
+
+None of this kills P1 — the ledger's asymmetry allows a post-hoc analysis to kill a result,
+and this one is not decisive enough to. It does mean **54.13% may not be described as an
+edge anywhere**. It is a hypothesis with a forward test attached, and the forward test is
+the only thing that can settle it.
+
 ### Status of the model itself, unchanged by this
 
 `bets_allowed()` remains **False** -- five promotion gates fail (`GATE_UNBIASED_BY_WEEK`,

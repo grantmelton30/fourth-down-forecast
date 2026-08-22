@@ -20,19 +20,19 @@ def _frame():
     return pd.DataFrame([
         # edge -0.2: below MIN_EDGE, no opinion
         {"game_id": 1, "season": 2026, "week": 1, "away_team": "A", "home_team": "B",
-         "model_total": 50.3, "total_open": 50.5, "restricted": True, "actual_total": np.nan},
+         "model_total": 50.3, "total_open": 60.0, "total_close": 50.5, "restricted": True, "actual_total": np.nan},
         # edge +0.5: exactly MIN_EDGE, inclusive -> qualifies
         {"game_id": 2, "season": 2026, "week": 1, "away_team": "C", "home_team": "D",
-         "model_total": 55.5, "total_open": 55.0, "restricted": True, "actual_total": np.nan},
+         "model_total": 55.5, "total_open": 40.0, "total_close": 55.0, "restricted": True, "actual_total": np.nan},
         # edge -3.0: comfortably inside -> qualifies, UNDER
         {"game_id": 3, "season": 2026, "week": 1, "away_team": "E", "home_team": "F",
-         "model_total": 49.0, "total_open": 52.0, "restricted": True, "actual_total": np.nan},
+         "model_total": 49.0, "total_open": 62.0, "total_close": 52.0, "restricted": True, "actual_total": np.nan},
         # edge +6.0: exactly MAX_EDGE, EXCLUSIVE -> must not qualify
         {"game_id": 4, "season": 2026, "week": 1, "away_team": "G", "home_team": "H",
-         "model_total": 61.0, "total_open": 55.0, "restricted": True, "actual_total": np.nan},
+         "model_total": 61.0, "total_open": 45.0, "total_close": 55.0, "restricted": True, "actual_total": np.nan},
         # edge +2.0 but OUTSIDE the restricted universe -> must not qualify
         {"game_id": 5, "season": 2026, "week": 1, "away_team": "I", "home_team": "J",
-         "model_total": 57.0, "total_open": 55.0, "restricted": False, "actual_total": np.nan},
+         "model_total": 57.0, "total_open": 45.0, "total_close": 55.0, "restricted": False, "actual_total": np.nan},
     ])
 
 
@@ -54,13 +54,17 @@ def test_non_restricted_games_are_excluded():
     assert 5 not in set(q["game_id"])
 
 
-def test_the_bet_is_priced_at_the_line_available_now_not_the_close():
-    """The bet-time number IS the experiment. A line 'remembered' later is the same class
-    of error as the opener anchoring that produced this repo's one false positive."""
+def test_the_bet_is_priced_at_the_line_available_now_not_the_opener():
+    """The bet-time number IS the experiment, and until 2026-08-21 this logged the OPENER --
+    CFBD's overUnderOpen, often set weeks earlier. Selected and priced at the opener the
+    same rule reads 52.07% and -7.1 units on 2021-2025, against 54.13% and +39.1 at the
+    number actually available. Every fixture here has an opener far from its current line,
+    so a regression is a failure and not a rounding difference."""
     frame = _frame()
-    frame["total_close"] = 99.0  # a wildly different close must not leak into selection
+    # `total_close` on an UNPLAYED game is the currently displayed quote, not a closing
+    # line from the future -- it only becomes "the close" once the game kicks off.
     q = track_p1._qualifying(frame, 2026, 1)
-    assert (q["market_total_at_bet"] == q["total_open"]).all()
+    assert (q["market_total_at_bet"] == q["total_close"]).all()
 
 
 def test_the_log_is_append_only(tmp_path, monkeypatch):
@@ -109,3 +113,22 @@ def test_rule_constants_match_the_registration():
     assert track_p1.MIN_EDGE == 0.5
     assert track_p1.MAX_EDGE == 6.0
     assert track_p1.UNIVERSE == "restricted"
+
+
+def test_line_basis_is_recorded_so_the_two_batches_can_never_be_pooled():
+    """The 26 bets logged before the fix were priced at the opener and stay that way -- the
+    log is append-only. They carry a different `line_basis` so nobody can later add them to
+    a record built on executable numbers and report one win rate over both."""
+    q = track_p1._qualifying(_frame(), 2026, 1)
+    assert (q["line_basis"] == "current").all()
+
+
+def test_a_game_with_no_current_line_falls_back_and_says_so():
+    """A missing current quote falls back to the opener rather than dropping the game, but
+    labels itself so the mixture is visible in the log instead of being invisible."""
+    frame = _frame()
+    frame.loc[frame["game_id"] == 3, "total_close"] = np.nan
+    frame.loc[frame["game_id"] == 3, "total_open"] = 52.0   # close enough to still qualify
+    q = track_p1._qualifying(frame, 2026, 1).set_index("game_id")
+    assert q.loc[3, "line_basis"] == "opener_fallback"
+    assert q.loc[3, "market_total_at_bet"] == 52.0
