@@ -1,3 +1,5 @@
-data/prop_quotes.jsonl
 __pycache__/
 .pytest_cache/
+# data/prop_quotes.jsonl is deliberately NOT ignored. It is the archive, not a cache:
+# no free historical prop source exists at any price, so a quote that is not committed is
+# a quote that can never be part of a backtest. Same reasoning as w1_log.csv and p1_log.csv.

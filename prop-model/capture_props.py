@@ -28,7 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -79,6 +79,19 @@ def cmd_capture(args) -> int:
     except OddsApiError as exc:
         print(f"FAILED to list events: {exc}")
         return 1
+    if args.days:
+        cutoff = datetime.now(timezone.utc) + timedelta(days=args.days)
+        within = []
+        for e in events:
+            t = e.get("commence_time")
+            try:
+                when = datetime.fromisoformat(str(t).replace("Z", "+00:00"))
+            except ValueError:
+                continue          # an unparseable kickoff is skipped, never assumed near
+            if when <= cutoff:
+                within.append(e)
+        print(f"{len(events)} upcoming event(s); {len(within)} within {args.days:g} days")
+        events = within
     if args.max_events:
         events = events[: args.max_events]
     if not events:
@@ -132,6 +145,12 @@ def main() -> int:
     cap = sub.add_parser("capture", help="capture prop quotes for upcoming events")
     cap.add_argument("--markets", nargs="+")
     cap.add_argument("--max-events", type=int)
+    cap.add_argument("--days", type=float, default=8.0,
+                     help="only events kicking off within this many days (default 8). "
+                          "The API lists the whole remaining season -- 272 events in "
+                          "August -- and books do not post props until close to kickoff, "
+                          "so an unbounded sweep spends credits on games that return "
+                          "nothing.")
     sub.add_parser("report", help="what is in the ledger")
     args = p.parse_args()
     return {"verify": cmd_verify, "capture": cmd_capture, "report": cmd_report}[args.cmd](args)

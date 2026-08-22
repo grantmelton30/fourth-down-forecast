@@ -1,0 +1,76 @@
+name: capture-props
+# Archives NFL player prop quotes, with prices, into prop-model/data/prop_quotes.jsonl.
+#
+# WHY THIS RUNS BEFORE THERE IS A MODEL. No free historical prop archive exists at any
+# price -- the vendor's own history starts 2023-05-03 and is paid-only. A week that is not
+# captured now can never be part of a backtest later. This is the one piece of the prop
+# project whose cost of delay is permanent.
+#
+# SEPARATE FROM track-rules.yml ON PURPOSE. A failure here must never stop P1 and W1 from
+# recording their bets, which is the one loss that cannot be recovered.
+on:
+  workflow_dispatch:
+  schedule:
+    # Twice a week in season. Books post props close to kickoff, so Thursday catches the
+    # weekend board and Sunday morning catches the late moves and anything added since.
+    #
+    # NOT more often, and the reason is quota: the free tier is 500 credits a month and a
+    # live event costs 1 credit per market. A 16-game week across 3 markets is ~48 credits,
+    # so twice weekly is ~384/month -- comfortably inside 500, with headroom for a manual
+    # run. Daily would exhaust the allowance mid-month and the archive would go dark
+    # exactly when the season is most interesting.
+    - cron: "0 16 * 8-12,1,2 4"
+    - cron: "0 14 * 8-12,1,2 0"
+permissions:
+  contents: write
+concurrency:
+  group: capture-props
+  cancel-in-progress: false
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --dev
+
+      # The archive is append-only and committed. Writing to it from a build whose own
+      # tests fail would put an unfixable bad row into a permanent record.
+      - name: Verify the capture code before it is allowed to write
+        run: cd prop-model && uv run pytest -q tests
+
+      # Confirms the key still returns player props before spending credits on a sweep.
+      # Costs 3 credits. Worth it: a silently downgraded key would otherwise fill the
+      # archive with empty captures that look like "the market posted nothing".
+      - name: Confirm the key still allows player props
+        run: cd prop-model && uv run python capture_props.py verify
+
+      # Never continue-on-error. A quote that fails to record cannot be reconstructed, so a
+      # broken run must be a red X rather than a quiet no-op.
+      - name: Capture the upcoming slate
+        run: |
+          cd prop-model
+          uv run python capture_props.py capture \
+            --days 20 \
+            --markets player_receptions player_rush_attempts player_pass_attempts
+
+      - name: Report the archive
+        run: cd prop-model && uv run python capture_props.py report
+
+      - name: Commit the archive
+        run: |
+          f=prop-model/data/prop_quotes.jsonl
+          if [ ! -f "$f" ]; then echo "no archive file yet"; exit 0; fi
+          git add -- "$f"
+          if git diff --cached --quiet; then
+            echo "no new quotes -- the board has not moved"; exit 0
+          fi
+          git config user.name "fourth-down-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "capture player prop quotes"
+          git pull --rebase --autostash origin main
+          git push
