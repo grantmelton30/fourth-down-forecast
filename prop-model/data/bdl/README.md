@@ -10,7 +10,7 @@ again, so treat these files as the archive rather than a cache.
 | `opening_odds.jsonl` | 5,052 | 2022-2025, 1,104 games, spreads + totals + moneylines **with prices**, from DraftKings / FanDuel / Caesars |
 | `games.jsonl` | 1,412 (285/season) | 2022-2026, team abbreviations, dates, scores — the key that maps `game_id` to a matchup |
 | `player_injuries.jsonl` | 334 | current snapshot — nfl-model has **no** live injury feed at all (nflverse clamps at 2024, `data/manual/availability.csv` does not exist) |
-| `player_props.jsonl` | 800 | 2026 only, 3 games, DraftKings + FanDuel, both sides priced |
+| `player_props.jsonl` | 830 | 2026 only, 4 games, draftkings + fanduel, 13 prop types, both sides priced |
 
 ## READ THIS BEFORE USING `opening_odds.jsonl`
 
