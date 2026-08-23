@@ -132,3 +132,24 @@ def test_a_game_with_no_current_line_falls_back_and_says_so():
     q = track_p1._qualifying(frame, 2026, 1).set_index("game_id")
     assert q.loc[3, "line_basis"] == "opener_fallback"
     assert q.loc[3, "market_total_at_bet"] == 52.0
+
+
+def test_the_opener_is_recorded_but_never_graded_against():
+    """The full arc -- open, the number actually taken, the close -- has to be on the row so
+    "did we bet before or after the market moved" is answerable from the log alone. But the
+    opener must not become the settlement price: PREREG P1 grades at the number available
+    when the bet was recorded, and the 2026-08-21 correction exists because using the opener
+    made the forward record test a different and historically LOSING strategy."""
+    frame = _frame()
+    q = track_p1._qualifying(frame, 2026, 1).set_index("game_id")
+    # Every fixture has an opener deliberately far from its current line.
+    assert q.loc[2, "market_total_open"] == 40.0
+    assert q.loc[2, "market_total_at_bet"] == 55.0
+    assert q.loc[2, "edge"] == pytest.approx(55.5 - 55.0), "edge is off the BET line"
+
+
+def test_the_opener_is_carried_into_the_written_row():
+    frame = _frame()
+    q = track_p1._qualifying(frame, 2026, 1)
+    assert "market_total_open" in track_p1.LOG_COLUMNS
+    assert q["market_total_open"].notna().all()

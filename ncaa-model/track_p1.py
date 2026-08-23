@@ -56,7 +56,8 @@ UNIVERSE = "restricted"
 
 LOG_COLUMNS = [
     "game_id", "season", "week", "away_team", "home_team", "kickoff",
-    "model_total", "market_total_at_bet", "line_basis", "edge", "side", "recorded_at",
+    "model_total", "market_total_open", "market_total_at_bet", "line_basis", "edge",
+    "side", "recorded_at",
     "actual_total", "market_total_close", "result", "graded_at",
 ]
 
@@ -114,6 +115,12 @@ def _qualifying(frame: pd.DataFrame, season: int, week: int) -> pd.DataFrame:
     # with what follows.
     has_current = sub["total_close"].notna()
     sub["market_total_at_bet"] = sub["total_close"].where(has_current, sub["total_open"])
+    # The OPENER is recorded alongside, and is never what the bet is graded at. Storing it
+    # makes the full arc visible on the row itself -- open, the number actually taken, and
+    # the close filled in at grading -- so "did we bet before or after the market moved, and
+    # did that help" is answerable from the log without joining an external archive.
+    # Purely additive: no trigger, side, universe or stake changes, so PREREG P1 is untouched.
+    sub["market_total_open"] = sub["total_open"]
     sub["line_basis"] = np.where(has_current, "current", "opener_fallback")
     sub = sub.dropna(subset=["market_total_at_bet"])
     sub["edge"] = sub["model_total"] - sub["market_total_at_bet"]
@@ -169,6 +176,7 @@ def cmd_record(cfg, client, args) -> int:
         "away_team": fresh["away_team"], "home_team": fresh["home_team"],
         "kickoff": fresh.get("kickoff"),
         "model_total": fresh["model_total"].round(2),
+        "market_total_open": fresh["market_total_open"],
         "market_total_at_bet": fresh["market_total_at_bet"],
         "edge": fresh["edge"].round(2), "side": fresh["side"],
         "line_basis": fresh["line_basis"],

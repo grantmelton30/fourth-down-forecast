@@ -205,6 +205,28 @@ apart. Treat the first 26 as a separate, already-compromised batch.
 
 **Found by an external audit**, and confirmed here against the live slate before acting.
 
+### Additive 2026-08-23: the opener is now recorded on every row
+
+`market_total_open` joins `market_total_at_bet` and `market_total_close` on each logged bet,
+so the full arc sits on the row itself — where the line opened, what was actually taken, and
+where it closed.
+
+**It changes nothing about the rule.** Trigger, side, universe, cap and stake are untouched,
+and the opener is NEVER the settlement price: grading stays at the number available when the
+bet was recorded. The 2026-08-21 correction exists precisely because grading at the opener
+made the forward record test a different and historically losing strategy, and a test now
+asserts the edge is computed off the bet line rather than the opener.
+
+**Why it is worth having.** Measured on 2021-2025, betting the opener versus the close is
+52.4% against 53.2% with only 29 of 1,071 bets resolving differently (McNemar p = 0.137) —
+not significant, but that is a backtest average. Recording all three numbers makes the
+question answerable on THIS season's actual bets: did they land before or after the market
+moved, and did it help. Without it that requires joining an external archive after the fact.
+
+**No NFL equivalent is possible.** nflverse publishes no opening line at all — verified,
+there is no such column — so W1 rows carry the bet-time line and the close only. The
+6-hourly market quote archive is the substitute there.
+
 ### What this registration still cannot claim
 
 Also recorded 2026-08-21, from the same audit and verified independently: the backtest
