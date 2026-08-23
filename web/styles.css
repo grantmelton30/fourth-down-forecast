@@ -47,21 +47,33 @@ footer{padding:22px clamp(18px,4vw,64px);display:flex;justify-content:space-betw
    the header removed, which left four numbers on screen and no way to tell the model from
    the market from the difference. Landscape phones hit this hardest: enough width to look
    like a table, not enough to be one.
-   Fixed by stacking to ONE column and revealing a label per cell. */
+
+   Values sit LEFT, immediately after a fixed-width label, rather than right-aligned to the
+   screen edge. Right-alignment on a wide landscape phone strands the label and the number
+   at opposite ends of a very long line, which is harder to read than the grid it replaced.
+   A fixed label column also lines all three values up on one left edge, so they compare
+   straight down. */
 .cell-label{display:none}
 @media(max-width:900px){
-  .table-head,.game-row{grid-template-columns:1fr;row-gap:2px}
-  .game-row{padding:18px 14px}
-  .matchup-id{margin-bottom:10px}
-  /* label left, numbers right -- scannable as a list rather than read as a grid */
-  .forecast{display:grid;grid-template-columns:auto 1fr;align-items:baseline;column-gap:12px}
-  .cell-label{display:block;font:500 .62rem var(--mono);letter-spacing:.07em;
-    text-transform:uppercase;color:var(--muted);min-width:82px}
-  .forecast strong{text-align:right;font-size:1rem}
-  .forecast span{grid-column:2;text-align:right;font-size:.64rem}
-  .rulecell{grid-column:1/-1;margin-top:10px;padding-top:10px;
-    border-top:1px solid var(--line);gap:7px}
-  .rulecell .cell-label{min-width:0;margin-bottom:2px}
-  .rulecell .badge{font-size:.7rem;padding:7px 11px}
-  .rulecell small{-webkit-line-clamp:3;font-size:.72rem}
+  .table-head,.game-row{grid-template-columns:1fr;row-gap:0}
+  .game-row{padding:16px 14px}
+  .matchup-id{margin-bottom:12px}
+  .forecast{display:grid;grid-template-columns:96px 1fr;align-items:baseline;
+    column-gap:14px;padding:5px 0}
+  .cell-label{display:block;font:500 .6rem var(--mono);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--muted)}
+  .forecast strong{text-align:left;font-size:1.02rem;line-height:1.2}
+  .forecast span{grid-column:2;text-align:left;font-size:.63rem;margin-top:1px}
+  .rulecell{grid-column:1/-1;margin-top:12px;padding-top:11px;
+    border-top:1px solid var(--line);gap:6px}
+  .rulecell .badge{font-size:.7rem;padding:6px 10px}
+  .rulecell small{-webkit-line-clamp:3;font-size:.72rem;line-height:1.4}
+}
+
+/* Very narrow (portrait): the 96px label column costs too much of the line, so labels sit
+   above their values instead. */
+@media(max-width:520px){
+  .forecast{grid-template-columns:1fr;column-gap:0;padding:6px 0}
+  .forecast span{grid-column:1}
+  .cell-label{margin-bottom:1px}
 }
