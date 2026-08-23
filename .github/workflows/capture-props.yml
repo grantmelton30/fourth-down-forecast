@@ -34,8 +34,8 @@ jobs:
       ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
       PYTHONUNBUFFERED: "1"
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
       - run: uv sync --frozen --dev
 
       # The archive is append-only and committed. Writing to it from a build whose own

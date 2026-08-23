@@ -1,27 +1,60 @@
 # Next session
 
-Rewritten 2026-08-07. Read this first, then `GATES.md`.
+**Rewritten 2026-08-23.** Read this, then `GATES.md`. The 2026-08-07 version described a
+repo that no longer exists — a `~/dev/grant-claude/` path, a stale Desktop copy to delete, a
+42/42 test count, and a "do this first" that has since been done and superseded. Replaced
+rather than amended.
 
-## Where everything lives now
+## Where everything lives
 
-**`~/dev/grant-claude/`** — moved off the iCloud-synced Desktop, which was truncating
-files mid-write and corrupted a round of commits before it was caught. The Desktop copy
-still exists and is STALE; delete it or you will edit the wrong tree.
+    C:\Users\grant\OneDrive\Documents\GitHub\fourth-down-forecast
 
-Run everything with the cache dirs set — the repo-local `data/cache` folders are stale
-partial copies and reading them silently produces wrong answers:
+One git repository, pushed to `github.com/grantmelton30/fourth-down-forecast`. Four
+directories that matter: `nfl-model/`, `ncaa-model/`, `prop-model/`, `shared/`.
 
-    NFL_MODEL_CACHE_DIR=~/.cache/nfl-model
-    NCAA_MODEL_CACHE_DIR=~/.cache/ncaa-model
-    python = ~/.venvs/nfl-model/bin/python
+Run everything through the repo venv — the system Python has none of the dependencies:
 
-Test state: **nfl-model 42/42, ncaa-model 12/12** (with those env vars set; without them
-the NFL lookahead test fails spuriously on the stale local cache).
+    uv run python <script>                    # from the repo root
+    .venv/Scripts/python.exe <script>         # equivalent
 
-Combined viewer: `streamlit run shared/app.py`, then http://127.0.0.1:8501 — or the
-machine's LAN IP from another device.
+Test state: **shared 143, nfl-model 71, prop-model 64.** All green.
 
-## The one thing to do first
+## The state of play, in one paragraph
+
+Neither team model beats the market and neither can be made to by becoming more accurate —
+Elo is MORE accurate than the NFL model and still returns 48.9 wins per 100. `bets_allowed()`
+is False for both leagues and should stay that way. Two pre-registered rules are tracked
+forward instead: **W1** (NFL, UNDER on forecast wind >= 10 mph) and **P1** (NCAA totals,
+restricted universe, edge 0.5-6.0). Everything runs itself on GitHub Actions.
+
+## What runs without you
+
+| workflow | when | what |
+|---|---|---|
+| `track-rules` | daily 09:00 ET, Aug-Feb | records and grades P1 and W1 |
+| `capture-props` | Thu + Sun in season | archives prop quotes (Odds API free tier) |
+| `publish-ledger` | every 4h | refreshes the site |
+| `integrity` | every push | the test suites |
+
+## The only thing left is to wait
+
+W1 starts logging around 9 September, when week 1 enters the 16-day forecast window. P1 has
+28 bets logged and needs 200 settled to reach its first checkpoint. Both rules were designed
+so a season of forward evidence is the output; no modelling task substitutes for it.
+
+## Superseded: the lambda grid search
+
+**DONE AND REVERTED, 2026-08-20. Do not act on this section; it is kept for the reasoning.**
+The widened search ran, selected 2400/1600, and made the SHIPPED model worse on both
+markets (spread RMSE 13.464 -> 13.495, total 13.627 -> 13.727). Reverted to 750/550. The
+cause was the objective, not the search: `tune_lambdas` scores a ratings-only margin proxy
+with no context adjustment, no simulator and no L1 projection, none of which the shipped
+`model_spread` does without — and it scores MARGIN ONLY while the lambdas it writes feed
+the totals path too. `ratings.tune_lambdas_shipped` was written to score the real
+projection on both markets, and is deliberately NOT wired to the CLI: accuracy is not the
+lever for this model, so it is parked rather than pursued.
+
+The original text follows.
 
 **Re-run the NFL lambda grid search against the widened grid.** The 2026-08-05 search
 selected lambda_off=750 — the ceiling of the grid it was given — so the search was
@@ -194,16 +227,23 @@ frame on a config hash the way `nfl-model` does, then rebuilding.
 - **The drive clamp `(8, 16)`** truncates college's top 1-2% of games.
 - `nfl-model` declares `drive_count_dist` and never reads it.
 
-## Housekeeping left
+## Housekeeping — all four items resolved, 2026-08-23
 
-- Delete the stale Desktop copy at `~/Desktop/Grant - Claude`.
-- `git init` at the workspace root so these docs are tracked (also needed before any
-  Streamlit deploy). Currently only the three subdirectories are repos.
-- Disposable clutter in the caches: two experiment frames in `~/.cache/nfl-model`, and
-  the repo-local `data/cache` folders, which should probably be emptied so the only way
-  to run is the correct way.
-- The CFBD key is committed in `nfl-model` history at `9fdc876` and still in HEAD. The
-  operator has seen the evidence and accepted the risk (internal-only, no remotes).
+Every entry that used to be here was stale. Checked rather than assumed:
+
+- ~~Delete the stale Desktop copy~~ — the tree described no longer exists.
+- ~~`git init` at the workspace root~~ — done. It is ONE repository now, pushed to
+  `github.com/grantmelton30/fourth-down-forecast`, not three loose subdirectories.
+- ~~Cache clutter~~ — moot; the repo-local caches are current and are what CI restores.
+- ~~"The CFBD key is committed at `9fdc876` and still in HEAD... accepted the risk
+  (internal-only, no remotes)"~~ — **that risk assessment no longer applies and the premise
+  is false twice over.** There ARE remotes now. But commit `9fdc876` is not in this
+  repository's history at all (it predates the consolidation), and a search of HEAD finds no
+  key. The repository is also PRIVATE. Nothing to remediate — but the note mattered because
+  "no remotes" was load-bearing in the original decision and stopped being true the day this
+  was pushed. If it is ever made public, re-check before doing so.
+
+Live secrets are GitHub Actions secrets (`CFBD_API_KEY`, `ODDS_API_KEY`), not files.
 
 ## Working rules
 

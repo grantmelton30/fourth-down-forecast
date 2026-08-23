@@ -1,0 +1,31 @@
+# Append-only ledgers merge by UNION, not by conflict.
+#
+# WHY. `publish-ledger` runs on three schedules that can land minutes apart, and two runs
+# starting from the same commit both append to these files. The second one's rebase then
+# stops on a content conflict and the whole run fails:
+#
+#     CONFLICT (content): Merge conflict in data/market_quotes.jsonl
+#
+# It was failing roughly twice a day. Nothing was lost -- the next run re-captures -- but a
+# workflow that routinely shows a red X trains you to ignore red X's, and the trackers those
+# same eyes are watching (P1, W1) record bets that genuinely cannot be recovered if a run
+# fails unnoticed.
+#
+# For a line-per-record log, "both sides appended" has an obvious correct answer: keep both.
+# That is exactly what git's built-in `union` driver does. It is only correct BECAUSE these
+# files are append-only and every line stands alone; a duplicate line is harmless anyway,
+# since MarketQuoteLedger indexes on `raw_hash` and skips replays on the next read.
+#
+# DELIBERATELY NOT APPLIED to web/api/v1/*.json or data/evidence/*.json. Those are whole
+# documents regenerated each run, not logs. Union-merging a JSON object would splice two
+# versions together and produce a file that no longer parses.
+# DELIBERATELY NOT APPLIED to the bet logs either -- w1_log.csv and p1_log.csv. They look
+# append-only but they are not: `grade` MUTATES existing rows (result, actual_total,
+# graded_at) and `_write_log` rewrites the whole file. A union merge on a changed line keeps
+# BOTH versions, which would put one bet in the log twice, once ungraded and once graded, and
+# every win rate computed from it would be wrong. They are written by a single daily job with
+# its own concurrency group and have never raced; leave them to conflict loudly if they ever do.
+data/market_quotes.jsonl          merge=union
+data/predictions.jsonl            merge=union
+prop-model/data/prop_quotes.jsonl merge=union
+prop-model/data/bdl/*.jsonl       merge=union

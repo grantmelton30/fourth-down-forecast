@@ -43,8 +43,8 @@ jobs:
       PYTHONUNBUFFERED: "1"
       CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
       - run: uv sync --frozen --dev
 
       # The log is append-only and committed. Writing to it from a build whose own tests
@@ -59,7 +59,7 @@ jobs:
       # the Actions cache below restores. `track_w1.py` anchors its log to the repo rather
       # than the cache dir, so the log location does not depend on this either way.
       - name: Restore source caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             nfl-model/data/cache
@@ -103,7 +103,7 @@ jobs:
 
       - name: Save refreshed caches
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             nfl-model/data/cache
