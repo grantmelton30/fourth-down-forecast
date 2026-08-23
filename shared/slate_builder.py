@@ -45,12 +45,14 @@ def market_for_game(
     if len(lines):
         consensus = aggregate_market_consensus(lines).iloc[0]
         if pd.notna(consensus["spread"]) and pd.notna(consensus["total"]):
+            # The label names the BOOK, because the number is now that book's actual quote
+            # rather than a blend. "two-book reference" used to describe a midpoint neither
+            # book offered; saying "Bovada (of 2 books)" says what you could have bet.
+            chosen = consensus.get("chosen_provider") or "unknown book"
+            n_books = max(int(consensus["book_count_spread"]),
+                          int(consensus["book_count_total"]))
             evidence = MarketEvidence(
-                label=("multi-book median" if consensus["is_consensus"] else
-                       "two-book reference" if max(
-                           int(consensus["book_count_spread"]),
-                           int(consensus["book_count_total"])) == 2
-                       else "submitted line baseline"),
+                label=(f"{chosen}" if n_books <= 1 else f"{chosen} (of {n_books} books)"),
                 is_consensus=bool(consensus["is_consensus"]),
                 book_count_spread=int(consensus["book_count_spread"]),
                 book_count_total=int(consensus["book_count_total"]),

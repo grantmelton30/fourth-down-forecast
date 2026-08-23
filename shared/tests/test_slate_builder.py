@@ -20,7 +20,9 @@ def test_sim_forecast_uses_calibrated_weights_not_raw_average():
     assert forecast.home_win_probability == pytest.approx(.9)
 
 
-def test_three_manual_sources_create_consensus():
+def test_three_sources_still_quote_ONE_book_not_their_middle():
+    """Three books used to yield the median. It is still one book's real line -- coverage
+    is reported separately via is_consensus, and never folded into the number."""
     game = pd.Series({"game_id": "g", "spread_line": 1, "total_line": 40})
     lines = pd.DataFrame([
         {"league": "nfl", "game_id": "g", "provider": p, "spread": s, "total": t,
@@ -29,9 +31,9 @@ def test_three_manual_sources_create_consensus():
     ])
     market, evidence = market_for_game(
         game, lines, league="nfl", as_of="2026-09-02T00:00:00Z")
-    assert market.spread == 3
-    assert market.total == 45
-    assert evidence.is_consensus
+    assert (market.spread, market.total) == (2, 44), "book 'a' wins on alphabetical fallback"
+    assert market.spread != 3, "the median of 2, 3, 4 must not appear"
+    assert evidence.is_consensus, "three books is still well-covered, it just is not blended"
 
 
 def test_calibration_remains_separate():
@@ -116,7 +118,9 @@ def test_market_snapshot_drops_observations_after_cutoff():
     assert evidence.providers == ("early",)
 
 
-def test_two_sources_are_a_reference_but_not_consensus():
+def test_two_sources_pick_one_book_rather_than_splitting_them():
+    """The defect both audits found: a two-book median is the midpoint, and the midpoint of
+    2 and 4 is 3 -- a number neither book offered."""
     game = pd.Series({"game_id": "g", "spread_line": 1, "total_line": 40})
     lines = pd.DataFrame([
         {"league": "ncaa", "game_id": "g", "provider": "a", "spread": 2,
@@ -126,7 +130,7 @@ def test_two_sources_are_a_reference_but_not_consensus():
     ])
     market, evidence = market_for_game(
         game, lines, league="ncaa", as_of="2026-08-02T00:00:00Z")
-    assert market.spread == 3
+    assert market.spread == 2, "book 'a', not the 3 that neither book posted"
     assert evidence.book_count_spread == 2
     assert evidence.is_consensus is False
-    assert evidence.label == "two-book reference"
+    assert evidence.label == "a (of 2 books)", "the label names the book that was taken"
