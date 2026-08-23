@@ -41,3 +41,27 @@ footer{padding:22px clamp(18px,4vw,64px);display:flex;justify-content:space-betw
 @media(max-width:900px){.table-head.record-head{display:none}.bet-row{grid-template-columns:1fr auto;row-gap:6px}}
 
 .record-tabs{margin:30px clamp(18px,4vw,64px) 0;max-width:460px;grid-template-columns:repeat(3,1fr)}.rule-card.total{border-top-color:var(--field);background:rgba(47,93,63,.07)}.rule-card.total h3{color:var(--ink)}
+
+/* --- Mobile / narrow: the table header is hidden, so every cell names itself ---------
+   Below 900px the four data columns previously collapsed into an unlabelled 2x2 grid with
+   the header removed, which left four numbers on screen and no way to tell the model from
+   the market from the difference. Landscape phones hit this hardest: enough width to look
+   like a table, not enough to be one.
+   Fixed by stacking to ONE column and revealing a label per cell. */
+.cell-label{display:none}
+@media(max-width:900px){
+  .table-head,.game-row{grid-template-columns:1fr;row-gap:2px}
+  .game-row{padding:18px 14px}
+  .matchup-id{margin-bottom:10px}
+  /* label left, numbers right -- scannable as a list rather than read as a grid */
+  .forecast{display:grid;grid-template-columns:auto 1fr;align-items:baseline;column-gap:12px}
+  .cell-label{display:block;font:500 .62rem var(--mono);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--muted);min-width:82px}
+  .forecast strong{text-align:right;font-size:1rem}
+  .forecast span{grid-column:2;text-align:right;font-size:.64rem}
+  .rulecell{grid-column:1/-1;margin-top:10px;padding-top:10px;
+    border-top:1px solid var(--line);gap:7px}
+  .rulecell .cell-label{min-width:0;margin-bottom:2px}
+  .rulecell .badge{font-size:.7rem;padding:7px 11px}
+  .rulecell small{-webkit-line-clamp:3;font-size:.72rem}
+}

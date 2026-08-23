@@ -6,8 +6,15 @@ const signed=n=>n==null?'—':`${n>=0?'+':''}${Number(n).toFixed(1)}`;
 const number=n=>n==null?'—':Number(n).toFixed(1);
 const date=s=>s?new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(s)):'TBD';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-const forecast=(f,kind='',missing='not available')=>f?`<div class="forecast ${kind}"><strong>${signed(f.spread)} · ${number(f.total)}</strong><span>${number(f.away_score)}–${number(f.home_score)} score</span></div>`:`<div class="forecast"><strong>—</strong><span>${missing}</span></div>`;
-const ruleCell=r=>{const t=r.tracked_rule;if(!t)return`<div class="rulecell"><span class="badge">—</span><small>rule not evaluated</small></div>`;return`<div class="rulecell ${t.qualifies?'on':''}"><span class="badge">${esc(t.label||'—')}</span><small>${esc(t.reason||'')}</small></div>`};
+// `label` renders only on narrow screens. The table header carries the column names on
+// desktop, but it is hidden below 900px -- which left four unlabelled numbers with no way
+// to tell the model from the market. Each cell now names itself when the header is gone.
+const forecast=(f,kind='',missing='not available',label='')=>{
+  const tag=label?`<b class="cell-label">${label}</b>`:'';
+  return f?`<div class="forecast ${kind}">${tag}<strong>${signed(f.spread)} · ${number(f.total)}</strong><span>${number(f.away_score)}–${number(f.home_score)} score</span></div>`
+          :`<div class="forecast">${tag}<strong>—</strong><span>${missing}</span></div>`;
+};
+const ruleCell=r=>{const t=r.tracked_rule;if(!t)return`<div class="rulecell"><b class="cell-label">Tracked rule</b><span class="badge">—</span><small>rule not evaluated</small></div>`;return`<div class="rulecell ${t.qualifies?'on':''}"><b class="cell-label">Tracked rule</b><span class="badge">${esc(t.label||'—')}</span><small>${esc(t.reason||'')}</small></div>`};
 const leagueData=league=>state.explorer?.leagues?.[league]||{ratings:[],schedule:[],summary:{}};
 const normalize=value=>String(value||'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const ratingFor=(league,team)=>leagueData(league).ratings.find(r=>r.team===team);
@@ -33,7 +40,7 @@ function renderProjections(){
   rows.forEach(r=>{
     const button=document.createElement('button');button.className=`game-row ${r.out_of_distribution?'flagged':''}`;
     const warning=r.out_of_distribution?'<span class="warning-mark" aria-label="Extreme model and market disagreement">!</span>':'';
-    button.innerHTML=`<div class="matchup-id"><span class="league-tag">${r.league.toUpperCase()}</span><div class="teams"><strong>${esc(r.away_team)} at ${esc(r.home_team)} ${warning}</strong><small>W${r.week} · ${date(r.kickoff)}</small><span class="quality ${r.confidence}">${esc(r.confidence)}</span></div></div>${forecast(r.independent)}${forecast(r.market,'','No line posted yet')}<div class="forecast diff"><strong>${signed(r.model_market_difference?.spread)} · ${signed(r.model_market_difference?.total)}</strong><span>spread · total</span></div>${ruleCell(r)}`;
+    button.innerHTML=`<div class="matchup-id"><span class="league-tag">${r.league.toUpperCase()}</span><div class="teams"><strong>${esc(r.away_team)} at ${esc(r.home_team)} ${warning}</strong><small>W${r.week} · ${date(r.kickoff)}</small><span class="quality ${r.confidence}">${esc(r.confidence)}</span></div></div>${forecast(r.independent,'','not available','Model')}${forecast(r.market,'','No line posted yet','Market')}<div class="forecast diff"><b class="cell-label">Difference</b><strong>${signed(r.model_market_difference?.spread)} · ${signed(r.model_market_difference?.total)}</strong><span>spread · total</span></div>${ruleCell(r)}`;
     button.addEventListener('click',()=>openDetail(r));list.append(button);
   });
 }
