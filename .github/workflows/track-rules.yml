@@ -44,7 +44,7 @@ jobs:
       CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.0.1
       - run: uv sync --frozen --dev
 
       # The log is append-only and committed. Writing to it from a build whose own tests

@@ -26,7 +26,7 @@ jobs:
       PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.0.1
       - run: uv sync --frozen --dev
       - name: Restore source and model caches
         uses: actions/cache/restore@v6
