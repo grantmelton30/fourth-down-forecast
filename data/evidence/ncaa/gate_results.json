@@ -72,7 +72,7 @@
     {
       "ci_high": null,
       "ci_low": null,
-      "detail": "spwk4:-2.74  towk13:+2.49  towk14:+2.21  towk9:+2.06  towk10:+1.92  towk7:+1.85   (not tested, n<40: wk15=13,wk16=2)",
+      "detail": "spwk4:-2.74  towk13:+2.49  towk14:+2.20  towk9:+2.06  towk10:+1.92  towk7:+1.85   (not tested, n<40: wk15=13,wk16=2)",
       "estimate": null,
       "evaluation_line": null,
       "market": null,
@@ -153,7 +153,7 @@
       "market": null,
       "n": null,
       "name": "GATE_API_BUDGET",
-      "observed": "526 calls for a cold build (budget 250)",
+      "observed": "557 calls for a cold build (budget 250)",
       "operator": null,
       "passed": false,
       "promotion": false,
@@ -162,7 +162,7 @@
     {
       "ci_high": null,
       "ci_low": null,
-      "detail": "|3|: sim  8.35%  real 10.66%  (-2.31pp)\n      |7|: sim  7.55%  real  8.55%  (-1.00pp)\n      |10|: sim  4.73%  real  4.71%  (+0.02pp)\n      |14|: sim  4.40%  real  4.14%  (+0.26pp)\n      |17|: sim  3.44%  real  3.92%  (-0.48pp)\n      |21|: sim  3.27%  real  3.64%  (-0.37pp)\n      >28: sim 13.08%  real 17.90%  (-4.82pp)",
+      "detail": "|3|: sim  8.35%  real 10.66%  (-2.31pp)\n      |7|: sim  7.55%  real  8.55%  (-0.99pp)\n      |10|: sim  4.73%  real  4.71%  (+0.02pp)\n      |14|: sim  4.40%  real  4.14%  (+0.25pp)\n      |17|: sim  3.44%  real  3.92%  (-0.48pp)\n      |21|: sim  3.27%  real  3.64%  (-0.37pp)\n      >28: sim 13.08%  real 17.90%  (-4.82pp)",
       "estimate": null,
       "evaluation_line": null,
       "market": null,
@@ -183,16 +183,16 @@
       "market": null,
       "n": null,
       "name": "GATE_CALIBRATED",
-      "observed": "worst bin off by 29.58pp (bin (0.75, 0.8], n=214, tolerance 6pp)",
+      "observed": "worst bin off by 29.81pp (bin (0.75, 0.8], n=213, tolerance 6pp)",
       "operator": null,
       "passed": false,
       "promotion": true,
       "threshold": null
     }
   ],
-  "generated_at": "2026-08-25T12:23:36.188118+00:00",
+  "generated_at": "2026-08-28T22:04:31.369050+00:00",
   "league": "ncaa",
-  "model_version": "ncaa-7b939b0e78bc15e71cfb",
+  "model_version": "ncaa-feb063f59f280dfb63b1",
   "producer": "run_backtest.py",
   "schema_version": 1
 }

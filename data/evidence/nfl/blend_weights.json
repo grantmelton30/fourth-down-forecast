@@ -1,19 +1,19 @@
 {
   "data_cutoff": "2026-01-04",
-  "generated_at": "2026-08-25T11:54:49.002878+00:00",
+  "generated_at": "2026-08-28T21:34:40.110768+00:00",
   "league": "nfl",
-  "model_version": "nfl-21ae24a2109e31e6ee49",
+  "model_version": "nfl-2643dc7c87518a2a22ad",
   "producer": "run_backtest.py",
   "schema_version": 1,
   "weights": {
-    "a_spread": 0.06618802399406536,
-    "a_total": 0.6654147260821807,
+    "a_spread": 0.06610835705412046,
+    "a_total": 0.6654051266132879,
     "b_model": 0.0,
-    "b_model_raw": -0.0952783100080469,
-    "b_model_total": 0.10054081580932736,
-    "b_model_total_raw": 0.10054081580932736,
+    "b_model_raw": -0.09558706799034322,
+    "b_model_total": 0.10054822923750074,
+    "b_model_total_raw": 0.10054822923750074,
     "clamped": [
-      "b_model -0.095 -> 0.000"
+      "b_model -0.096 -> 0.000"
     ],
     "covariance_type_spread": "cluster",
     "covariance_type_total": "cluster",
@@ -21,17 +21,17 @@
     "n_clusters_spread": 103,
     "n_clusters_total": 103,
     "n_total": 1535,
-    "r_squared": 0.000946219659554659,
-    "resid_sd": 12.69411021197977,
-    "resid_sd_total": 13.193503744771844,
+    "r_squared": 0.0009521011400926982,
+    "resid_sd": 12.694072846487785,
+    "resid_sd_total": 13.193502918770697,
     "schema_version": 2,
-    "se_a_spread": 0.30551792359666075,
-    "se_a_total": 0.3012207326799797,
-    "se_model": 0.07830810607281193,
-    "se_model_total": 0.07129946465849417,
-    "t_a_spread": 0.2166420326993502,
-    "t_a_total": 2.209060180426308,
-    "t_model": -1.216710693008663,
-    "t_model_total": 1.410120206244067
+    "se_a_spread": 0.30550753933917013,
+    "se_a_total": 0.30121960059561664,
+    "se_model": 0.07831848234858681,
+    "se_model_total": 0.07129874722908673,
+    "t_a_spread": 0.21638862725652053,
+    "t_a_total": 2.209036614143133,
+    "t_model": -1.2204918318628273,
+    "t_model_total": 1.4102383722736929
   }
 }
