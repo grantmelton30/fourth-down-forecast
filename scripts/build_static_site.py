@@ -2,6 +2,7 @@
 """Create a complete, clean Render static artifact in ``dist``."""
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys
@@ -13,20 +14,28 @@ WEB = ROOT / "web"
 DIST = ROOT / "dist"
 
 
+def require_json(path: Path) -> None:
+    """Require a committed publication artifact that parses as a JSON object."""
+    if not path.is_file():
+        raise RuntimeError(f"publication artifact is missing: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"publication artifact is invalid: {path}") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"publication artifact must contain a JSON object: {path}")
+
+
 def main() -> int:
     subprocess.run([sys.executable, str(ROOT / "scripts" / "publish_ledger.py")],
                    check=True)
     explorer = WEB / "api/v1/explorer.json"
-    if not explorer.exists():
-        subprocess.run([sys.executable, str(ROOT / "scripts" / "build_explorer.py")],
-                       check=True)
-    # The forward record is generated the same way, and for the same reason: publish-ledger
-    # runs this script on its own 4-hourly schedule without running the trackers, so the
-    # artifact has to be able to produce itself rather than silently ship a stale or absent
-    # Record tab. It reads the append-only logs, so regenerating is always safe.
+    require_json(explorer)
+    # track-rules owns this artifact and commits it alongside the append-only logs. Render's
+    # static build has no project dependencies installed, so packaging must validate the
+    # committed record rather than silently regenerate it with pandas here.
     tracker = WEB / "api/v1/tracker.json"
-    subprocess.run([sys.executable, str(ROOT / "scripts" / "build_tracker.py")],
-                   check=True)
+    require_json(tracker)
     if DIST.resolve().parent != ROOT.resolve() or DIST.name != "dist":
         raise RuntimeError("static output must remain inside this checkout")
     if DIST.exists():
