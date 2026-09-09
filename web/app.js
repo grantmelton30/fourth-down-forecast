@@ -48,27 +48,26 @@ function renderProjections(){
 function renderRecord(){
   const t=state.tracker,cards=$('#rule-cards'),list=$('#bet-list'),blank=$('#bet-empty');
   if(!cards)return;
-  if(!t){cards.replaceChildren();return}
+  if(!t){cards.replaceChildren();list.replaceChildren();blank.hidden=false;blank.textContent='Record unavailable — the tracker could not be loaded.';return}
   const pct=v=>v==null?'—':`${Number(v).toFixed(1)}%`;
   // 'all' shows the pooled bankroll FIRST, then each rule, so the breakout is one glance
   // away rather than one click. A single league shows only that rule.
   const lg=state.recordLeague;
-  const shown=lg==='all'
-    ? [{...t.combined,total:true},...Object.values(t.rules)]
-    : Object.values(t.rules).filter(r=>r.league===lg);
+  const rules=Object.values(t.rules).filter(r=>lg==='all'||r.league===lg);
+  const shown=rules.flatMap(r=>[r,...(r.cohorts||[]).filter(c=>c.cohort!==r.cohort).map(c=>({...c,legacy:true}))]);
   cards.innerHTML=shown.map(r=>{
     // Colour tracks the only comparison that matters: the break-even rate, not zero.
     const dir=r.win_pct==null?'':(r.win_pct>=t.breakeven?'up':'down');
     const vs=r.win_pct==null?'—':`${r.win_pct>=t.breakeven?'+':''}${(r.win_pct-t.breakeven).toFixed(1)} pts vs break-even`;
     const ci=r.ci_low==null?'not enough settled bets':`${pct(r.ci_low)} to ${pct(r.ci_high)}`;
-    return `<article class="rule-card ${dir} ${r.total?'total':''}"><h3>${r.total?'Combined · both rules':`${esc(r.rule)} · ${esc(r.league.toUpperCase())}`}</h3>
-      <p class="sub">${esc(r.headline)}</p>
+    return `<article class="rule-card ${dir} ${r.total?'total':''}"><h3>${esc(r.rule)} · ${esc(r.cohort||r.league.toUpperCase())}</h3>
+      <p class="sub">${r.legacy?'Historical cohort — excluded from the active checkpoint. ':'Active reference-tracking protocol. '}${esc(r.headline)}</p>
       <div class="big"><strong>${pct(r.win_pct)}</strong><em>${esc(vs)}</em></div>
       <dl><dt>Record</dt><dd>${r.wins}-${r.losses}${r.pushes?` (${r.pushes} push)`:''}</dd>
-      <dt>Units @ -110</dt><dd>${r.units>=0?'+':''}${Number(r.units).toFixed(1)}</dd>
+      <dt>Assumed units @ -110</dt><dd>${r.units>=0?'+':''}${Number(r.units).toFixed(1)}</dd>
       <dt>95% interval</dt><dd>${esc(ci)}</dd>
-      <dt>Pending</dt><dd>${r.pending}</dd></dl>
-      <p class="status">${esc(r.status)}<br>${esc(r.prereg)}</p></article>`}).join('');
+      <dt>Pending</dt><dd>${r.pending}</dd><dt>Recorded-price units</dt><dd>${r.priced_units==null?'Unavailable':Number(r.priced_units).toFixed(2)} (${r.priced_bets||0} priced)</dd></dl>
+      <p class="status">${r.legacy?'Historical cohort; no active checkpoint.':esc(r.status)}<br>${esc(r.prereg)}</p></article>`}).join('');
   const bets=(t.bets||[]).filter(b=>lg==='all'||b.league===lg);
   blank.hidden=bets.length>0;
   blank.textContent=(t.bets||[]).length?`No ${lg.toUpperCase()} bets logged yet.`:'No bets logged yet. The trackers append here automatically once the season starts.';
@@ -79,8 +78,8 @@ function renderRecord(){
       :(b.edge!=null?`${signed(b.edge)} pt edge`:'');
     return `<div class="bet-row"><div><b>${esc(b.away_team)} at ${esc(b.home_team)}</b>
       <small>W${b.week} · ${date(b.kickoff)}${extra?` · ${esc(extra)}`:''}</small></div>
-      <span class="tag">${esc(b.rule)}</span><span>${esc(b.side||'—')}</span>
-      <span>${number(b.market_total_at_bet)}</span><span>${number(b.actual_total)}</span>
+      <span class="tag" title="${esc(b.cohort||b.line_basis||'unknown')}">${esc(b.cohort||b.line_basis||b.rule)}</span><span>${esc(b.side||'—')}</span>
+      <span>${number(b.market_total_at_bet)}<small class="quote-detail">${esc(b.book||'Book not recorded')} · ${b.price==null?'Price unavailable':esc(b.price)}<br>${esc(b.line_basis||'reference')} · ${b.quote_observed_at?date(b.quote_observed_at):'Quote time unavailable'}</small></span><span>${number(b.actual_total)}</span>
       <span class="res ${res}">${esc(label)}</span></div>`}).join('');
 }
 function populateProjectionFilters(){
@@ -110,7 +109,7 @@ function openDetail(r){
   const ev=r.market_evidence,unavailable=r.unavailable_features?.length?r.unavailable_features.join(', '):'None reported';
   const warnings=r.warnings?.length?`<div class="alert-block"><strong>Review required</strong>${r.warnings.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:'';
   const reasons=r.quality_reasons?.length?r.quality_reasons.join('; '):'No quality blockers reported';
-  $('#dialog-content').innerHTML=`<div class="dialog-inner"><p class="dialog-kicker">${r.league.toUpperCase()} · Week ${r.week} · ${date(r.kickoff)}</p><h2>${esc(r.away_team)} <span>at</span> ${esc(r.home_team)}</h2>${warnings}<div class="detail-grid"><div><span>01 Model</span><strong>${signed(r.independent.spread)} / ${number(r.independent.total)}</strong></div><div><span>02 Market</span><strong>${signed(r.market?.spread)} / ${number(r.market?.total)}</strong></div><div><span>03 Difference</span><strong>${signed(r.model_market_difference?.spread)} / ${signed(r.model_market_difference?.total)}</strong></div></div><dl class="disclosures">${winProbRow(r)}${intervalRow(r)}<dt>Quality</dt><dd>${esc(r.confidence)} — ${esc(reasons)}</dd><dt>Model version</dt><dd>${esc(r.model_version)}</dd><dt>Information cutoff</dt><dd>${date(r.data_cutoff)}</dd><dt>Market evidence</dt><dd>${ev?`${esc(ev.label)}; ${ev.book_count_spread} spread / ${ev.book_count_total} total sources (${ev.providers.map(esc).join(', ')})`:'No market evidence attached'}</dd><dt>Calibration permissions</dt><dd>Spread: ${r.calibration_status?.spread?'validated':'not validated'} · Total: ${r.calibration_status?.total?'validated':'not validated'}</dd><dt>Unavailable inputs</dt><dd>${esc(unavailable)}</dd><dt>Tracked rule</dt><dd>${r.tracked_rule?`<strong>${esc(r.tracked_rule.label)}</strong> — ${esc(r.tracked_rule.reason)}<br><small>Pre-registered tracking rule (${esc(r.tracked_rule.rule)}), recorded for a forward record. Not an authorisation to bet: this model's bet gates fail.</small>`:'Not evaluated'}</dd><dt>Interpretation</dt><dd>Difference is the independent model minus the market reference. Large disagreement triggers investigation, never an automatic pick.</dd></dl></div>`;
+  $('#dialog-content').innerHTML=`<div class="dialog-inner"><p class="dialog-kicker">${r.league.toUpperCase()} · Week ${r.week} · ${date(r.kickoff)}</p><h2>${esc(r.away_team)} <span>at</span> ${esc(r.home_team)}</h2>${warnings}<div class="detail-grid"><div><span>01 Model</span><strong>${signed(r.independent.spread)} / ${number(r.independent.total)}</strong></div><div><span>02 Market</span><strong>${signed(r.market?.spread)} / ${number(r.market?.total)}</strong></div><div><span>03 Difference</span><strong>${signed(r.model_market_difference?.spread)} / ${signed(r.model_market_difference?.total)}</strong></div></div><dl class="disclosures">${winProbRow(r)}${intervalRow(r)}<dt>Quality</dt><dd>${esc(r.confidence)} — ${esc(reasons)}</dd><dt>Model version</dt><dd>${esc(r.model_version)}</dd><dt>Information cutoff</dt><dd>${date(r.data_cutoff)}</dd><dt>Forecast generated</dt><dd>${date(r.generated_at)}</dd><dt>Market observed</dt><dd>${ev?.observed_at?date(ev.observed_at):'Observation time unavailable'}</dd><dt>Market evidence</dt><dd>${ev?`${esc(ev.label)}; ${ev.book_count_spread} spread / ${ev.book_count_total} total sources (${ev.providers.map(esc).join(', ')})`:'No market evidence attached'}</dd><dt>Experimental blend</dt><dd>Spread: ${r.calibration_status?.spread?'eligible':'unavailable'} · Total: ${r.calibration_status?.total?'eligible':'unavailable'}. Positive fitted weights do not establish probability calibration or a betting edge.</dd><dt>Unavailable inputs</dt><dd>${esc(unavailable)}</dd><dt>Tracked rule</dt><dd>${r.tracked_rule?`<strong>${esc(r.tracked_rule.label)}</strong> — ${esc(r.tracked_rule.reason)}<br><small>Pre-registered tracking rule (${esc(r.tracked_rule.rule)}), recorded for a forward record. Not an authorisation to bet: this model's bet gates fail.</small>`:'Not evaluated'}</dd><dt>Interpretation</dt><dd>Difference is the independent model minus the market reference. Large disagreement triggers investigation, never an automatic pick.</dd></dl></div>`;
   dialog.showModal();
 }
 
@@ -140,7 +139,7 @@ function renderLeague(){
     const dir=(r.net_rating||0)>=0?'pos':'neg';
     return `<button class="ranking-row" data-team-jump="${esc(r.team)}"><span><b>${r.net_rank||'—'}</b><i>${esc(r.team)}</i><small>${esc(r.conference||state.explorerLeague.toUpperCase())}</small></span><strong>${signed(r.net_rating)}</strong><em>#${r.off_rank||'—'}</em><em>#${r.def_rank||'—'}</em><span class="rating-bar-track"><span class="rating-bar-fill ${dir}" style="width:${pct}%"></span></span></button>`;
   }).join('');
-  $('#evidence-overview').innerHTML=`<div class="evidence-score"><strong>${records.filter(r=>r.confidence==='established').length}</strong><span>established forecasts</span></div><dl><dt>Incomplete</dt><dd>${records.filter(r=>r.confidence==='incomplete').length}</dd><dt>Extreme-disagreement review</dt><dd>${records.filter(r=>r.out_of_distribution).length}</dd><dt>Spread calibration</dt><dd>${records.some(r=>r.calibration_status?.spread)?'validated':'not validated'}</dd><dt>Total calibration</dt><dd>${records.some(r=>r.calibration_status?.total)?'validated':'not validated'}</dd></dl><p>Quality describes evidence maturity. It is not a pick grade.</p>`;
+  $('#evidence-overview').innerHTML=`<div class="evidence-score"><strong>${records.filter(r=>r.confidence==='established').length}</strong><span>established forecasts</span></div><dl><dt>Incomplete</dt><dd>${records.filter(r=>r.confidence==='incomplete').length}</dd><dt>Extreme-disagreement review</dt><dd>${records.filter(r=>r.out_of_distribution).length}</dd><dt>Spread blend</dt><dd>${records.some(r=>r.calibration_status?.spread)?'experimental weights available':'unavailable'}</dd><dt>Total blend</dt><dd>${records.some(r=>r.calibration_status?.total)?'experimental weights available':'unavailable'}</dd></dl><p>Quality describes evidence maturity. Blend eligibility is not probability calibration or a pick grade.</p>`;
   $$('[data-team-jump]').forEach(button=>button.addEventListener('click',()=>{state.teamLeague=state.explorerLeague;state.team=button.dataset.teamJump;showView('teams')}));
 }
 function populateTeams(){

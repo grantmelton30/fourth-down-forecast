@@ -110,12 +110,18 @@ def nflverse_quotes(
     if schedules is None or schedules.empty:
         return out
     for _, row in schedules.iterrows():
+        if pd.isna(row.get("gametime")) or not str(row.get("gametime", "")).strip():
+            continue
         kickoff = pd.to_datetime(
-            f"{row.get('gameday')} {row.get('gametime') or '00:00'}",
-            utc=True, errors="coerce",
+            f"{row.get('gameday')} {row.get('gametime')}", errors="coerce",
         )
         if pd.isna(kickoff):
             continue
+        # nflverse's schedule dictionary specifies Eastern wall time year-round.
+        kickoff = kickoff.tz_localize("America/New_York", ambiguous="NaT", nonexistent="NaT")
+        if pd.isna(kickoff):
+            continue
+        kickoff = kickoff.tz_convert("UTC")
         spread = _number(row.get("spread_line"))
         total = _number(row.get("total_line"))
         common = dict(

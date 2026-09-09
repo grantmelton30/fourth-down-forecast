@@ -41,10 +41,15 @@ def main() -> int:
         ledger = stage / "predictions.jsonl"
         predictions = stage / "predictions.json"
         explorer = stage / "explorer.json"
+        shadow = stage / "ncaa_totals_shadow.jsonl"
         source_ledger = ROOT / "data/predictions.jsonl"
+        source_shadow = ROOT / "data/internal/ncaa_totals_shadow.jsonl"
         if source_ledger.exists():
             shutil.copy2(source_ledger, ledger)
-        checked(python, "scripts/build_slate.py", "--ledger", str(ledger))
+        if source_shadow.exists():
+            shutil.copy2(source_shadow, shadow)
+        checked(python, "scripts/build_slate.py", "--ledger", str(ledger),
+                "--totals-shadow-ledger", str(shadow))
         checked(python, "scripts/publish_ledger.py", "--ledger", str(ledger),
                 "--output", str(predictions))
         checked(python, "scripts/build_explorer.py", "--output", str(explorer))
@@ -56,6 +61,8 @@ def main() -> int:
             predictions: ROOT / "web/api/v1/predictions.json",
             explorer: ROOT / "web/api/v1/explorer.json",
         }
+        if shadow.exists():
+            targets[shadow] = source_shadow
         for source, target in targets.items():
             target.parent.mkdir(parents=True, exist_ok=True)
             os.replace(source, target)

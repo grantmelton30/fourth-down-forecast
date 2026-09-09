@@ -89,3 +89,36 @@ def test_priced_units_use_the_same_convention_as_the_headline_units():
 
 def _stats_units(w, l):
     return bt._stats(w, l)["units"]
+
+
+def test_legacy_rows_do_not_advance_active_checkpoint(tmp_path):
+    import pandas as pd
+    path = tmp_path / "p1.csv"
+    pd.DataFrame([
+      {"result":"WIN", "line_basis":"opener"},
+      {"result":"LOSS", "line_basis":"current"},
+      {"result":"WIN", "line_basis":"current", "protocol_version":"P1-current-v2"},
+    ]).to_csv(path,index=False)
+    spec = {**bt.RULES["P1"], "log":path}
+    summary, rows = bt.summarise("P1", spec)
+    assert summary["settled"] == 1 and summary["wins"] == 1
+    assert len(summary["cohorts"]) == 3 and len(rows) == 3
+    assert "199" in summary["status"]
+    assert summary["priced_units"] is None and summary["priced_bets"] == 0
+
+
+def test_priced_units_exclude_unpriced_rows(tmp_path):
+    import pandas as pd
+    path = tmp_path / "p1.csv"
+    pd.DataFrame([
+      {"result":"WIN", "price":120, "protocol_version":"P1-current-v2"},
+      {"result":"LOSS", "price":-120, "protocol_version":"P1-current-v2"},
+      {"result":"LOSS", "protocol_version":"P1-current-v2"},
+    ]).to_csv(path,index=False)
+    summary,_ = bt.summarise("P1",{**bt.RULES["P1"],"log":path})
+    assert summary["priced_bets"] == 2 and summary["priced_units"] == pytest.approx(-.2)
+
+
+def test_wilson_interval_has_uncertainty_at_extreme_records():
+    assert 0 < bt._stats(2,0)["ci_low"] < 100
+    assert 0 < bt._stats(0,2)["ci_high"] < 100

@@ -96,3 +96,36 @@ def test_ev_is_reported_per_unit_risked():
     """+100 doubles a winner, so a 60% shot returns 0.2 per unit risked."""
     assert ev_per_unit(0.60, +100) == pytest.approx(0.20, abs=1e-9)
     assert ev_per_unit(1.0, -200) == pytest.approx(0.5, abs=1e-9)
+
+
+def test_all_push_is_not_a_winning_under():
+    assert select_bets([np.full(100,5)], [5])[0] is None
+    assert ev_per_unit(0,-110,p_push=1) == 0
+
+
+def test_integer_line_ev_matches_exhaustive_settlement():
+    sims = np.array([4]*20+[5]*30+[6]*50)
+    r = select_bets([sims],[5],over_prices=[-120],under_prices=[-105])[0]
+    assert r["side"] == "OVER"
+    assert r["p_push"] == pytest.approx(.3)
+    assert r["ev"] == pytest.approx((50*100/120-20)/100)
+
+
+def test_side_specific_odds_can_reverse_the_choice():
+    sims = np.array([0]*45+[1]*55)
+    r = select_bets([sims],[.5],over_prices=[-200],under_prices=[150])[0]
+    assert r["side"] == "UNDER" and r["price"] == 150
+
+
+@pytest.mark.parametrize("sims", [[],[float("nan")],[float("inf")]])
+def test_bad_simulations_are_rejected(sims):
+    with pytest.raises(ValueError):
+        select_bets([sims],[5])
+
+
+def test_missing_side_price_cannot_be_assumed():
+    assert select_bets([[0,1]],[.5],over_prices=[float("nan")],under_prices=[100]) == [None]
+    with pytest.raises(ValueError):
+        select_bets([[0,1]],[.5],over_prices=[-110])
+    with pytest.raises(ValueError):
+        select_bets([[0,1]],[.5,1.5])

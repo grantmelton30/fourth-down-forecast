@@ -46,14 +46,16 @@ def add_baselines(
     `frame` must already be sorted by kickoff — ordering by week label is not the same
     thing and leaks a postponed game backwards in time.
     """
-    out = frame.copy()
+    out = frame.sort_values("kickoff").copy()
+    if out.duplicated([player_col, "kickoff"]).any():
+        raise ValueError("duplicate player/kickoff rows would leak outcomes")
     g = out.groupby(player_col)[stat]
 
     out["base_last_n"] = g.transform(
         lambda s: _prior(s, lambda p: p.rolling(last_n, min_periods=1).mean()))
     out["base_ewma"] = g.transform(
         lambda s: _prior(s, lambda p: p.ewm(halflife=halflife, min_periods=1).mean()))
-    out["base_season_mean"] = g.transform(
+    out["base_season_mean"] = out.groupby([player_col, "season"])[stat].transform(
         lambda s: _prior(s, lambda p: p.expanding().mean()))
     out["prior_games"] = g.transform(
         lambda s: _prior(s, lambda p: p.expanding().count())).fillna(0.0)
@@ -102,9 +104,10 @@ def add_usage_model(
             lambda s: _prior(s, lambda p: p.expanding().mean()))
         # A player with no prior opportunities has no personal rate; fall back to the
         # league's prior mean rather than to zero, which would predict he never converts.
-        league = rate.groupby(out["season"]).transform(
-            lambda s: _prior(s, lambda p: p.expanding().mean()))
-        conv = conv.fillna(league).fillna(rate.mean())
+        from .prop_model import prior_group_totals
+        league_sum, league_n = prior_group_totals(out.assign(_rate=rate), ["season"], "_rate")
+        league = league_sum / league_n.replace(0, np.nan)
+        conv = conv.fillna(league)
 
     out["model_pred"] = out[share_col] * out["team_volume_pred"] * conv
     out["model_conv_rate"] = conv

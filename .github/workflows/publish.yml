@@ -37,15 +37,17 @@ jobs:
             ncaa-model/data/api_budget.json
           key: football-model-${{ runner.os }}-${{ github.run_id }}
           restore-keys: football-model-${{ runner.os }}-
-      - name: Verify shared, NFL, and NCAA suites in isolated processes
+      - name: Verify shared, NFL, NCAA, and prop suites in isolated processes
         run: |
           uv run pytest -q shared/tests
           (cd nfl-model && uv run pytest -q -m "not integration" tests)
           (cd ncaa-model && uv run pytest -q -m "not integration" tests)
+          (cd prop-model && uv run pytest -q tests)
       # Runs on every schedule, including the frequent capture-only pass. A quote that
       # is not recorded now cannot be recovered later, so this must not depend on the
       # model rebuild below succeeding.
       - name: Capture market quotes
+        id: capture
         run: uv run python scripts/collect_market_quotes.py
       - name: Refresh sources, rebuild models, and stage publication
         if: github.event.schedule != '23 */6 * * *'
@@ -56,6 +58,7 @@ jobs:
             uv run python scripts/refresh_publication.py
           fi
       - name: Validate promoted publication
+        id: validate
         if: github.event.schedule != '23 */6 * * *'
         run: uv run python scripts/validate_publication.py
       - name: Save refreshed caches
@@ -68,32 +71,42 @@ jobs:
             ncaa-model/data/api_budget.json
           key: football-model-${{ runner.os }}-${{ github.run_id }}
       - name: Commit changed static artifact
+        if: always() && steps.capture.outcome == 'success'
+        env:
+          PUBLICATION_VALID: ${{ steps.validate.outcome == 'success' }}
         run: |
-          TRACKED="data/predictions.jsonl data/evidence data/market_quotes.jsonl web/api/v1"
+          TRACKED="data/predictions.jsonl data/evidence data/market_quotes.jsonl data/internal/ncaa_totals_shadow.jsonl web/api/v1"
           if git diff --quiet -- $TRACKED; then exit 0; fi
           git config user.name "fourth-down-bot"
           git config user.email "actions@users.noreply.github.com"
           # The evidence goes in the same commit as the claim it authorized.
-          git add data/predictions.jsonl data/evidence data/market_quotes.jsonl \
-            web/api/v1/predictions.json web/api/v1/explorer.json
+          git add data/market_quotes.jsonl
+          if [ "$PUBLICATION_VALID" = "true" ]; then
+            git add data/predictions.jsonl data/evidence web/api/v1/predictions.json web/api/v1/explorer.json
+            if [ -f data/internal/ncaa_totals_shadow.jsonl ]; then
+              git add data/internal/ncaa_totals_shadow.jsonl
+            fi
+          fi
+          if git diff --cached --quiet; then exit 0; fi
           # Concurrent schedules append to the same ledgers; rebase onto whatever the
           # previous run pushed rather than clobbering it.
           git commit -m "capture market quotes and refresh projections"
-          # RETRY, because a rebase can still fail on files the union driver does not cover.
-          # .gitattributes resolves the append-only ledgers automatically, but the
-          # regenerated artifacts (web/api/v1/*.json, data/evidence) are whole documents and
-          # a concurrent run rewrites them wholesale. For those, "whatever the other run
-          # produced, then re-apply mine" is the correct resolution -- they are derived files
-          # and the next run regenerates them anyway. Failing the whole job over them lost
-          # the market capture too, which is the one thing that cannot be re-created.
+          # A conflict needs review; never auto-stage unvalidated local artifacts.
           for attempt in 1 2 3; do
-            if git pull --rebase --autostash origin main; then
-              git push && exit 0
+            if ! git pull --rebase origin main; then
+              git rebase --abort || true
+              exit 1
             fi
-            echo "rebase failed (attempt $attempt); resolving derived artifacts and retrying"
-            git checkout --theirs -- web/api/v1 data/evidence 2>/dev/null || true
-            git add -A
-            GIT_EDITOR=true git rebase --continue || git rebase --abort || true
-            sleep 5
+            if git push; then exit 0; fi
+            if [ "$attempt" -lt 3 ]; then sleep 5; fi
           done
           echo "could not land the commit after 3 attempts"; exit 1
+      - name: Preserve captured evidence for recovery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-evidence-${{ github.run_id }}
+          path: |
+            data/market_quotes.jsonl
+            data/internal/ncaa_totals_shadow.jsonl
+          if-no-files-found: ignore

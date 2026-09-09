@@ -42,7 +42,7 @@ def test_validated_mean_replaces_simulation_mean_without_destroying_distribution
     assert forecast.spread == pytest.approx(9.0)
     assert sim._margin_target == 9.0
     assert sim._total_target == 49.0
-    assert forecast.source == "validated football mean + drive simulation"
+    assert forecast.source == "football model + drive simulation"
     assert forecast.interval_80_low is not None
 
 
@@ -100,7 +100,7 @@ def test_game_specific_quality_and_disagreement_fail_closed():
     assert quality.pick_eligible is False
     assert quality.out_of_distribution is True
     assert any("Extreme" in warning for warning in quality.warnings)
-    assert any("spread calibration" in reason for reason in quality.reasons)
+    assert any("spread experimental blend" in reason for reason in quality.reasons)
 
 
 def test_only_extreme_disagreement_gets_warning_icon_policy():

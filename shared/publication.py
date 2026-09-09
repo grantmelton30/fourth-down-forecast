@@ -45,7 +45,7 @@ def assess_quality(
     # book count and providers are already disclosed via market_evidence itself.
     unvalidated = [m for m in ("spread", "total") if not calibration_status.get(m, False)]
     for market in unvalidated:
-        reasons.append(f"{market} calibration is not validated")
+        reasons.append(f"{market} experimental blend is unavailable")
     # Say why the evidence was refused, not merely that the label is absent. A build
     # that never fitted weights and a build whose weights were repudiated as belonging
     # to a different model both show no calibration; only one of them is routine.

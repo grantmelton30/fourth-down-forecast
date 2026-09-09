@@ -88,6 +88,8 @@ def per_touch_sample(market: str, seasons: list[int]) -> np.ndarray:
     return sub["yards_gained"].to_numpy(dtype=float)
 
 
+from src.evaluation import eligible_rows, chronological_split
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -112,22 +114,21 @@ def main() -> int:
     f = add_baselines(f, stat=denom)
     f = defense_effects(f, stat=denom, baseline_col="base_ewma")
     f = predict(f, baseline_col="base_ewma")
-    f = f[f.groupby("player_id")[denom].transform("mean") >= min_opp]
+    f = eligible_rows(f, denom, min_opp)
     f = f[f["prior_games"] >= args.min_prior].dropna(subset=[args.market, "pred_mean"])
 
-    train = f[f["season"] != args.holdout]
-    test = f[f["season"] == args.holdout]
+    train, test = chronological_split(f, args.holdout)
     if test.empty:
         print(f"no rows for holdout {args.holdout}")
         return 1
 
     # Per-touch distribution fitted on TRAINING seasons only.
-    touches = per_touch_sample(args.market, [s for s in args.seasons if s != args.holdout])
+    touches = per_touch_sample(args.market, [s for s in args.seasons if s < args.holdout])
     ald = fit_ald(touches)
     touch_r = fit_touch_dispersion(train[denom])
     print(f"market        : {args.market}")
     print(f"per-touch ALD : mu={ald[0]:.2f} sigma={ald[1]:.2f} tau={ald[2]:.3f}  "
-          f"(n={len(touches):,} plays, {args.seasons[0]}-{max(s for s in args.seasons if s != args.holdout)})")
+          f"(n={len(touches):,} plays, {args.seasons[0]}-{max(s for s in args.seasons if s < args.holdout)})")
     print(f"touch count r : {touch_r:.2f}")
     print(f"holdout       : {args.holdout}, {len(test):,} player-weeks")
 

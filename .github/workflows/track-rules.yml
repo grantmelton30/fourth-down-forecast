@@ -49,9 +49,10 @@ jobs:
 
       # The log is append-only and committed. Writing to it from a build whose own tests
       # fail would put an unfixable bad row into a permanent record, so this gates it.
-      - name: Verify the W1 tracker before it is allowed to write
+      - name: Verify tracking and grading before writes
+        id: verify
         run: |
-          uv run pytest -q shared/tests/test_tracked_rules.py
+          uv run pytest -q shared/tests/test_tracked_rules.py shared/tests/test_build_tracker.py shared/tests/test_grade_all_games.py shared/tests/test_execution_quotes.py
           (cd nfl-model && uv run pytest -q tests/test_track_w1.py)
           (cd ncaa-model && uv run pytest -q tests/test_track_p1.py)
 
@@ -95,10 +96,20 @@ jobs:
           (cd nfl-model && uv run python track_w1.py report)
           (cd ncaa-model && uv run python track_p1.py report)
 
+      # FULL-SLATE GRADE + CLV. Research instrument, deliberately NOT on the site: it writes
+      # to data/internal/, which build_static_site.py does not copy into dist/. The bet logs
+      # settle ~5 games a week; the projection ledger has an opinion on 40-90, and the
+      # discarded nine-tenths is the only part large enough to say anything within a season.
+      #
+      # Fail visibly on grading errors; preserve successful rows in the final commit.
+      - name: Grade the full slate and report CLV
+        run: uv run python scripts/grade_all_games.py --quiet
+
       # Publishes both logs to web/api/v1/tracker.json for the site's Record tab. Reads the
       # logs and never recomputes them -- re-deriving what "would have" qualified from
       # today's model would replace the bet-time number and turn the record into a backtest.
       - name: Publish the forward record to the site
+        if: always() && steps.verify.outcome == 'success'
         run: uv run python scripts/build_tracker.py
 
       - name: Save refreshed caches
@@ -112,6 +123,7 @@ jobs:
           key: track-rules-${{ runner.os }}-${{ github.run_id }}
 
       - name: Commit the log
+        if: always() && steps.verify.outcome == 'success'
         run: |
           # Stage each path SEPARATELY and only if it exists. `git add a b c` aborts
           # atomically when any one pathspec matches nothing, so listing a log that has not
@@ -119,7 +131,7 @@ jobs:
           # 2026-08-21: 26 P1 bets were recorded, w1_log.csv did not exist yet, and the step
           # reported success having committed nothing.
           staged=0
-          for f in nfl-model/data/w1_log.csv ncaa-model/data/p1_log.csv                    web/api/v1/tracker.json; do
+          for f in nfl-model/data/w1_log.csv ncaa-model/data/p1_log.csv                    web/api/v1/tracker.json data/internal/graded_games_v2.csv data/internal/grading_status.json; do
             if [ -f "$f" ]; then git add -- "$f"; staged=1; fi
           done
           if [ "$staged" = "0" ] || git diff --cached --quiet; then
@@ -132,3 +144,13 @@ jobs:
           # landed rather than clobbering it.
           git pull --rebase --autostash origin main
           git push
+      - name: Preserve tracking evidence for recovery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tracking-evidence-${{ github.run_id }}
+          path: |
+            nfl-model/data/w1_log.csv
+            ncaa-model/data/p1_log.csv
+            data/internal
+          if-no-files-found: ignore

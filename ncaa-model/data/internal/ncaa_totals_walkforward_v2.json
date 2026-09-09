@@ -1,0 +1,324 @@
+{
+  "schema_version": 1,
+  "status": "preregistered_historical_challenger_not_authorized_for_promotion",
+  "frame_sha256": "145767e4dfd09f6cf1365acb1d4284256413121bf3c6d54ef49dd76eda997b5b",
+  "evaluation_rows": 2410,
+  "team_shrinkage": 20.0,
+  "ridge_alpha": 45.0,
+  "families": {
+    "movement_context": [
+      "line_move",
+      "line_move_missing",
+      "market_level",
+      "market_level_squared",
+      "abs_spread_close",
+      "indoor",
+      "wind_mph"
+    ],
+    "football_context": [
+      "pace_sum",
+      "eff_sum",
+      "pace_efficiency_interaction",
+      "abs_net_diff",
+      "early_down_efficiency_matchup_sum",
+      "explosive_rate_matchup_sum",
+      "red_zone_td_rate_matchup_sum",
+      "starting_field_position_matchup_sum",
+      "pass_block_success_matchup_sum",
+      "run_block_success_matchup_sum",
+      "abs_qb_delta_gap"
+    ],
+    "team_memory": [
+      "team_memory_feature"
+    ],
+    "combined_v2": [
+      "line_move",
+      "line_move_missing",
+      "market_level",
+      "market_level_squared",
+      "abs_spread_close",
+      "indoor",
+      "wind_mph",
+      "pace_sum",
+      "eff_sum",
+      "pace_efficiency_interaction",
+      "abs_net_diff",
+      "early_down_efficiency_matchup_sum",
+      "explosive_rate_matchup_sum",
+      "red_zone_td_rate_matchup_sum",
+      "starting_field_position_matchup_sum",
+      "pass_block_success_matchup_sum",
+      "run_block_success_matchup_sum",
+      "abs_qb_delta_gap",
+      "team_memory_feature"
+    ]
+  },
+  "metrics": [
+    {
+      "model": "market",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.783391791105462,
+      "mae": 12.511410788381744,
+      "bias_value": -1.0143153526970954,
+      "gain_vs_market": 0.0,
+      "gain_vs_market_ci90": [
+        0.0,
+        0.0
+      ],
+      "gain_vs_bias": -0.017798775005623213,
+      "gain_vs_bias_ci90": [
+        -0.03405904324214735,
+        -0.0008995593936380565
+      ],
+      "season_gains": {
+        "2022": {
+          "vs_market": 0.0,
+          "vs_bias": 0.006766802719051057
+        },
+        "2023": {
+          "vs_market": 0.0,
+          "vs_bias": -0.018340620528805474
+        },
+        "2024": {
+          "vs_market": 0.0,
+          "vs_bias": -0.05124453971940568
+        },
+        "2025": {
+          "vs_market": 0.0,
+          "vs_bias": -0.004476353751410755
+        }
+      },
+      "positive_seasons": 0,
+      "eligible_for_new_shadow": false
+    },
+    {
+      "model": "bias",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.765593016099839,
+      "mae": 12.516046775625222,
+      "bias_value": -0.5715411469276361,
+      "gain_vs_market": 0.017798775005623213,
+      "gain_vs_market_ci90": [
+        0.0010144797483843785,
+        0.0343592798381911
+      ],
+      "gain_vs_bias": 0.0,
+      "gain_vs_bias_ci90": [
+        0.0,
+        0.0
+      ],
+      "season_gains": {
+        "2022": {
+          "vs_market": -0.006766802719051057,
+          "vs_bias": 0.0
+        },
+        "2023": {
+          "vs_market": 0.018340620528805474,
+          "vs_bias": 0.0
+        },
+        "2024": {
+          "vs_market": 0.05124453971940568,
+          "vs_bias": 0.0
+        },
+        "2025": {
+          "vs_market": 0.004476353751410755,
+          "vs_bias": 0.0
+        }
+      },
+      "positive_seasons": 0,
+      "eligible_for_new_shadow": false
+    },
+    {
+      "model": "tempo_efficiency",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.750889047969933,
+      "mae": 12.507376764782272,
+      "bias_value": -0.6318869882070342,
+      "gain_vs_market": 0.032502743135529144,
+      "gain_vs_market_ci90": [
+        0.002267789244325247,
+        0.06349568913533626
+      ],
+      "gain_vs_bias": 0.014703968129905931,
+      "gain_vs_bias_ci90": [
+        -0.015160500359783401,
+        0.044859859023559885
+      ],
+      "season_gains": {
+        "2022": {
+          "vs_market": -0.00026703118209070453,
+          "vs_bias": 0.006499771536960353
+        },
+        "2023": {
+          "vs_market": 0.03433709797393725,
+          "vs_bias": 0.015996477445131774
+        },
+        "2024": {
+          "vs_market": 0.06630090409888112,
+          "vs_bias": 0.01505636437947544
+        },
+        "2025": {
+          "vs_market": 0.025369177206187032,
+          "vs_bias": 0.020892823454776277
+        }
+      },
+      "positive_seasons": 3,
+      "eligible_for_new_shadow": false
+    },
+    {
+      "model": "movement_context",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.778033484097394,
+      "mae": 12.512020486614238,
+      "bias_value": -0.9278737631893188,
+      "gain_vs_market": 0.005358307008068053,
+      "gain_vs_market_ci90": [
+        -0.04360756675848902,
+        0.05294055887856617
+      ],
+      "gain_vs_bias": -0.01244046799755516,
+      "gain_vs_bias_ci90": [
+        -0.0582851334521016,
+        0.033077183171603616
+      ],
+      "season_gains": {
+        "2022": {
+          "vs_market": 0.05050693529572747,
+          "vs_bias": 0.05727373801477853
+        },
+        "2023": {
+          "vs_market": -0.04673991938718913,
+          "vs_bias": -0.0650805399159946
+        },
+        "2024": {
+          "vs_market": 0.036302078921075065,
+          "vs_bias": -0.014942460798330615
+        },
+        "2025": {
+          "vs_market": -0.01878179351169429,
+          "vs_bias": -0.023258147263105045
+        }
+      },
+      "positive_seasons": 1,
+      "eligible_for_new_shadow": false
+    },
+    {
+      "model": "football_context",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.793139980437916,
+      "mae": 12.542702949462136,
+      "bias_value": -0.5937637737479029,
+      "gain_vs_market": -0.009748189332453805,
+      "gain_vs_market_ci90": [
+        -0.04399696486426681,
+        0.02400913961894258
+      ],
+      "gain_vs_bias": -0.027546964338077018,
+      "gain_vs_bias_ci90": [
+        -0.06217560442146519,
+        0.009327747028478675
+      ],
+      "season_gains": {
+        "2022": {
+          "vs_market": -0.06948434770750644,
+          "vs_bias": -0.06271754498845539
+        },
+        "2023": {
+          "vs_market": -0.028171327706569826,
+          "vs_bias": -0.0465119482353753
+        },
+        "2024": {
+          "vs_market": 0.033718284365480855,
+          "vs_bias": -0.017526255353924824
+        },
+        "2025": {
+          "vs_market": 0.018689770982351916,
+          "vs_bias": 0.014213417230941161
+        }
+      },
+      "positive_seasons": 1,
+      "eligible_for_new_shadow": false
+    },
+    {
+      "model": "team_memory",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.75851350042076,
+      "mae": 12.504096333606972,
+      "bias_value": -0.651500598726086,
+      "gain_vs_market": 0.024878290684702264,
+      "gain_vs_market_ci90": [
+        0.006570930491905269,
+        0.0443731762210561
+      ],
+      "gain_vs_bias": 0.0070795156790790514,
+      "gain_vs_bias_ci90": [
+        -0.010340571515871132,
+        0.023063778663745895
+      ],
+      "season_gains": {
+        "2022": {
+          "vs_market": -0.018861823078726303,
+          "vs_bias": -0.012095020359675246
+        },
+        "2023": {
+          "vs_market": 0.04661328971120682,
+          "vs_bias": 0.028272669182401344
+        },
+        "2024": {
+          "vs_market": 0.05109160043874539,
+          "vs_bias": -0.0001529392806602914
+        },
+        "2025": {
+          "vs_market": 0.01647649020084252,
+          "vs_bias": 0.012000136449431764
+        }
+      },
+      "positive_seasons": 2,
+      "eligible_for_new_shadow": false
+    },
+    {
+      "model": "combined_v2",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.847460304274149,
+      "mae": 12.55980265530851,
+      "bias_value": -0.9897946400418436,
+      "gain_vs_market": -0.06406851316868689,
+      "gain_vs_market_ci90": [
+        -0.12111248880677587,
+        -0.007549634187377485
+      ],
+      "gain_vs_bias": -0.0818672881743101,
+      "gain_vs_bias_ci90": [
+        -0.14107606748873228,
+        -0.025660733285690716
+      ],
+      "season_gains": {
+        "2022": {
+          "vs_market": -0.012611059405085001,
+          "vs_bias": -0.005844256686033944
+        },
+        "2023": {
+          "vs_market": -0.1278544561502848,
+          "vs_bias": -0.14619507667909026
+        },
+        "2024": {
+          "vs_market": -0.0875392532719701,
+          "vs_bias": -0.13878379299137578
+        },
+        "2025": {
+          "vs_market": -0.023552851479252013,
+          "vs_bias": -0.028029205230662768
+        }
+      },
+      "positive_seasons": 0,
+      "eligible_for_new_shadow": false
+    }
+  ]
+}

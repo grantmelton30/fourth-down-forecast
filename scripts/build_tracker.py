@@ -50,7 +50,8 @@ RULES = {
 
 COMMON = ["game_id", "season", "week", "away_team", "home_team", "kickoff",
           "market_total_at_bet", "price_under", "line_basis", "side", "recorded_at",
-          "actual_total",
+          "protocol_version", "book", "quote_observed_at", "quote_source", "quote_id",
+          "price", "price_status", "model_version", "actual_total",
           "market_total_close", "result", "graded_at"]
 EXTRA = {"P1": ["model_total", "edge"],
          "W1": ["forecast_wind_mph", "observed_wind_mph", "hours_before_kickoff"]}
@@ -104,67 +105,82 @@ def _stats(wins: int, losses: int) -> dict:
     if not n:
         return {"win_pct": None, "units": 0.0, "ci_low": None, "ci_high": None}
     r = wins / n
-    se = math.sqrt(r * (1 - r) / n)
+    # Wilson interval stays inside [0, 1], including all-win/all-loss samples.
+    z = 1.96
+    denom = 1 + z*z/n
+    center = (r + z*z/(2*n))/denom
+    half = z*math.sqrt(r*(1-r)/n + z*z/(4*n*n))/denom
     return {"win_pct": round(100 * r, 1),
             "units": round(wins - losses * 1.1, 1),
-            "ci_low": round(100 * (r - 1.96 * se), 1) if n > 1 else None,
-            "ci_high": round(100 * (r + 1.96 * se), 1) if n > 1 else None}
+            "ci_low": round(100 * (center-half), 1) if n > 1 else None,
+            "ci_high": round(100 * (center+half), 1) if n > 1 else None}
+
+
+ACTIVE_PROTOCOL = {"P1": "P1-current-v2", "W1": "W1-reference-v2"}
+
+
+def cohort_for(row, rule):
+    protocol = row.get("protocol_version")
+    if isinstance(protocol, str) and protocol.strip():
+        return protocol
+    if rule == "W1":
+        return "W1-legacy-reference"
+    basis = row.get("line_basis")
+    return "P1-legacy-current" if basis == "current" else "P1-legacy-opener"
+
+
+def _valid_price(value):
+    try:
+        price = float(value)
+        return math.isfinite(price) and abs(price) >= 100
+    except (TypeError, ValueError):
+        return False
+
+
+def _cohort_stats(log, rule, spec, cohort):
+    results = log.get("result", pd.Series(index=log.index, dtype=object)).fillna("")
+    settled = log[results.isin(["WIN", "LOSS"])]
+    wins = int((settled["result"] == "WIN").sum()) if len(settled) else 0
+    losses = len(settled)-wins
+    priced = []
+    for row in settled.to_dict("records"):
+        price = row.get("price")
+        if not _valid_price(price) and rule == "W1":
+            price = row.get("price_under")
+        if _valid_price(price):
+            priced.append((row["result"], float(price)))
+    n = len(settled)
+    pct = 100*wins/n if n else None
+    checkpoint = spec["checkpoint_n"]
+    status = (f"{max(0, checkpoint-n)} more settled selections to this cohort's monitoring checkpoint"
+              if n < checkpoint else "monitoring checkpoint reached; no profitability claim")
+    if n >= checkpoint and pct < spec["kill_below"]:
+        status = "KILL — below the pre-committed floor at this cohort's checkpoint"
+    return {"rule": rule, "league": spec["league"], "headline": spec["headline"],
+            "prereg": spec["prereg"], "cohort": cohort,
+            "logged": len(log), "settled": n, "pending": int((results == "").sum()),
+            "pushes": int((results == "PUSH").sum()), "wins": wins, "losses": losses,
+            **_stats(wins, losses), "breakeven": BREAKEVEN,
+            "priced_units": round(sum(1 if r == "WIN" else -_loss_units(p) for r,p in priced), 3) if priced else None,
+            "priced_bets": len(priced),
+            "real_breakeven": round(100*sum(_loss_units(p) for _,p in priced)/sum(1+_loss_units(p) for _,p in priced), 2) if priced else None,
+            "checkpoint_n": checkpoint, "kill_below": spec["kill_below"],
+            "status": status, "evidence_status": "reference tracking; execution is not verified"}
 
 
 def summarise(rule: str, spec: dict) -> tuple[dict, list]:
-    if not spec["log"].exists():
-        return ({"rule": rule, "league": spec["league"], "headline": spec["headline"],
-                 "prereg": spec["prereg"], "logged": 0, "settled": 0, "pending": 0,
-                 "pushes": 0, "wins": 0, "losses": 0, "win_pct": None, "units": 0.0,
-                 "breakeven": BREAKEVEN, "ci_low": None, "ci_high": None,
-                 "priced_units": 0.0, "priced_bets": 0, "real_breakeven": None,
-                 "checkpoint_n": spec["checkpoint_n"], "kill_below": spec["kill_below"],
-                 "status": "no bets logged yet"}, [])
-
-    log = pd.read_csv(spec["log"])
-    result = log["result"].fillna("") if "result" in log else pd.Series([""] * len(log))
-    settled = log[result.isin(["WIN", "LOSS"])]
-    wins = int((settled["result"] == "WIN").sum()) if len(settled) else 0
-    n = len(settled)
-    losses = n - wins
-    pct = (100.0 * wins / n) if n else None
-    st = _stats(wins, losses)
-
-    if n >= spec["checkpoint_n"]:
-        status = ("KILL — below the pre-committed floor at the checkpoint"
-                  if pct is not None and pct < spec["kill_below"]
-                  else "continuing — not a claim that it works")
-    else:
-        status = f"{spec['checkpoint_n'] - n} more settled bets to the first checkpoint"
-
-    # Units at the price actually recorded, where one was. Reported ALONGSIDE the -110
-    # figure rather than replacing it, so the two can be compared and neither is hidden.
-    priced_units, priced_n, be_sum = 0.0, 0, 0.0
-    if n:
-        for _, r in settled.iterrows():
-            odds = r.get("price_under") if "price_under" in settled.columns else None
-            if odds is not None and isinstance(odds, float) and math.isfinite(odds):
-                priced_n += 1
-            be_sum += _breakeven(odds)
-            priced_units += (1.0 if r["result"] == "WIN" else -_loss_units(odds))
-
-    cols = [c for c in COMMON + EXTRA[rule] if c in log.columns]
-    rows = []
-    for rec in log[cols].to_dict("records"):
-        rows.append({"rule": rule, "league": spec["league"],
-                     **{k: _clean(v) for k, v in rec.items()}})
-    # Newest first: graded games at the top, then pending, by kickoff.
+    log = pd.read_csv(spec["log"]) if spec["log"].exists() else pd.DataFrame()
+    log["cohort"] = [cohort_for(r, rule) for r in log.to_dict("records")]
+    active = ACTIVE_PROTOCOL[rule]
+    summary = _cohort_stats(log[log.cohort == active], rule, spec, active)
+    summary["cohorts"] = [_cohort_stats(g, rule, spec, str(c))
+                          for c,g in log.groupby("cohort", sort=True)]
+    cols = [c for c in [*COMMON, *EXTRA[rule], "cohort"] if c in log.columns]
+    rows = [{"rule": rule, "league": spec["league"],
+             **{k: _clean(v) for k,v in rec.items()}}
+            for rec in log[cols].to_dict("records")]
     rows.sort(key=lambda r: str(r.get("kickoff") or ""), reverse=True)
-
-    return ({"rule": rule, "league": spec["league"], "headline": spec["headline"],
-             "prereg": spec["prereg"], "logged": int(len(log)), "settled": n,
-             "pending": int((result == "").sum()), "pushes": int((result == "PUSH").sum()),
-             "wins": wins, "losses": losses, **st, "breakeven": BREAKEVEN,
-             "priced_units": round(priced_units, 1) if n else 0.0,
-             "priced_bets": priced_n,
-             "real_breakeven": round(100 * be_sum / n, 2) if n else None,
-             "checkpoint_n": spec["checkpoint_n"], "kill_below": spec["kill_below"],
-             "status": status}, rows)
+    return summary, rows
 
 
 def main() -> int:
@@ -183,29 +199,30 @@ def main() -> int:
     tl = sum(r["losses"] for r in rules.values())
     combined = {
         "rule": "ALL", "league": "all",
-        "headline": "Both pre-registered rules pooled",
+        "headline": "Active tracking protocols only; legacy cohorts listed separately",
         "prereg": "NCAA P1 + NFL W1",
         "logged": sum(r["logged"] for r in rules.values()),
         "settled": tw + tl, "pending": sum(r["pending"] for r in rules.values()),
         "pushes": sum(r["pushes"] for r in rules.values()),
         "wins": tw, "losses": tl, **_stats(tw, tl), "breakeven": BREAKEVEN,
-        "priced_units": round(sum(r["priced_units"] for r in rules.values()), 1),
+        "priced_units": round(sum(r["priced_units"] or 0 for r in rules.values()), 3) if any(r["priced_bets"] for r in rules.values()) else None,
         "priced_bets": sum(r["priced_bets"] for r in rules.values()),
         "real_breakeven": None,
         "checkpoint_n": None, "kill_below": None,
         "status": ("no bets logged yet" if tw + tl == 0 else
-                   "combined bankroll across both rules; each rule has its own checkpoint"),
+                   "Active protocols only; each cohort has its own monitoring checkpoint"),
     }
     print(f"  ALL: {combined['logged']} logged, {combined['settled']} settled, "
           f"{combined['win_pct'] if combined['win_pct'] is not None else '--'}%")
 
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "breakeven": BREAKEVEN,
-        "disclaimer": ("Forward record of two pre-registered tracking rules. "
+        "disclaimer": ("Reference tracking separated by protocol and line basis. "
                        "bets_allowed() is False for both leagues and neither rule is an "
-                       "authorisation to stake money. Units assume one flat unit at -110."),
+                       "authorisation to stake money. Assumed units risk 1.1 to win 1 at -110. "
+                       "Priced units include only rows with recorded odds; execution is unverified."),
         "combined": combined,
         "rules": rules,
         "bets": bets,

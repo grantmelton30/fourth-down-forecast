@@ -31,7 +31,7 @@
       <div class="title-block">
         <p class="eyebrow">Independent football projections · v2</p>
         <h1 id="page-title">See the model.<br><em>Then see the market.</em></h1>
-        <p class="lede">Four numbers, kept structurally separate. The raw football model never reads a betting line; calibration is displayed alongside it, never over it.</p>
+        <p class="lede">Compare the independent forecast with its market reference. A model disagreement or rule match is a research signal, not a verified betting edge.</p>
       </div>
       <div class="controls" aria-label="Prediction filters">
         <div class="segmented" role="group" aria-label="League">
@@ -62,7 +62,7 @@
 
     <section class="legend" aria-label="Forecast definitions">
       <div><b>01</b><span><strong>Model</strong>Football-only score and line.</span></div>
-      <div><b>02</b><span><strong>Market</strong>Best available published line(s), consensus median when more than one book agrees.</span></div>
+      <div><b>02</b><span><strong>Market</strong>Published reference line; consensus requires at least three independent books.</span></div>
       <div><b>03</b><span><strong>Difference</strong>Model minus market. Not automatically an edge.</span></div>
       <div><b>04</b><span><strong>Tracked rule</strong>Whether the pre-registered rule fires (NCAA P1 / NFL W1). A record of what the declared rule would do &mdash; both leagues fail their bet gates.</span></div>
     </section>
@@ -90,7 +90,7 @@
     <div id="record-view" class="workspace-view">
       <section class="view-heading">
         <p class="eyebrow">Forward record</p>
-        <div><h1>What the rules actually did.</h1><p>Every bet the two pre-registered rules logged before kickoff, graded once the game finished. Written at bet time and never edited &mdash; that is what separates this from another backtest.</p></div>
+        <div><h1>What the rules actually did.</h1><p>Selections are separated by protocol and line basis. Historical cohorts do not advance current checkpoints. Reference lines and assumed returns do not establish executable bets.</p></div>
       </section>
       <div class="segmented record-tabs" role="group" aria-label="Record league">
         <button class="active" data-record="all">NFL + NCAA</button>
@@ -99,7 +99,7 @@
       </div>
       <section class="rule-cards" id="rule-cards"></section>
       <section class="matchups">
-        <div class="table-head record-head"><span>Game</span><span>Rule</span><span>Bet</span><span>Line</span><span>Actual</span><span>Result</span></div>
+        <div class="table-head record-head"><span>Game</span><span>Rule</span><span>Side</span><span>Line &amp; quote</span><span>Actual</span><span>Result</span></div>
         <div id="bet-list"></div>
         <div id="bet-empty" class="panel-empty">No bets logged yet. The trackers append here automatically once the season starts.</div>
       </section>

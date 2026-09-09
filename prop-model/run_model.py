@@ -70,6 +70,8 @@ def build(seasons, market):
     return predict(f, baseline_col="base_ewma")
 
 
+from src.evaluation import eligible_rows, chronological_split
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -79,12 +81,13 @@ def main() -> int:
     p.add_argument("--min-prior", type=int, default=4)
     args = p.parse_args()
 
+    args.holdout = args.holdout or max(args.seasons)
     denom, min_opp = MARKETS[args.market]
     f = build(args.seasons, args.market)
-    f = f[f.groupby("player_id")[denom].transform("mean") >= min_opp]
+    f = eligible_rows(f, denom, min_opp)
     f = f[f["prior_games"] >= args.min_prior]
 
-    scored = f[f["season"] == args.holdout] if args.holdout else f
+    train, scored = chronological_split(f, args.holdout)
     if scored.empty:
         return print(f"no rows for holdout {args.holdout}") or 1
 
@@ -115,7 +118,7 @@ def main() -> int:
         print("Fitting one produces -inf log scores. A hurdle or empirical-residual model is")
         print("needed before this market can be priced. MAE above is the only valid number.")
         return 0
-    r = fit_dispersion(f[f["season"] != args.holdout] if args.holdout else f,
+    r = fit_dispersion(train,
                        stat=args.market)
     print(f"\ndispersion r = {r:.2f}   "
           f"({'overdispersed vs Poisson' if np.isfinite(r) else 'Poisson limit'})")

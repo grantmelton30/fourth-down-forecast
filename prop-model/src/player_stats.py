@@ -116,8 +116,11 @@ def usage_shares(stats: pd.DataFrame, *, prior_games: float = 4.0) -> pd.DataFra
         prior_n = by_player.transform(lambda s: s.shift(1).expanding().count())
 
         # Shrink toward the team's positional mean over the same prior window.
-        pos_mean = share.groupby([df["season"], df["team"], df["position"]]).transform(
-            lambda s: s.shift(1).expanding().mean())
+        from .prop_model import prior_group_totals
+        history = df.assign(_share=share)
+        pos_sum, pos_count = prior_group_totals(
+            history, ["season", "team", "position"], "_share")
+        pos_mean = pos_sum / pos_count.replace(0, float("nan"))
         weight = prior_n / (prior_n + prior_games)
         blended = weight * prior_mean.fillna(0.0) + (1 - weight) * pos_mean.fillna(0.0)
 

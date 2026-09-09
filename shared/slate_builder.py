@@ -101,7 +101,7 @@ def forecast_from_projection(
     multiplier = float(interval_multiplier)
     return Forecast.from_spread_total(
         float(spread), float(total), float(weights[margins > 0].sum()),
-        "validated football mean + drive simulation",
+        "football model + drive simulation",
         interval_80_low=float(spread) + (low - float(spread)) * multiplier,
         interval_80_high=float(spread) + (high - float(spread)) * multiplier,
     )

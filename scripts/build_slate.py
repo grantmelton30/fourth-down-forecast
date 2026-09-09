@@ -16,10 +16,11 @@ sys.path.insert(0, str(ROOT / "shared"))
 from prediction_contract import PredictionLedger  # noqa: E402
 from publication import assess_quality, build_public_record  # noqa: E402
 from slate_builder import (calibration_from_weights, calibration_permissions,
-                           forecast_from_projection, forecast_from_sim, market_for_game,
-                           source_digest)  # noqa: E402
+                           forecast_from_projection, forecast_from_sim,
+                           market_for_game)  # noqa: E402
 from sport import load_adapter  # noqa: E402
 from tracked_rules import evaluate as evaluate_tracked_rule  # noqa: E402
+from totals_shadow_ledger import append_shadow_record  # noqa: E402
 
 
 def manual_lines(path: Path) -> pd.DataFrame:
@@ -82,12 +83,31 @@ def unavailable_for(league: str, adapter=None, game_id=None) -> tuple[str, ...]:
     return tuple(missing)
 
 
+def _append_totals_shadow(path, adapter, game, market, evidence, record) -> bool:
+    if market is None or evidence is None or not evidence.observed_at:
+        return False
+    shadow = adapter.totals_shadow(str(game["game_id"]), market.total)
+    if shadow is None:
+        return False
+    return append_shadow_record(path, {
+        **shadow, "prediction_id": record.prediction_id,
+        "game_id": record.game_id, "season": record.season,
+        "week": record.week, "home_team": record.home_team,
+        "away_team": record.away_team, "kickoff": record.kickoff,
+        "generated_at": record.generated_at, "data_cutoff": record.data_cutoff,
+        "market_observed_at": evidence.observed_at,
+        "market_label": evidence.label, "providers": list(evidence.providers),
+    })
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--league", choices=("nfl", "ncaa", "all"), default="all")
     parser.add_argument("--ledger", type=Path, default=ROOT / "data/predictions.jsonl")
     parser.add_argument("--market-lines", type=Path,
                         default=ROOT / "data/manual/market_lines.csv")
+    parser.add_argument("--totals-shadow-ledger", type=Path,
+                        default=ROOT / "data/internal/ncaa_totals_shadow.jsonl")
     args = parser.parse_args()
     now = datetime.now(timezone.utc)
     lines, ledger = manual_lines(args.market_lines), PredictionLedger(args.ledger)
@@ -175,7 +195,7 @@ def main() -> int:
                 kickoff=kickoff.isoformat(), home_team=str(game["home_team"]),
                 away_team=str(game["away_team"]), independent=independent, market=market,
                 market_evidence=evidence, calibrated=calibrated,
-                model_version=f"{league}-{source_digest(adapter.profile.repo)}",
+                model_version=adapter.model_version(),
                 data_cutoff=now.isoformat(), unavailable_features=unavailable,
                 bets_allowed=adapter.bets_allowed(), generated_at=now.isoformat(),
                 confidence=quality.label,
@@ -187,6 +207,14 @@ def main() -> int:
                 tracked_rule=rule.to_dict(),
             )
             built += int(ledger.append(record))
+            if (league == "ncaa" and market is not None and evidence is not None
+                    and evidence.observed_at and hasattr(adapter, "totals_shadow")):
+                try:
+                    _append_totals_shadow(
+                        args.totals_shadow_ledger, adapter, game, market, evidence, record
+                    )
+                except ValueError as exc:
+                    print(f"ncaa {game['game_id']}: totals shadow unavailable -- {exc}")
     print(f"appended {built} predictions; skipped {skipped} unavailable/past games")
     return 0
 

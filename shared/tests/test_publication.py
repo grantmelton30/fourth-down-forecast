@@ -57,7 +57,7 @@ def _assess(**overrides):
 def test_unvalidated_calibration_discloses_why_the_evidence_was_refused():
     """"Not validated" and "we threw the evidence out" are different facts to a reader."""
     silent = _assess()
-    assert any("calibration is not validated" in r for r in silent.reasons)
+    assert any("experimental blend is unavailable" in r for r in silent.reasons)
 
     disclosed = _assess(
         calibration_block_reason="calibration evidence was fitted by a different model build")

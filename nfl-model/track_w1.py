@@ -37,6 +37,8 @@ records what the rule would have done.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import sys
 from datetime import datetime, timezone
 
@@ -54,6 +56,7 @@ from src.weather import ET, forecast_at_bet_time
 # hold the whole history. The log is evidence, not cache: it is committed, and it lives at a
 # fixed path regardless of environment.
 LOG_PATH = REPO_ROOT / "data" / "w1_log.csv"
+PROTOCOL_VERSION = "W1-reference-v2"
 
 # The rule, from PREREG.md W1. These are frozen -- changing one voids the test and starts a
 # new registration under a new id, which is why they are constants and not CLI flags.
@@ -81,6 +84,8 @@ LOG_COLUMNS = [
     "forecast_wind_mph", "forecast_issued_at", "hours_before_kickoff",
     "market_total_at_bet", "price_under", "side", "recorded_at",
     "actual_total", "market_total_close", "observed_wind_mph", "result", "graded_at",
+    "protocol_version", "book", "quote_source", "quote_observed_at", "quote_id",
+    "quote_payload", "price", "price_status", "model_version",
 ]
 
 
@@ -171,11 +176,15 @@ def _read_log() -> pd.DataFrame:
 
 def _write_log(frame: pd.DataFrame) -> None:
     LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    frame.reindex(columns=LOG_COLUMNS).to_csv(LOG_PATH, index=False)
+    columns = list(dict.fromkeys([*LOG_COLUMNS,*frame.columns]))
+    temp = LOG_PATH.with_suffix(".csv.tmp")
+    frame.reindex(columns=columns).to_csv(temp,index=False)
+    temp.replace(LOG_PATH)
 
 
 def cmd_record(cfg, args) -> int:
     slate = _slate(cfg)
+    quote_observed_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     season = args.season or int(cfg.seasons.current)
 
     # No week is selected by default. The recording window, not the calendar, decides what
@@ -183,6 +192,9 @@ def cmd_record(cfg, args) -> int:
     # boundary inside the same 48 hours, and a daily job has no reason to care which week a
     # kickoff belongs to. `--week` stays available for inspecting one week by hand.
     picks = _qualifying(slate, season, args.week)
+    recorded_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    if len(picks):
+        picks = picks[picks["kickoff"].map(lambda k: _hours_to_kickoff(k,pd.Timestamp(recorded_at))) > 0]
     log = _read_log()
     already = set(log["game_id"].astype(str)) if len(log) else set()
     fresh = picks[~picks["game_id"].astype(str).isin(already)] if len(picks) else picks
@@ -211,14 +223,30 @@ def cmd_record(cfg, args) -> int:
         # say which. nflverse carries `under_odds` on the live slate as well as history.
         "price_under": fresh.get("under_odds"),
         "side": fresh["side"],
-        "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "recorded_at": recorded_at,
         "actual_total": np.nan, "market_total_close": np.nan,
         "observed_wind_mph": np.nan, "result": "", "graded_at": "",
     })
+    rows["protocol_version"] = PROTOCOL_VERSION
+    rows["book"] = "nflverse"
+    rows["quote_source"] = "nflverse/schedules"
+    rows["quote_observed_at"] = quote_observed_at
+    rows["price"] = rows["price_under"]
+    rows["price_status"] = "aggregate_reference_execution_unverified"
+    version = hashlib.sha256()
+    for path in (REPO_ROOT / "track_w1.py", REPO_ROOT / "src/weather.py", REPO_ROOT / "config/nfl.yaml"):
+        version.update(path.read_bytes())
+    rows["model_version"] = "W1-" + version.hexdigest()[:20]
+    for idx, row in rows.iterrows():
+        payload = json.dumps({"game_id":str(row["game_id"]), "line":row["market_total_at_bet"],
+                              "price_under":None if pd.isna(row["price_under"]) else row["price_under"],
+                              "source":"nflverse/schedules", "observed_at":quote_observed_at}, sort_keys=True)
+        rows.loc[idx,"quote_payload"] = payload
+        rows.loc[idx,"quote_id"] = hashlib.sha256(payload.encode()).hexdigest()
     for r in rows.itertuples(index=False):
         print(f"  {r.away_team} at {r.home_team}: wind {r.forecast_wind_mph:.0f} mph "
               f"({r.hours_before_kickoff:.0f}h out)  ->  UNDER {r.market_total_at_bet}")
-    _write_log(pd.concat([log, rows], ignore_index=True))
+    _write_log(rows if log.empty else pd.concat([log, rows], ignore_index=True))
     print(f"appended {len(rows)} to {LOG_PATH}")
     return 0
 
@@ -294,6 +322,10 @@ def _forecast_error_report(log: pd.DataFrame) -> None:
 
 def cmd_report(cfg, args) -> int:
     log = _read_log()
+    total = len(log)
+    protocol = log.get("protocol_version", pd.Series("", index=log.index))
+    log = log[protocol.eq(PROTOCOL_VERSION)].copy()
+    print(f"Active protocol: {PROTOCOL_VERSION}; {total-len(log)} historical rows excluded")
     print("=" * 68)
     print(f"W1 FORWARD RECORD -- pre-registered 2026-08-21, "
           f"UNDER on forecast wind >= {MIN_WIND_MPH:.0f} mph")
@@ -312,11 +344,13 @@ def cmd_report(cfg, args) -> int:
     wins = int((settled["result"] == "WIN").sum())
     rate = wins / n
     units = wins * 1.0 - (n - wins) * 1.1
-    se = np.sqrt(rate * (1 - rate) / n) if n > 1 else float("nan")
+    z = 1.96
+    center = (rate + z*z/(2*n)) / (1 + z*z/n)
+    radius = z*np.sqrt(rate*(1-rate)/n + z*z/(4*n*n)) / (1 + z*z/n)
     print(f"  record {wins}-{n - wins}   win rate {100 * rate:.1f}%   "
-          f"units @ -110 {units:+.1f}")
+          f"assumed units @ -110 {units:+.1f}")
     if n > 1:
-        print(f"  95% CI [{100 * (rate - 1.96 * se):.1f}, {100 * (rate + 1.96 * se):.1f}]"
+        print(f"  95% CI [{100 * (center - radius):.1f}, {100 * (center + radius):.1f}]"
               f"   breakeven 52.4%")
     # The pre-committed kill condition, evaluated rather than remembered.
     if n >= 60:

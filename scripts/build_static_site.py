@@ -25,9 +25,10 @@ def main() -> int:
     # artifact has to be able to produce itself rather than silently ship a stale or absent
     # Record tab. It reads the append-only logs, so regenerating is always safe.
     tracker = WEB / "api/v1/tracker.json"
-    if not tracker.exists():
-        subprocess.run([sys.executable, str(ROOT / "scripts" / "build_tracker.py")],
-                       check=True)
+    subprocess.run([sys.executable, str(ROOT / "scripts" / "build_tracker.py")],
+                   check=True)
+    if DIST.resolve().parent != ROOT.resolve() or DIST.name != "dist":
+        raise RuntimeError("static output must remain inside this checkout")
     if DIST.exists():
         shutil.rmtree(DIST)
     DIST.mkdir(parents=True)

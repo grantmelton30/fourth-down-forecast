@@ -211,3 +211,13 @@ def test_the_window_is_an_operating_parameter_not_a_rule_constant():
     """PREREG W1 freezes trigger/side/universe/stake. The horizon is explicitly an operating
     instruction, and the realised value is stored per row regardless."""
     assert track_w1.MAX_HOURS_BEFORE_KICKOFF == 48.0
+
+
+def test_report_excludes_historical_protocols(monkeypatch, capsys):
+    import track_w1 as tracker
+    rows = pd.DataFrame({"protocol_version": ["legacy"], "result": ["WIN"]})
+    monkeypatch.setattr(tracker, "_read_log", lambda: rows)
+    tracker.cmd_report(None, None)
+    output = capsys.readouterr().out
+    assert "1 historical rows excluded" in output
+    assert "record 1-0" not in output

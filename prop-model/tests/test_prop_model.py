@@ -148,3 +148,25 @@ def test_opponent_is_attached_from_the_schedule_both_ways():
     out = add_opponent(f, sched).set_index("team")
     assert out.loc["KC", "opponent"] == "DEN" and out.loc["KC", "is_home"] == 1
     assert out.loc["DEN", "opponent"] == "KC" and out.loc["DEN", "is_home"] == 0
+
+
+def test_same_kickoff_outcomes_cannot_change_other_predictions():
+    f = _frame()
+    f.loc[1, "kickoff"] = f.loc[0, "kickoff"]
+    first = defense_effects(f, stat="receptions", baseline_col="base_ewma")
+    h_first = home_effect(f, stat="receptions", baseline_col="base_ewma")
+    changed = f.copy()
+    changed.loc[0, "receptions"] = 1000
+    second = defense_effects(changed, stat="receptions", baseline_col="base_ewma")
+    h_second = home_effect(changed, stat="receptions", baseline_col="base_ewma")
+    assert first.loc[1,"def_effect"] == second.loc[1,"def_effect"] == 0
+    assert h_first.loc[1,"home_effect"] == h_second.loc[1,"home_effect"] == 0
+    assert second.loc[2,"def_effect"] != first.loc[2,"def_effect"]
+
+
+def test_same_kickoff_order_does_not_change_effects():
+    f = _frame()
+    f.loc[1,"kickoff"] = f.loc[0,"kickoff"]
+    a = defense_effects(f, stat="receptions", baseline_col="base_ewma").set_index("player_id")
+    b = defense_effects(f.iloc[::-1], stat="receptions", baseline_col="base_ewma").set_index("player_id")
+    np.testing.assert_allclose(a.sort_index().def_effect,b.sort_index().def_effect)

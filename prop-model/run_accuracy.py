@@ -71,6 +71,8 @@ def build(seasons: list[int], market: str) -> pd.DataFrame:
     return frame
 
 
+from src.evaluation import eligible_rows, chronological_split
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -86,7 +88,7 @@ def main() -> int:
 
     # Only players with real involvement. Scoring every kicker and lineman at zero would
     # let a predict-zero estimator look excellent and hide any real difference.
-    frame = frame[frame.groupby("player_id")[denom].transform("mean") >= min_opp]
+    frame = eligible_rows(frame, denom, min_opp)
 
     print(f"market       : {args.market}  (opportunity: {denom})")
     print(f"seasons      : {min(args.seasons)}-{max(args.seasons)}")

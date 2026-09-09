@@ -1,4 +1,4 @@
-"""Run the three test suites in isolated interpreters.
+"""Run the four test suites in isolated interpreters.
 
 Both league repositories intentionally use a top-level package named ``src``. Running
 them in one pytest process can bind the second suite to the first league's package, so
@@ -36,6 +36,7 @@ def main() -> int:
         ("shared", "shared/tests", str(ROOT / "shared")),
         ("NFL", "nfl-model/tests", os.pathsep.join([str(ROOT / "shared"), str(ROOT / "nfl-model")])),
         ("NCAA", "ncaa-model/tests", os.pathsep.join([str(ROOT / "shared"), str(ROOT / "ncaa-model")])),
+        ("Props", "prop-model/tests", os.pathsep.join([str(ROOT / "shared"), str(ROOT / "prop-model")])),
     ]
     return max(run(*suite) for suite in suites)
 

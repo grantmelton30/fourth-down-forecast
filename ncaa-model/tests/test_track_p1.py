@@ -33,7 +33,7 @@ def _frame():
         # edge +2.0 but OUTSIDE the restricted universe -> must not qualify
         {"game_id": 5, "season": 2026, "week": 1, "away_team": "I", "home_team": "J",
          "model_total": 57.0, "total_open": 45.0, "total_close": 55.0, "restricted": False, "actual_total": np.nan},
-    ])
+    ]).assign(kickoff="2099-09-01T00:00:00Z")
 
 
 def test_declared_edge_bounds_are_enforced_exactly():
@@ -123,15 +123,26 @@ def test_line_basis_is_recorded_so_the_two_batches_can_never_be_pooled():
     assert (q["line_basis"] == "current").all()
 
 
-def test_a_game_with_no_current_line_falls_back_and_says_so():
-    """A missing current quote falls back to the opener rather than dropping the game, but
-    labels itself so the mixture is visible in the log instead of being invisible."""
+def test_a_game_with_no_current_line_is_not_recorded():
     frame = _frame()
     frame.loc[frame["game_id"] == 3, "total_close"] = np.nan
-    frame.loc[frame["game_id"] == 3, "total_open"] = 52.0   # close enough to still qualify
-    q = track_p1._qualifying(frame, 2026, 1).set_index("game_id")
-    assert q.loc[3, "line_basis"] == "opener_fallback"
-    assert q.loc[3, "market_total_at_bet"] == 52.0
+    frame.loc[frame["game_id"] == 3, "total_open"] = 52.0
+    assert 3 not in set(track_p1._qualifying(frame, 2026, 1)["game_id"])
+
+
+@pytest.mark.parametrize("kickoff,actual", [
+    ("2026-09-01T00:00:00Z", np.nan),
+    ("2026-09-08T00:00:00Z", np.nan),
+    (None, np.nan), ("bad", np.nan),
+    ("2026-09-10T00:00:00Z", 65.0),
+])
+def test_started_finished_and_unknown_kickoffs_are_rejected(kickoff, actual):
+    frame = _frame().assign(kickoff=kickoff, actual_total=actual)
+    assert track_p1._qualifying(frame, 2026, 1, now="2026-09-08T00:00:00Z").empty
+
+
+def test_unknown_universe_is_rejected():
+    assert track_p1._qualifying(_frame().drop(columns="restricted"), 2026, 1).empty
 
 
 def test_the_opener_is_recorded_but_never_graded_against():
@@ -153,3 +164,49 @@ def test_the_opener_is_carried_into_the_written_row():
     q = track_p1._qualifying(frame, 2026, 1)
     assert "market_total_open" in track_p1.LOG_COLUMNS
     assert q["market_total_open"].notna().all()
+
+
+def test_fresh_quote_replaces_stale_line_and_retains_provenance():
+    from types import SimpleNamespace
+    class Client:
+        def call(self, *args, **kwargs):
+            assert kwargs["ttl_hours"] == 0.0
+            return [{"id": 2, "lines": [{"provider": "Book", "overUnder": 54.0,
+                      "overUnderOpen": 40.0, "spreadOpen": 3.0}]}]
+    cfg = SimpleNamespace(market=SimpleNamespace(provider_priority=["Book"]))
+    q = track_p1._fresh_quotes(_frame(), cfg, Client(), 2026)
+    selected = track_p1._qualifying(q, 2026, 1)
+    assert selected.game_id.tolist() == [2]
+    r = selected.iloc[0]
+    assert r.market_total_at_bet == 54.0 and r.book == "Book"
+    assert r.price_status == "unavailable_reference_only" and pd.isna(r.price)
+    assert track_p1.hashlib.sha256(r.quote_payload.encode()).hexdigest() == r.quote_id
+
+
+def test_record_is_idempotent_and_preserves_protocol_evidence(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setattr(track_p1, "LOG_PATH", tmp_path / "log.csv")
+    monkeypatch.setattr(track_p1, "_projected_totals", lambda *a: _frame())
+    class Client:
+        def call(self, *args, **kwargs):
+            return [{"id": 2, "lines": [{"provider": "Book", "overUnder": 55.0}]}]
+    cfg = SimpleNamespace(seasons=SimpleNamespace(current=2026),
+                          market=SimpleNamespace(provider_priority=["Book"]))
+    args = SimpleNamespace(season=2026, week=1)
+    track_p1.cmd_record(cfg, Client(), args)
+    first = track_p1.LOG_PATH.read_bytes()
+    track_p1.cmd_record(cfg, Client(), args)
+    assert track_p1.LOG_PATH.read_bytes() == first
+    row = pd.read_csv(track_p1.LOG_PATH).iloc[0]
+    assert row.protocol_version == track_p1.PROTOCOL_VERSION
+    assert row.model_version.startswith("ncaa-") and row.quote_payload
+
+
+def test_report_excludes_historical_protocols(monkeypatch, capsys):
+    import track_p1 as tracker
+    rows = pd.DataFrame({"protocol_version": ["legacy"], "result": ["WIN"]})
+    monkeypatch.setattr(tracker, "_read_log", lambda: rows)
+    tracker.cmd_report(None, None, None)
+    output = capsys.readouterr().out
+    assert "1 historical rows excluded" in output
+    assert "record 1-0" not in output

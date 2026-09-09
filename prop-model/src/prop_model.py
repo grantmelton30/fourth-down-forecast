@@ -50,6 +50,29 @@ def add_opponent(frame: pd.DataFrame, schedules: pd.DataFrame) -> pd.DataFrame:
     return frame.merge(long, on=["season", "week", "team"], how="left")
 
 
+def prior_group_totals(frame, groups, value):
+    """Sum/count strictly before kickoff, shared by every simultaneous row.
+
+    Aggregate the entire kickoff block before shifting. Shifting player rows
+    would expose teammates' or simultaneous games' final outcomes.
+    """
+    stamps = pd.to_datetime(frame["kickoff"], utc=True, errors="raise")
+    if stamps.isna().any():
+        raise ValueError("historical effects require known kickoff timestamps")
+    f = frame.copy()
+    f["_stamp"] = stamps
+    blocks = f.groupby([*groups, "_stamp"], dropna=False)[value].agg(["sum", "count"]).reset_index()
+    blocks = blocks.sort_values("_stamp")
+    for col in ("sum", "count"):
+        blocks["prior_"+col] = blocks.groupby(groups, dropna=False)[col].transform(
+            lambda x: x.cumsum().shift(1).fillna(0))
+    f["_row_order"] = np.arange(len(f))
+    joined = f.merge(blocks[[*groups,"_stamp","prior_sum","prior_count"]],
+                     on=[*groups,"_stamp"], how="left", validate="many_to_one").sort_values("_row_order")
+    return (pd.Series(joined.prior_sum.to_numpy(), index=frame.index),
+            pd.Series(joined.prior_count.to_numpy(), index=frame.index))
+
+
 def defense_effects(
     frame: pd.DataFrame, *, stat: str, baseline_col: str, prior_games: float = 10.0,
 ) -> pd.DataFrame:
@@ -68,10 +91,7 @@ def defense_effects(
     resid = out[stat] - out[baseline_col]
     out["_resid"] = resid
 
-    key = out.groupby(["opponent", "position"])["_resid"]
-    # Strictly earlier: shift(1) before any accumulation, so a game never informs itself.
-    prior_sum = key.transform(lambda s: s.shift(1).expanding().sum())
-    prior_n = key.transform(lambda s: s.shift(1).expanding().count())
+    prior_sum, prior_n = prior_group_totals(out, ["opponent", "position"], "_resid")
 
     raw = prior_sum / prior_n.replace(0, np.nan)
     weight = prior_n / (prior_n + prior_games)
@@ -85,8 +105,8 @@ def home_effect(frame: pd.DataFrame, *, stat: str, baseline_col: str) -> pd.Data
     out = frame.sort_values("kickoff").copy()
     resid = out[stat] - out[baseline_col]
     out["_r"] = resid
-    eff = out.groupby("is_home")["_r"].transform(
-        lambda s: s.shift(1).expanding().mean())
+    prior_sum, prior_n = prior_group_totals(out, ["is_home"], "_r")
+    eff = prior_sum / prior_n.replace(0, np.nan)
     out["home_effect"] = eff.fillna(0.0)
     return out.drop(columns=["_r"])
 

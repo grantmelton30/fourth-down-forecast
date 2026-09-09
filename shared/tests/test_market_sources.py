@@ -136,3 +136,17 @@ def test_nflverse_neutral_site_is_flagged():
     quotes = nflverse_quotes(_nfl_schedule(location="Neutral"),
                              observed_at=OBSERVED, collector_version="v1")
     assert quotes[0].neutral_site is True
+
+
+def test_nflverse_eastern_kickoff_accounts_for_daylight_saving():
+    for day, expected in (("2026-09-10", "2026-09-11T00:20:00+00:00"),
+                          ("2026-12-10", "2026-12-11T01:20:00+00:00")):
+        quotes = nflverse_quotes(_nfl_schedule(gameday=day),
+                                observed_at=OBSERVED, collector_version="v1")
+        assert pd.Timestamp(quotes[0].kickoff) == pd.Timestamp(expected)
+
+
+def test_nflverse_unknown_kickoff_is_not_invented():
+    for missing in (None, "", float("nan")):
+        assert nflverse_quotes(_nfl_schedule(gametime=missing),
+                               observed_at=OBSERVED, collector_version="v1") == []

@@ -1,0 +1,789 @@
+{
+  "schema_version": 1,
+  "status": "exploratory_historical_research_not_authorized_for_promotion",
+  "frame": "data/cache/backtest_frame_default.parquet",
+  "frame_sha256": "145767e4dfd09f6cf1365acb1d4284256413121bf3c6d54ef49dd76eda997b5b",
+  "source_rows": 6242,
+  "population_rows": 4022,
+  "evaluation_rows": 2410,
+  "available_evaluation_weeks": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ],
+  "evaluation_seasons": [
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "minimum_train_rows": 300,
+  "ridge_alpha": 45.0,
+  "families": {
+    "pure_residual": [
+      "pure_disagreement"
+    ],
+    "tempo_efficiency": [
+      "pace_sum",
+      "eff_sum",
+      "pace_efficiency_interaction",
+      "abs_net_diff"
+    ],
+    "play_quality": [
+      "success_rate_matchup_sum",
+      "explosive_rate_matchup_sum",
+      "havoc_avoidance_matchup_sum",
+      "red_zone_td_rate_matchup_sum"
+    ]
+  },
+  "metrics": [
+    {
+      "model": "market",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.783391791105462,
+      "mae": 12.511410788381744,
+      "bias": -1.0143153526970954,
+      "rmse_gain_vs_market": 0.0,
+      "gain_vs_market_90ci": [
+        0.0,
+        0.0
+      ],
+      "rmse_gain_vs_bias": -0.017798775005621437,
+      "gain_vs_bias_90ci": [
+        -0.034564942149762065,
+        -0.0014402388791172145
+      ]
+    },
+    {
+      "model": "bias",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.76559301609984,
+      "mae": 12.516046775625222,
+      "bias": -0.5715411469276361,
+      "rmse_gain_vs_market": 0.017798775005621437,
+      "gain_vs_market_90ci": [
+        0.0011680178947356624,
+        0.03450447776683072
+      ],
+      "rmse_gain_vs_bias": 0.0,
+      "gain_vs_bias_90ci": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "model": "pure_residual",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.760285902681627,
+      "mae": 12.51916307066135,
+      "bias": -0.42671418314126147,
+      "rmse_gain_vs_market": 0.023105888423835097,
+      "gain_vs_market_90ci": [
+        -0.005480691499644672,
+        0.05287893545566612
+      ],
+      "rmse_gain_vs_bias": 0.00530711341821366,
+      "gain_vs_bias_90ci": [
+        -0.013197112408195454,
+        0.023514488529500444
+      ]
+    },
+    {
+      "model": "tempo_efficiency",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.750889047969933,
+      "mae": 12.507376764782274,
+      "bias": -0.6318869882070342,
+      "rmse_gain_vs_market": 0.032502743135529144,
+      "gain_vs_market_90ci": [
+        0.0023014243997055315,
+        0.06333564998003167
+      ],
+      "rmse_gain_vs_bias": 0.014703968129907707,
+      "gain_vs_bias_90ci": [
+        -0.015140449347087514,
+        0.045622664250479436
+      ]
+    },
+    {
+      "model": "play_quality",
+      "n": 2409,
+      "coverage": 0.9995850622406639,
+      "rmse": 15.774823695793252,
+      "mae": 12.51851706502729,
+      "bias": -0.5913457509889049,
+      "rmse_gain_vs_market": 0.01119943732945572,
+      "gain_vs_market_90ci": [
+        -0.011532878646487799,
+        0.033452092431026786
+      ],
+      "rmse_gain_vs_bias": -0.006510049767355142,
+      "gain_vs_bias_90ci": [
+        -0.02101182214403634,
+        0.006810145974578771
+      ]
+    },
+    {
+      "model": "adaptive",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 15.759349808179612,
+      "mae": 12.508196429050804,
+      "bias": -0.7008185404743477,
+      "rmse_gain_vs_market": 0.02404198292584958,
+      "gain_vs_market_90ci": [
+        -0.00015988576124739107,
+        0.048812253323097916
+      ],
+      "rmse_gain_vs_bias": 0.006243207920228144,
+      "gain_vs_bias_90ci": [
+        -0.01615415316082025,
+        0.03066092448750526
+      ]
+    },
+    {
+      "model": "archived_pure",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 16.402915502044817,
+      "mae": 13.220005268984039,
+      "bias": 2.309865612269574,
+      "rmse_gain_vs_market": -0.6195237109393545,
+      "gain_vs_market_90ci": [
+        -0.8111643330386531,
+        -0.43066015437398636
+      ],
+      "rmse_gain_vs_bias": -0.637322485944976,
+      "gain_vs_bias_90ci": [
+        -0.8158664928097908,
+        -0.45834915228975964
+      ]
+    },
+    {
+      "model": "archived_adjusted",
+      "n": 2410,
+      "coverage": 1.0,
+      "rmse": 16.426134234935194,
+      "mae": 13.181526594235793,
+      "bias": 0.7399815303372406,
+      "rmse_gain_vs_market": -0.6427424438297322,
+      "gain_vs_market_90ci": [
+        -0.8146005654028396,
+        -0.4727106203603459
+      ],
+      "rmse_gain_vs_bias": -0.6605412188353537,
+      "gain_vs_bias_90ci": [
+        -0.8258885765524633,
+        -0.4969043692322407
+      ]
+    }
+  ],
+  "season_metrics": [
+    {
+      "season": 2022,
+      "model": "market",
+      "n": 584,
+      "rmse": 15.351433938645691,
+      "bias": 0.20633561643835616,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2022,
+      "model": "bias",
+      "n": 584,
+      "rmse": 15.358200741364742,
+      "bias": 0.5003802814507635,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2022,
+      "model": "pure_residual",
+      "n": 584,
+      "rmse": 15.369261187083751,
+      "bias": 0.5844944312929587,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2022,
+      "model": "tempo_efficiency",
+      "n": 584,
+      "rmse": 15.351700969827782,
+      "bias": 0.4357790546269581,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2022,
+      "model": "play_quality",
+      "n": 584,
+      "rmse": 15.370775859464775,
+      "bias": 0.445408979633854,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2022,
+      "model": "adaptive",
+      "n": 584,
+      "rmse": 15.351433938645691,
+      "bias": 0.20633561643835616,
+      "adaptive_choice": "market"
+    },
+    {
+      "season": 2023,
+      "model": "market",
+      "n": 597,
+      "rmse": 15.805441358893264,
+      "bias": -1.8802345058626466,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2023,
+      "model": "bias",
+      "n": 597,
+      "rmse": 15.787100738364458,
+      "bias": -1.7192600067733899,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2023,
+      "model": "pure_residual",
+      "n": 597,
+      "rmse": 15.777565116361762,
+      "bias": -1.541609902408355,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2023,
+      "model": "tempo_efficiency",
+      "n": 597,
+      "rmse": 15.771104260919328,
+      "bias": -1.826415288003213,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2023,
+      "model": "play_quality",
+      "n": 597,
+      "rmse": 15.79432938359939,
+      "bias": -1.7403987597402744,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2023,
+      "model": "adaptive",
+      "n": 597,
+      "rmse": 15.805441358893264,
+      "bias": -1.8802345058626466,
+      "adaptive_choice": "market"
+    },
+    {
+      "season": 2024,
+      "model": "market",
+      "n": 612,
+      "rmse": 16.678941558242478,
+      "bias": -1.8790849673202614,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2024,
+      "model": "bias",
+      "n": 612,
+      "rmse": 16.627697018523072,
+      "bias": -1.350620950134442,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2024,
+      "model": "pure_residual",
+      "n": 612,
+      "rmse": 16.59702181717279,
+      "bias": -1.1483162438099592,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2024,
+      "model": "tempo_efficiency",
+      "n": 612,
+      "rmse": 16.6126406541436,
+      "bias": -1.4479800842198502,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2024,
+      "model": "play_quality",
+      "n": 611,
+      "rmse": 16.640011462427406,
+      "bias": -1.3637727827435597,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2024,
+      "model": "adaptive",
+      "n": 612,
+      "rmse": 16.6126406541436,
+      "bias": -1.4479800842198502,
+      "adaptive_choice": "tempo_efficiency"
+    },
+    {
+      "season": 2025,
+      "model": "market",
+      "n": 617,
+      "rmse": 15.242542082638474,
+      "bias": -0.4740680713128039,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2025,
+      "model": "bias",
+      "n": 617,
+      "rmse": 15.238065728887063,
+      "bias": 0.29715072457559766,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2025,
+      "model": "pure_residual",
+      "n": 617,
+      "rmse": 15.24878995718227,
+      "bias": 0.41067216159474,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2025,
+      "model": "tempo_efficiency",
+      "n": 617,
+      "rmse": 15.217172905432287,
+      "bias": 0.3228381345208601,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2025,
+      "model": "play_quality",
+      "n": 617,
+      "rmse": 15.244287237571092,
+      "bias": 0.30407207711963696,
+      "adaptive_choice": null
+    },
+    {
+      "season": 2025,
+      "model": "adaptive",
+      "n": 617,
+      "rmse": 15.217172905432287,
+      "bias": 0.3228381345208601,
+      "adaptive_choice": "tempo_efficiency"
+    }
+  ],
+  "diagnostics": [
+    {
+      "group": "restricted",
+      "model": "market",
+      "n": 1240,
+      "rmse": 16.261621154750998,
+      "bias": -1.3120967741935483,
+      "available": true
+    },
+    {
+      "group": "restricted",
+      "model": "bias",
+      "n": 1240,
+      "rmse": 16.230737018566455,
+      "bias": -0.8685201212798966,
+      "available": true
+    },
+    {
+      "group": "restricted",
+      "model": "pure_residual",
+      "n": 1240,
+      "rmse": 16.218840884484536,
+      "bias": -0.8157651767244075,
+      "available": true
+    },
+    {
+      "group": "restricted",
+      "model": "tempo_efficiency",
+      "n": 1240,
+      "rmse": 16.233054380619595,
+      "bias": -0.8918207872105267,
+      "available": true
+    },
+    {
+      "group": "restricted",
+      "model": "play_quality",
+      "n": 1239,
+      "rmse": 16.246945151123256,
+      "bias": -0.917553987430488,
+      "available": true
+    },
+    {
+      "group": "restricted",
+      "model": "adaptive",
+      "n": 1240,
+      "rmse": 16.22612427625878,
+      "bias": -0.9753161325740001,
+      "available": true
+    },
+    {
+      "group": "p5_vs_p5",
+      "model": "market",
+      "n": 1170,
+      "rmse": 15.260200455718724,
+      "bias": -0.6987179487179487,
+      "available": true
+    },
+    {
+      "group": "p5_vs_p5",
+      "model": "bias",
+      "n": 1170,
+      "rmse": 15.257148886911288,
+      "bias": -0.2567941997508813,
+      "available": true
+    },
+    {
+      "group": "p5_vs_p5",
+      "model": "pure_residual",
+      "n": 1170,
+      "rmse": 15.259262081010746,
+      "bias": -0.01438663438647402,
+      "available": true
+    },
+    {
+      "group": "p5_vs_p5",
+      "model": "tempo_efficiency",
+      "n": 1170,
+      "rmse": 15.223215833639701,
+      "bias": -0.35640159439136704,
+      "available": true
+    },
+    {
+      "group": "p5_vs_p5",
+      "model": "play_quality",
+      "n": 1170,
+      "rmse": 15.258942115554476,
+      "bias": -0.24589959291102342,
+      "available": true
+    },
+    {
+      "group": "p5_vs_p5",
+      "model": "adaptive",
+      "n": 1170,
+      "rmse": 15.24906081378887,
+      "bias": -0.4098980155140323,
+      "available": true
+    },
+    {
+      "group": "weeks_1_3",
+      "model": "market",
+      "n": 0,
+      "rmse": null,
+      "bias": null,
+      "available": false
+    },
+    {
+      "group": "weeks_1_3",
+      "model": "bias",
+      "n": 0,
+      "rmse": null,
+      "bias": null,
+      "available": false
+    },
+    {
+      "group": "weeks_1_3",
+      "model": "pure_residual",
+      "n": 0,
+      "rmse": null,
+      "bias": null,
+      "available": false
+    },
+    {
+      "group": "weeks_1_3",
+      "model": "tempo_efficiency",
+      "n": 0,
+      "rmse": null,
+      "bias": null,
+      "available": false
+    },
+    {
+      "group": "weeks_1_3",
+      "model": "play_quality",
+      "n": 0,
+      "rmse": null,
+      "bias": null,
+      "available": false
+    },
+    {
+      "group": "weeks_1_3",
+      "model": "adaptive",
+      "n": 0,
+      "rmse": null,
+      "bias": null,
+      "available": false
+    },
+    {
+      "group": "weeks_4_plus",
+      "model": "market",
+      "n": 2410,
+      "rmse": 15.783391791105462,
+      "bias": -1.0143153526970954,
+      "available": true
+    },
+    {
+      "group": "weeks_4_plus",
+      "model": "bias",
+      "n": 2410,
+      "rmse": 15.76559301609984,
+      "bias": -0.5715411469276361,
+      "available": true
+    },
+    {
+      "group": "weeks_4_plus",
+      "model": "pure_residual",
+      "n": 2410,
+      "rmse": 15.760285902681627,
+      "bias": -0.42671418314126147,
+      "available": true
+    },
+    {
+      "group": "weeks_4_plus",
+      "model": "tempo_efficiency",
+      "n": 2410,
+      "rmse": 15.750889047969933,
+      "bias": -0.6318869882070342,
+      "available": true
+    },
+    {
+      "group": "weeks_4_plus",
+      "model": "play_quality",
+      "n": 2409,
+      "rmse": 15.774823695793252,
+      "bias": -0.5913457509889049,
+      "available": true
+    },
+    {
+      "group": "weeks_4_plus",
+      "model": "adaptive",
+      "n": 2410,
+      "rmse": 15.759349808179612,
+      "bias": -0.7008185404743477,
+      "available": true
+    },
+    {
+      "group": "spread_abs_over_28",
+      "model": "market",
+      "n": 75,
+      "rmse": 12.79010033841278,
+      "bias": 0.6266666666666667,
+      "available": true
+    },
+    {
+      "group": "spread_abs_over_28",
+      "model": "bias",
+      "n": 75,
+      "rmse": 12.851646743977135,
+      "bias": 1.1116132019160079,
+      "available": true
+    },
+    {
+      "group": "spread_abs_over_28",
+      "model": "pure_residual",
+      "n": 75,
+      "rmse": 12.835651290126464,
+      "bias": 1.088663899228984,
+      "available": true
+    },
+    {
+      "group": "spread_abs_over_28",
+      "model": "tempo_efficiency",
+      "n": 75,
+      "rmse": 12.823687796125089,
+      "bias": 1.5373178809581804,
+      "available": true
+    },
+    {
+      "group": "spread_abs_over_28",
+      "model": "play_quality",
+      "n": 75,
+      "rmse": 12.866365098979228,
+      "bias": 1.0897148704644444,
+      "available": true
+    },
+    {
+      "group": "spread_abs_over_28",
+      "model": "adaptive",
+      "n": 75,
+      "rmse": 12.822205984867223,
+      "bias": 1.22593282536189,
+      "available": true
+    },
+    {
+      "group": "spread_abs_at_most_28",
+      "model": "market",
+      "n": 2335,
+      "rmse": 15.870180649034102,
+      "bias": -1.0670235546038545,
+      "available": true
+    },
+    {
+      "group": "spread_abs_at_most_28",
+      "model": "bias",
+      "n": 2335,
+      "rmse": 15.850311475501327,
+      "bias": -0.6256039204450979,
+      "available": true
+    },
+    {
+      "group": "spread_abs_at_most_28",
+      "model": "pure_residual",
+      "n": 2335,
+      "rmse": 15.845279608045798,
+      "bias": -0.47538799735015586,
+      "available": true
+    },
+    {
+      "group": "spread_abs_at_most_28",
+      "model": "tempo_efficiency",
+      "n": 2335,
+      "rmse": 15.835944210847382,
+      "bias": -0.7015616628054886,
+      "available": true
+    },
+    {
+      "group": "spread_abs_at_most_28",
+      "model": "play_quality",
+      "n": 2334,
+      "rmse": 15.85944049635524,
+      "bias": -0.6453644084906192,
+      "available": true
+    },
+    {
+      "group": "spread_abs_at_most_28",
+      "model": "adaptive",
+      "n": 2335,
+      "rmse": 15.844668297090399,
+      "bias": -0.7627056293127707,
+      "available": true
+    },
+    {
+      "group": "market_total_at_most_50",
+      "model": "market",
+      "n": 953,
+      "rmse": 15.49778273414334,
+      "bias": -1.8714585519412381,
+      "available": true
+    },
+    {
+      "group": "market_total_at_most_50",
+      "model": "bias",
+      "n": 953,
+      "rmse": 15.452760254746234,
+      "bias": -1.4297593223450535,
+      "available": true
+    },
+    {
+      "group": "market_total_at_most_50",
+      "model": "pure_residual",
+      "n": 953,
+      "rmse": 15.449565544336906,
+      "bias": -0.9504451522222008,
+      "available": true
+    },
+    {
+      "group": "market_total_at_most_50",
+      "model": "tempo_efficiency",
+      "n": 953,
+      "rmse": 15.419696375304785,
+      "bias": -0.9515473340090814,
+      "available": true
+    },
+    {
+      "group": "market_total_at_most_50",
+      "model": "play_quality",
+      "n": 952,
+      "rmse": 15.470683772841767,
+      "bias": -1.467160369367945,
+      "available": true
+    },
+    {
+      "group": "market_total_at_most_50",
+      "model": "adaptive",
+      "n": 953,
+      "rmse": 15.441550697717163,
+      "bias": -1.265282283181928,
+      "available": true
+    },
+    {
+      "group": "market_total_over_50",
+      "model": "market",
+      "n": 1457,
+      "rmse": 15.967440704853304,
+      "bias": -0.45367192862045297,
+      "available": true
+    },
+    {
+      "group": "market_total_over_50",
+      "model": "bias",
+      "n": 1457,
+      "rmse": 15.966896560562525,
+      "bias": -0.010194598421939899,
+      "available": true
+    },
+    {
+      "group": "market_total_over_50",
+      "model": "pure_residual",
+      "n": 1457,
+      "rmse": 15.96025101420173,
+      "bias": -0.08415027543080461,
+      "available": true
+    },
+    {
+      "group": "market_total_over_50",
+      "model": "tempo_efficiency",
+      "n": 1457,
+      "rmse": 15.963800276669604,
+      "bias": -0.4228023557091955,
+      "available": true
+    },
+    {
+      "group": "market_total_over_50",
+      "model": "play_quality",
+      "n": 1457,
+      "rmse": 15.970419597553963,
+      "bias": -0.01909076355112442,
+      "available": true
+    },
+    {
+      "group": "market_total_over_50",
+      "model": "adaptive",
+      "n": 1457,
+      "rmse": 15.963795009296813,
+      "bias": -0.33161198810624604,
+      "available": true
+    }
+  ],
+  "p1_historical_close": {
+    "n": 1081,
+    "wins": 577,
+    "losses": 489,
+    "pushes": 15,
+    "win_rate": 0.5412757973733584,
+    "assumed_units_at_minus_110": 39.09999999999991
+  },
+  "adaptive_choices": {
+    "2022": "market",
+    "2023": "market",
+    "2024": "tempo_efficiency",
+    "2025": "tempo_efficiency"
+  }
+}

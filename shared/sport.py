@@ -864,9 +864,12 @@ class NCAAAdapter(SportAdapter):
                 season = int(self._cfg().seasons.current)
                 if "season" in historical:
                     historical = historical[historical["season"].ne(season)]
-                self._cache["market"] = pd.concat(
-                    [historical, live], ignore_index=True, sort=False
-                )
+                # Live schedules legitimately have all-null result columns. Dropping only
+                # per-frame all-null columns before the union preserves the populated
+                # historical schema and avoids pandas guessing future dtypes differently.
+                pieces = [part.dropna(axis=1, how="all") for part in (historical, live)
+                          if not part.empty]
+                self._cache["market"] = pd.concat(pieces, ignore_index=True, sort=False)
             else:
                 self._cache["market"] = historical
         return self._cache["market"]
@@ -1009,6 +1012,20 @@ class NCAAAdapter(SportAdapter):
             "spread_preseason_promoted": model.spread.challenger_promoted,
             "total_preseason_promoted": model.total.challenger_promoted,
         }
+
+    def totals_shadow(self, game_id: str, market_total: float) -> "dict | None":
+        """Prospective NCAA total comparison; never feeds the published point estimate."""
+        frame = self._live_features()
+        row = frame[frame["game_id"].astype(str).eq(str(game_id))]
+        if row.empty:
+            return None
+        season = int(row.iloc[0]["season"])
+        key = f"totals_shadow_{season}"
+        if key not in self._cache:
+            self._cache[key] = self._module("totals_shadow").fit_totals_shadow(
+                self.backtest_frame(), season
+            )
+        return self._cache[key].predict(row, market_total)
 
     def projection_uncertainty(self, game_id: str) -> dict:
         """Game-level preseason uncertainty, separate from the validated mean."""
