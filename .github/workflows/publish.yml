@@ -5,10 +5,10 @@ on:
     # Tuesday after the weekend is graded; Friday catches late lines/injury context.
     - cron: "17 11 * * 2,5"
     # Lightweight market-only republish: no model rebuild (skips both run_backtest.py
-    # calls), just fresh live-season games/lines and a republish. Bumped from once daily
-    # to every 4 hours 2026-08-18 -- the displayed market number was going stale for up to
-    # 24h even though quotes were already being archived every 6h below.
-    - cron: "17 */4 * * *"
+    # calls), just fresh live-season games/lines and a republish. Two-hour opportunities
+    # give GitHub's delayed scheduler multiple chances to land inside each strict six-hour
+    # grading window; the August 28-30 gaps showed that four-hour scheduling was not enough.
+    - cron: "17 */2 * * *"
     # Market capture only. Timestamped quotes cannot be reconstructed later, so this
     # runs far more often than any model work and spends ~1 API call per pass.
     - cron: "23 */6 * * *"
@@ -52,7 +52,7 @@ jobs:
       - name: Refresh sources, rebuild models, and stage publication
         if: github.event.schedule != '23 */6 * * *'
         run: |
-          if [ "${{ github.event.schedule }}" = "17 */4 * * *" ]; then
+          if [ "${{ github.event.schedule }}" = "17 */2 * * *" ]; then
             uv run python scripts/refresh_publication.py --market-only
           else
             uv run python scripts/refresh_publication.py

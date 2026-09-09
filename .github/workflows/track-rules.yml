@@ -112,6 +112,10 @@ jobs:
         if: always() && steps.verify.outcome == 'success'
         run: uv run python scripts/build_tracker.py
 
+      - name: Validate generated tracking artifacts
+        if: always() && steps.verify.outcome == 'success'
+        run: uv run python scripts/validate_tracking_artifacts.py
+
       - name: Save refreshed caches
         if: always()
         uses: actions/cache/save@v6

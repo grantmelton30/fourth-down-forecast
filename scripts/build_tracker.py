@@ -183,7 +183,77 @@ def summarise(rule: str, spec: dict) -> tuple[dict, list]:
     return summary, rows
 
 
-def main() -> int:
+def _validate_summary(label: str, summary: dict) -> None:
+    counts = {key: summary.get(key) for key in
+              ("logged", "settled", "pending", "pushes", "wins", "losses")}
+    if any(not isinstance(value, int) or value < 0 for value in counts.values()):
+        raise ValueError(f"{label}: counts must be nonnegative integers: {counts}")
+    if counts["settled"] != counts["wins"] + counts["losses"]:
+        raise ValueError(f"{label}: settled count does not equal wins plus losses")
+    if counts["logged"] != counts["settled"] + counts["pushes"] + counts["pending"]:
+        raise ValueError(f"{label}: logged count does not reconcile")
+    expected = _stats(counts["wins"], counts["losses"])
+    for field in ("win_pct", "units", "ci_low", "ci_high"):
+        if summary.get(field) != expected[field]:
+            raise ValueError(f"{label}: {field} does not match the W-L record")
+    priced = summary.get("priced_bets")
+    if not isinstance(priced, int) or not 0 <= priced <= counts["settled"]:
+        raise ValueError(f"{label}: priced_bets must be within the settled count")
+    if (summary.get("priced_units") is None) != (priced == 0):
+        raise ValueError(f"{label}: priced_units availability disagrees with priced_bets")
+
+
+def validate_payload(payload: dict) -> None:
+    """Reject a tracker whose source rows, cohorts, or scoreboard do not reconcile."""
+    if not isinstance(payload, dict) or payload.get("schema_version") != 2:
+        raise ValueError("tracker must be a schema-version 2 JSON object")
+    rules = payload.get("rules")
+    bets = payload.get("bets")
+    combined = payload.get("combined")
+    if not isinstance(rules, dict) or not isinstance(bets, list) or not isinstance(combined, dict):
+        raise ValueError("tracker must contain rules, bets, and combined sections")
+
+    seen = set()
+    for row in bets:
+        key = (row.get("rule"), str(row.get("game_id") or ""))
+        if key[0] not in RULES or not key[1]:
+            raise ValueError(f"tracker bet has an invalid identity: {key}")
+        if key in seen:
+            raise ValueError(f"duplicate tracker bet: {key[0]} {key[1]}")
+        seen.add(key)
+
+    for rule in RULES:
+        summary = rules.get(rule)
+        if not isinstance(summary, dict):
+            raise ValueError(f"tracker is missing rule summary {rule}")
+        active = ACTIVE_PROTOCOL[rule]
+        if summary.get("cohort") != active:
+            raise ValueError(f"{rule}: active summary is not cohort {active}")
+        _validate_summary(rule, summary)
+
+        cohorts = summary.get("cohorts")
+        if not isinstance(cohorts, list):
+            raise ValueError(f"{rule}: cohorts must be a list")
+        names = [item.get("cohort") for item in cohorts if isinstance(item, dict)]
+        if len(names) != len(cohorts) or len(set(names)) != len(names):
+            raise ValueError(f"{rule}: cohort names must be present and unique")
+        for cohort in cohorts:
+            _validate_summary(f"{rule}/{cohort['cohort']}", cohort)
+
+        rule_rows = [row for row in bets if row["rule"] == rule]
+        if len(rule_rows) != sum(item["logged"] for item in cohorts):
+            raise ValueError(f"{rule}: cohort totals do not cover every source row")
+        active_rows = sum(1 for row in rule_rows if row.get("cohort") == active)
+        if active_rows != summary["logged"]:
+            raise ValueError(f"{rule}: active summary does not match active rows")
+
+    _validate_summary("combined", combined)
+    for field in ("logged", "settled", "pending", "pushes", "wins", "losses", "priced_bets"):
+        if combined[field] != sum(rules[rule][field] for rule in RULES):
+            raise ValueError(f"combined: {field} does not equal the active rule totals")
+
+
+def build_payload() -> dict:
     rules, bets = {}, []
     for rule, spec in RULES.items():
         summary, rows = summarise(rule, spec)
@@ -215,7 +285,7 @@ def main() -> int:
     print(f"  ALL: {combined['logged']} logged, {combined['settled']} settled, "
           f"{combined['win_pct'] if combined['win_pct'] is not None else '--'}%")
 
-    payload = {
+    return {
         "schema_version": 2,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "breakeven": BREAKEVEN,
@@ -227,9 +297,14 @@ def main() -> int:
         "rules": rules,
         "bets": bets,
     }
+
+
+def main() -> int:
+    payload = build_payload()
+    validate_payload(payload)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, indent=1, allow_nan=False), encoding="utf-8")
-    print(f"wrote {len(bets)} logged bets -> {OUT}")
+    print(f"wrote {len(payload['bets'])} logged bets -> {OUT}")
     return 0
 
 

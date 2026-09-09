@@ -5,6 +5,7 @@ view pools two rules, so the maths has to be right in one place rather than two.
 """
 from __future__ import annotations
 
+import copy
 import importlib.util
 import sys
 from pathlib import Path
@@ -122,3 +123,22 @@ def test_priced_units_exclude_unpriced_rows(tmp_path):
 def test_wilson_interval_has_uncertainty_at_extreme_records():
     assert 0 < bt._stats(2,0)["ci_low"] < 100
     assert 0 < bt._stats(0,2)["ci_high"] < 100
+
+
+def test_generated_payload_reconciles_source_rows_and_scoreboards():
+    payload = bt.build_payload()
+    bt.validate_payload(payload)
+
+
+def test_tracker_validation_rejects_duplicate_games_and_bad_combined_counts():
+    payload = bt.build_payload()
+    if payload["bets"]:
+        duplicate = copy.deepcopy(payload)
+        duplicate["bets"].append(copy.deepcopy(duplicate["bets"][0]))
+        with pytest.raises(ValueError, match="duplicate tracker bet"):
+            bt.validate_payload(duplicate)
+
+    broken = copy.deepcopy(payload)
+    broken["combined"]["logged"] += 1
+    with pytest.raises(ValueError, match="logged count does not reconcile"):
+        bt.validate_payload(broken)
