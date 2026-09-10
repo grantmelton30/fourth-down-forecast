@@ -31,6 +31,13 @@ def test_refresh_workflow_keeps_manual_and_twice_weekly_triggers():
     assert 'github.event.schedule }}" = "17 */2 * * *"' in workflow
 
 
+def test_failed_publication_cannot_poison_the_next_model_cache():
+    workflow = (ROOT / ".github/workflows/publish.yml").read_text()
+    assert "name: Save successful source and model caches\n        if: success()" in workflow
+    assert "name: Save CFBD budget counter\n        if: always()" in workflow
+    assert "key: cfbd-budget-${{ runner.os }}-${{ github.run_id }}" in workflow
+
+
 def test_ui_reserves_warning_icon_for_extreme_disagreement_and_labels_missing_market():
     app = (ROOT / "web/app.js").read_text()
     assert "r.out_of_distribution?'" in app

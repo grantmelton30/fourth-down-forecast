@@ -119,6 +119,47 @@ def _cached(name: str, seasons: "list[int] | None", refresh: bool, fetch,
     return df
 
 
+def _unpublished_current_release(exc: Exception, season: int) -> bool:
+    """True only for nflverse's exact current-season parquet-not-found response."""
+    import nflreadpy as nfl
+
+    try:
+        if season != int(nfl.get_current_season()):
+            return False
+    except Exception:  # source metadata failure is not evidence that a dataset is absent
+        return False
+    messages = []
+    current: BaseException | None = exc
+    while current is not None:
+        messages.append(str(current))
+        current = current.__cause__
+    joined = " ".join(messages)
+    return "404 Client Error" in joined and f"_{season}.parquet" in joined
+
+
+def _cached_with_current_fallback(name: str, seasons: list[int], refresh: bool,
+                                  fetch_for_seasons, expected_cols=None):
+    """Retry without an as-yet unpublished current-season dataset.
+
+    nflverse can publish the schedule and advance ``get_current_season()`` before every
+    play-level parquet exists. Only that exact current-season 404 is recoverable. Older
+    missing seasons, schema errors, empty frames, and all other source failures still stop
+    the build rather than silently shrinking the training sample.
+    """
+    try:
+        return _cached(name, seasons, refresh, lambda: fetch_for_seasons(seasons),
+                       expected_cols=expected_cols)
+    except RuntimeError as exc:
+        latest = max(seasons)
+        fallback = [season for season in seasons if season != latest]
+        if not fallback or not _unpublished_current_release(exc, latest):
+            raise
+        print(f"ingest.{name}: nflverse has not published {latest}; "
+              f"using completed seasons through {max(fallback)}")
+        return _cached(name, fallback, refresh, lambda: fetch_for_seasons(fallback),
+                       expected_cols=expected_cols)
+
+
 def _to_pandas(obj) -> pd.DataFrame:
     """nflreadpy returns polars; cross to pandas here and only here."""
     return obj.to_pandas() if hasattr(obj, "to_pandas") else obj
@@ -196,10 +237,10 @@ def load_pbp(seasons: list[int], refresh: bool = False) -> pd.DataFrame:
 
     seasons = published_seasons(seasons)
 
-    def fetch() -> pd.DataFrame:
+    def fetch(requested: list[int]) -> pd.DataFrame:
         import nflreadpy as nfl
 
-        raw = nfl.load_pbp(seasons)
+        raw = nfl.load_pbp(requested)
         missing = [c for c in PBP_COLUMNS if c not in raw.columns]
         if missing:
             raise RuntimeError(
@@ -209,7 +250,8 @@ def load_pbp(seasons: list[int], refresh: bool = False) -> pd.DataFrame:
         df = normalize_all_team_columns(df)
         return add_competitive_flag(df)
 
-    return _cached("pbp", seasons, refresh, fetch, expected_cols=PBP_COLUMNS)
+    return _cached_with_current_fallback(
+        "pbp", seasons, refresh, fetch, expected_cols=PBP_COLUMNS)
 
 
 def add_competitive_flag(pbp: pd.DataFrame) -> pd.DataFrame:
@@ -271,17 +313,18 @@ def load_snap_counts(seasons: list[int], refresh: bool = False) -> pd.DataFrame:
     if not seasons:
         return pd.DataFrame()
 
-    def fetch() -> pd.DataFrame:
+    def fetch(requested: list[int]) -> pd.DataFrame:
         import nflreadpy as nfl
 
-        return normalize_all_team_columns(_to_pandas(nfl.load_snap_counts(seasons)))
+        return normalize_all_team_columns(_to_pandas(nfl.load_snap_counts(requested)))
 
     # injuries.py::build_injury_burden indexes all five of these directly (no alias
     # fallback), so a schema drift here silently breaks the injury-burden feature -- the
     # one real, measured NFL injury signal this repo has (NEXT_SESSION.md).
-    return _cached("snap_counts", seasons, refresh, fetch, expected_cols=[
-        "season", "week", "player", "offense_pct", "defense_pct",
-    ])
+    return _cached_with_current_fallback(
+        "snap_counts", seasons, refresh, fetch, expected_cols=[
+            "season", "week", "player", "offense_pct", "defense_pct",
+        ])
 
 
 def load_injuries(seasons: list[int], refresh: bool = False) -> pd.DataFrame:

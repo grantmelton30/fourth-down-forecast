@@ -34,9 +34,14 @@ jobs:
           path: |
             nfl-model/data/cache
             ncaa-model/data/cache
-            ncaa-model/data/api_budget.json
           key: football-model-${{ runner.os }}-${{ github.run_id }}
           restore-keys: football-model-${{ runner.os }}-
+      - name: Restore CFBD budget counter
+        uses: actions/cache/restore@v6
+        with:
+          path: ncaa-model/data/api_budget.json
+          key: cfbd-budget-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: cfbd-budget-${{ runner.os }}-
       - name: Verify shared, NFL, NCAA, and prop suites in isolated processes
         run: |
           uv run pytest -q shared/tests
@@ -61,15 +66,20 @@ jobs:
         id: validate
         if: github.event.schedule != '23 */6 * * *'
         run: uv run python scripts/validate_publication.py
-      - name: Save refreshed caches
-        if: always()
+      - name: Save successful source and model caches
+        if: success()
         uses: actions/cache/save@v6
         with:
           path: |
             nfl-model/data/cache
             ncaa-model/data/cache
-            ncaa-model/data/api_budget.json
           key: football-model-${{ runner.os }}-${{ github.run_id }}
+      - name: Save CFBD budget counter
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: ncaa-model/data/api_budget.json
+          key: cfbd-budget-${{ runner.os }}-${{ github.run_id }}
       - name: Commit changed static artifact
         if: always() && steps.capture.outcome == 'success'
         env:
