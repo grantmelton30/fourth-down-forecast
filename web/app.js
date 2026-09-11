@@ -1,4 +1,4 @@
-const state={records:[],explorer:null,league:'all',status:'upcoming',week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',tracker:null,recordLeague:'all',explorerLeague:'nfl',teamLeague:'nfl',team:null};
+const state={records:[],explorer:null,league:'all',status:'upcoming',betsOnly:false,logged:new Map(),week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',tracker:null,recordLeague:'all',explorerLeague:'nfl',teamLeague:'nfl',team:null};
 const $=selector=>document.querySelector(selector);
 const $$=selector=>[...document.querySelectorAll(selector)];
 const list=$('#game-list'),empty=$('#empty-state'),weekFilter=$('#week-filter'),sortFilter=$('#sort-filter'),groupFilter=$('#group-filter'),teamFilter=$('#team-filter'),dialog=$('#detail-dialog');
@@ -45,7 +45,12 @@ const disagreeCell=d=>{
   const label=s==null?'No market spread to compare':`Spread difference ${signed(s)} points`;
   return`<div class="disagree"><b class="cell-label">Spread disagreement</b><span class="track" role="img" aria-label="${esc(label)}"><i class="tick"></i>${fill}</span></div>`;
 };
-const ruleCell=r=>{const t=r.tracked_rule;if(!t)return`<div class="rulecell"><b class="cell-label">Tracked rule</b><span class="badge">—</span><small>rule not evaluated</small></div>`;return`<div class="rulecell ${t.qualifies?'on':''}"><b class="cell-label">Tracked rule</b><span class="badge">${esc(t.label||'—')}</span><small title="${esc(t.reason||'')}">${esc(t.reason||'')}</small></div>`};
+// The badge is recomputed against the latest line on every publish; the bet log is written
+// once, when the rule's recorder runs, and never changes. A logged bet can therefore sit
+// under a badge that has since switched off, so the row says what was actually logged.
+const betKey=r=>`${r.league}|${String(r.game_id)}`;
+const loggedLine=r=>{const b=state.logged.get(betKey(r));return b?`<small class="logged">Logged ${esc(b.rule)} · ${esc(b.side||'')} ${number(b.market_total_at_bet)} · ${b.result?esc(b.result):'pending'}</small>`:''};
+const ruleCell=r=>{const t=r.tracked_rule;if(!t)return`<div class="rulecell"><b class="cell-label">Tracked rule</b><span class="badge">—</span><small>rule not evaluated</small>${loggedLine(r)}</div>`;return`<div class="rulecell ${t.qualifies?'on':''}"><b class="cell-label">Tracked rule</b><span class="badge">${esc(t.label||'—')}</span><small title="${esc(t.reason||'')}">${esc(t.reason||'')}</small>${loggedLine(r)}</div>`};
 const leagueData=league=>state.explorer?.leagues?.[league]||{ratings:[],schedule:[],summary:{}};
 const normalize=value=>String(value||'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const ratingFor=(league,team)=>leagueData(league).ratings.find(r=>r.team===team);
@@ -69,14 +74,18 @@ function matchesFilters(r,query){
 function filtered(){
   const query=normalize(state.teamQuery.trim());
   const now=Date.now();
-  // The Games counts respect every other filter, so each button says how many rows
-  // clicking it would show.
+  const inStatus=r=>state.status==='all'||(state.status==='settled')===hasKickedOff(r,now);
+  const logged=r=>state.logged.has(betKey(r));
+  // Every count respects every other filter, so each control says how many rows clicking
+  // it would show.
   const base=state.records.filter(r=>matchesFilters(r,query));
-  const settled=base.filter(r=>hasKickedOff(r,now)).length;
-  $('#count-upcoming').textContent=base.length-settled;
+  const pool=state.betsOnly?base.filter(logged):base;
+  const settled=pool.filter(r=>hasKickedOff(r,now)).length;
+  $('#count-upcoming').textContent=pool.length-settled;
   $('#count-settled').textContent=settled;
-  $('#count-all').textContent=base.length;
-  const rows=base.filter(r=>state.status==='all'||(state.status==='settled')===hasKickedOff(r,now));
+  $('#count-all').textContent=pool.length;
+  $('#count-bets').textContent=base.filter(r=>logged(r)&&inStatus(r)).length;
+  const rows=pool.filter(inStatus);
   if(state.sort==='difference')rows.sort((a,b)=>Math.abs(b.model_market_difference?.spread||0)-Math.abs(a.model_market_difference?.spread||0));
   else if(state.sort==='confidence')rows.sort((a,b)=>(a.quality_reasons?.length||0)-(b.quality_reasons?.length||0));
   else rows.sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff));
@@ -95,6 +104,7 @@ function renderProjections(){
     ?'The site is ready, but it will not invent picks. Run the prospective model refresh to append evidence to the ledger; this page then updates from the versioned JSON artifact.'
     :settledAvailable?'Every projected game has kicked off. Switch Games to Settled to review them, or wait for the next slate to publish.'
     :'Try a different team, conference/division, league, or week.';
+  if(state.betsOnly&&state.records.length&&!rows.length){empty.querySelector('h2').textContent='No logged bets match these filters.';empty.querySelector('p:last-child').textContent='Logged bets are the pre-registered rule selections in the Record tab. Try Settled or All, or turn off Logged bets only.';}
   rows.forEach(r=>{
     const button=document.createElement('button');button.type='button';button.className=`game-row ${r.out_of_distribution?'flagged':''}`;
     const warning=r.out_of_distribution?'<span class="warning-mark" aria-label="Extreme model and market disagreement">!</span>':'';
@@ -307,7 +317,8 @@ weekFilter.addEventListener('change',()=>{state.week=weekFilter.value;renderProj
 sortFilter.addEventListener('change',()=>{state.sort=sortFilter.value;renderProjections()});
 groupFilter.addEventListener('change',()=>{state.group=groupFilter.value;renderProjections()});
 teamFilter.addEventListener('input',()=>{state.teamQuery=teamFilter.value;renderProjections()});
-$('#clear-filters').addEventListener('click',()=>{state.league='all';state.status='upcoming';state.week='all';state.group='all';state.teamQuery='';teamFilter.value='';weekFilter.value='all';setButtonGroup('[data-league]','all','league');setButtonGroup('[data-status]','upcoming','status');populateProjectionFilters();renderProjections()});
+$('#bets-filter').addEventListener('change',e=>{state.betsOnly=e.target.checked;renderProjections()});
+$('#clear-filters').addEventListener('click',()=>{state.betsOnly=false;$('#bets-filter').checked=false;state.league='all';state.status='upcoming';state.week='all';state.group='all';state.teamQuery='';teamFilter.value='';weekFilter.value='all';setButtonGroup('[data-league]','all','league');setButtonGroup('[data-status]','upcoming','status');populateProjectionFilters();renderProjections()});
 
 Promise.all([
   fetch('api/v1/predictions.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`predictions HTTP ${r.status}`);return r.json()}),
@@ -321,5 +332,10 @@ Promise.all([
   [...new Set(state.records.map(r=>r.week))].sort((a,b)=>a-b).forEach(w=>weekFilter.add(new Option(`Week ${w}`,w)));
   $('#data-status').textContent=feed.generated_at?`Updated ${date(feed.generated_at)}`:'Awaiting first slate';
   $('#gate-chip').hidden=!state.records.length||state.records.some(r=>r.pick_eligible);
-  state.tracker=tracker;populateProjectionFilters();renderProjections();renderLeague();renderTeam();renderRecord();
+  state.tracker=tracker;
+  // Without tracker.json there is no bet log to filter by, so the control is hidden rather
+  // than offered and silently matching nothing.
+  state.logged=new Map((tracker?.bets||[]).map(b=>[`${b.league}|${String(b.game_id)}`,b]));
+  $('#bets-filter-group').hidden=!tracker;
+  populateProjectionFilters();renderProjections();renderLeague();renderTeam();renderRecord();
 }).catch(error=>{$('#data-status').textContent='Data unavailable';empty.hidden=false;empty.querySelector('p:last-child').textContent=`The publication artifacts could not be loaded (${error.message}).`;});

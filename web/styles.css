@@ -114,6 +114,14 @@ select:hover,input[type="search"]:hover{border-color:var(--line-strong)}
 .status-list button:hover b{color:var(--dim)}
 .status-list button.active{background:var(--track);color:var(--text)}
 .status-list button.active b{color:var(--dim)}
+.rail-check{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:3px;color:var(--dim);font-size:12px;font-weight:500;cursor:pointer}
+.rail-check:hover{background:var(--hair);color:var(--text)}
+.rail-check input{width:14px;height:14px;margin:0;accent-color:var(--accent);cursor:pointer}
+.rail-check b{margin-left:auto;color:var(--faint);font:400 11px var(--mono)}
+.rail-check:hover b,.rail-check:has(input:checked) b{color:var(--dim)}
+.rail-check:has(input:checked){background:var(--track);color:var(--text)}
+.rulecell small.logged{overflow:hidden;color:var(--text-2);white-space:nowrap;text-overflow:ellipsis}
+@media (max-width:760px){.rail-check{min-height:44px}}
 .clear-filters{align-self:flex-start;padding:2px 0;border:0;border-bottom:1px solid var(--control);background:transparent;color:var(--dim);font-size:11px;cursor:pointer}
 .clear-filters:hover{border-color:var(--text);color:var(--text)}
 .rail-count{display:flex;flex-direction:column;gap:6px;margin-top:auto;padding-top:14px;border-top:1px solid var(--hair)}
