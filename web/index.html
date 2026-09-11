@@ -1,136 +1,166 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Independent NFL and NCAA score projections compared against the published market line.">
   <title>Fourth Down · Football Forecast Ledger</title>
+  <script>
+    // Resolved before first paint so a light-mode visitor never sees a dark flash. An
+    // explicit choice wins; otherwise the page follows the operating system.
+    (function () {
+      var theme = null;
+      try { theme = localStorage.getItem('fd-theme'); } catch (e) {}
+      if (theme !== 'light' && theme !== 'dark') {
+        theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <a class="skip-link" href="#workspace">Skip to forecast workspace</a>
-  <header class="site-header">
+
+  <header class="topbar">
     <a class="brand" href="#">
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-      <span><strong>Fourth Down</strong><small>forecast ledger</small></span>
+      <strong>Fourth Down</strong>
     </a>
-    <div class="data-state"><span class="pulse"></span><span id="data-status">Loading ledger</span></div>
+    <nav class="workspace-nav" aria-label="Forecast workspace">
+      <button class="active" data-view="projections" aria-current="page">Projections</button>
+      <button data-view="league">League</button>
+      <button data-view="teams">Teams</button>
+      <button data-view="record">Record</button>
+    </nav>
+    <div class="topbar-meta">
+      <div class="data-state"><span class="pulse" aria-hidden="true"></span><span id="data-status">Loading ledger</span></div>
+      <span id="gate-chip" class="gate-chip" title="No published forecast cleared the pick gates" hidden>Picks blocked</span>
+      <div class="theme-toggle" role="group" aria-label="Colour theme">
+        <button type="button" data-theme-choice="dark" aria-pressed="false" title="Dark theme">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span class="sr-only">Dark</span>
+        </button>
+        <button type="button" data-theme-choice="light" aria-pressed="false" title="Light theme">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <span class="sr-only">Light</span>
+        </button>
+      </div>
+    </div>
   </header>
-
-  <nav class="workspace-nav" aria-label="Forecast workspace">
-    <button class="active" data-view="projections">Projections</button>
-    <button data-view="league">League overview</button>
-    <button data-view="teams">Teams & schedules</button>
-    <button data-view="record">Record</button>
-  </nav>
 
   <main id="workspace">
     <div id="projections-view" class="workspace-view active">
-    <section class="control-deck" aria-labelledby="page-title">
-      <div class="title-block">
-        <p class="eyebrow">Independent football projections · v2</p>
-        <h1 id="page-title">See the model.<br><em>Then see the market.</em></h1>
-        <p class="lede">Compare the independent forecast with its market reference. A model disagreement or rule match is a research signal, not a verified betting edge.</p>
-      </div>
-      <div class="controls" aria-label="Prediction filters">
-        <div class="segmented" role="group" aria-label="League">
-          <button class="active" data-league="all">All</button>
-          <button data-league="nfl">NFL</button>
-          <button data-league="ncaa">NCAA</button>
-        </div>
-        <label>Games
-          <select id="status-filter">
-            <option value="upcoming">Upcoming</option>
-            <option value="settled">Settled</option>
-            <option value="all">All</option>
-          </select>
-        </label>
-        <label>Week
-          <select id="week-filter"><option value="all">All available</option></select>
-        </label>
-        <label>Sort
-          <select id="sort-filter">
-            <option value="kickoff">Kickoff</option>
-            <option value="difference">Largest difference</option>
-            <option value="confidence">Data quality</option>
-          </select>
-        </label>
-        <label>Conference / division
-          <select id="group-filter"><option value="all">All conferences & divisions</option></select>
-        </label>
-        <label>Find a team
-          <input id="team-filter" type="search" list="projection-teams" placeholder="Type a team name" autocomplete="off">
+      <div class="projections-layout">
+        <aside class="filter-rail" aria-label="Prediction filters">
+          <div class="rail-group">
+            <span class="rail-label" id="league-label">League</span>
+            <div class="segmented" role="group" aria-labelledby="league-label">
+              <button class="active" data-league="all" aria-pressed="true">All</button>
+              <button data-league="nfl" aria-pressed="false">NFL</button>
+              <button data-league="ncaa" aria-pressed="false">NCAA</button>
+            </div>
+          </div>
+          <div class="rail-group games-group">
+            <span class="rail-label" id="games-label">Games</span>
+            <div class="status-list" role="group" aria-labelledby="games-label">
+              <button class="active" data-status="upcoming" aria-pressed="true"><span>Upcoming</span><b id="count-upcoming">—</b></button>
+              <button data-status="settled" aria-pressed="false"><span>Settled</span><b id="count-settled">—</b></button>
+              <button data-status="all" aria-pressed="false"><span>All</span><b id="count-all">—</b></button>
+            </div>
+          </div>
+          <label class="rail-group"><span class="rail-label">Week</span>
+            <select id="week-filter"><option value="all">All available</option></select>
+          </label>
+          <label class="rail-group"><span class="rail-label">Sort</span>
+            <select id="sort-filter">
+              <option value="kickoff">Kickoff</option>
+              <option value="difference">Largest difference</option>
+              <option value="confidence">Data quality</option>
+            </select>
+          </label>
+          <label class="rail-group"><span class="rail-label">Conference / division</span>
+            <select id="group-filter"><option value="all">All conferences &amp; divisions</option></select>
+          </label>
+          <label class="rail-group"><span class="rail-label">Find a team</span>
+            <input id="team-filter" type="search" list="projection-teams" placeholder="Type a team name" autocomplete="off">
+          </label>
           <datalist id="projection-teams"></datalist>
-        </label>
-        <button id="clear-filters" class="clear-filters" type="button">Clear filters</button>
-      </div>
-    </section>
+          <button id="clear-filters" class="clear-filters" type="button">Clear filters</button>
+          <div class="rail-count"><span class="rail-label">Showing</span><strong id="showing-count" aria-live="polite">—</strong></div>
+        </aside>
 
-    <section class="legend" aria-label="Forecast definitions">
-      <div><b>01</b><span><strong>Model</strong>Football-only score and line.</span></div>
-      <div><b>02</b><span><strong>Market</strong>Published reference line; consensus requires at least three independent books.</span></div>
-      <div><b>03</b><span><strong>Difference</strong>Model minus market. Not automatically an edge.</span></div>
-      <div><b>04</b><span><strong>Tracked rule</strong>Whether the pre-registered rule fires (NCAA P1 / NFL W1). A record of what the declared rule would do &mdash; both leagues fail their bet gates.</span></div>
-    </section>
-
-    <section id="matchups" class="matchups" aria-live="polite">
-      <div class="table-head" aria-hidden="true">
-        <span>Matchup</span><span>01 Model</span><span>02 Market</span><span>03 Difference</span><span>04 Tracked rule</span>
+        <div class="table-wrap">
+          <section id="matchups" class="matchups">
+            <div class="table-head proj-head" aria-hidden="true">
+              <span>Matchup</span><span>Model</span><span>Market</span><span>Difference</span><span>Disagreement</span><span>Tracked rule</span>
+            </div>
+            <div id="game-list" class="game-list"></div>
+            <div id="empty-state" class="empty-state" hidden>
+              <div><h2>No published slate yet.</h2><p>The site is ready, but it will not invent picks. Run the prospective model refresh to append evidence to the ledger; this page then updates from the versioned JSON artifact.</p></div>
+            </div>
+          </section>
+          <p class="table-note">Lines read spread · total, with the spread positive when the home team is favoured. Difference is model minus market &mdash; disagreement is a research signal, not a pick.</p>
+          <details class="how-to">
+            <summary>How this ledger is kept</summary>
+            <dl>
+              <div><dt>Model</dt><dd>Football-only score and line.</dd></div>
+              <div><dt>Market</dt><dd>Published reference line; consensus requires at least three independent books.</dd></div>
+              <div><dt>Tracked rule</dt><dd>Whether a pre-registered rule fires (NCAA P1 / NFL W1). A record of what the declared rule would do &mdash; both leagues fail their bet gates.</dd></div>
+              <div><dt>Publication</dt><dd>Every snapshot is immutable.</dd></div>
+              <div><dt>Missing data</dt><dd>Unknown is never assumed healthy.</dd></div>
+              <div><dt>Promotion</dt><dd>Held-out seasons must improve.</dd></div>
+            </dl>
+          </details>
+        </div>
       </div>
-      <div id="game-list" class="game-list"></div>
-      <div id="empty-state" class="empty-state" hidden>
-        <p class="yard-number">00</p>
-        <div><h2>No published slate yet.</h2><p>The site is ready, but it will not invent picks. Run the prospective model refresh to append evidence to the ledger; this page then updates from the versioned JSON artifact.</p></div>
-      </div>
-    </section>
-
-    <section class="integrity-strip">
-      <div><span>Publication rule</span><strong>Every snapshot is immutable</strong></div>
-      <div><span>Consensus rule</span><strong>Minimum 3 independent books</strong></div>
-      <div><span>Missing-data rule</span><strong>Unknown is never assumed healthy</strong></div>
-      <div><span>Promotion rule</span><strong>Held-out seasons must improve</strong></div>
-    </section>
     </div>
-
 
     <div id="record-view" class="workspace-view">
       <section class="view-heading">
-        <p class="eyebrow">Forward record</p>
-        <div><h1>What the rules actually did.</h1><p>Selections are separated by protocol and line basis. Historical cohorts do not advance current checkpoints. Reference lines and assumed returns do not establish executable bets.</p></div>
+        <h1>Record</h1>
+        <p>Pre-registered rules, graded at the line each selection was recorded at. Historical cohorts do not advance current checkpoints, and reference lines are not executable bets.</p>
+        <span class="spacer"></span>
+        <div class="segmented record-tabs" role="group" aria-label="Record league">
+          <button class="active" data-record="all" aria-pressed="true">NFL + NCAA</button>
+          <button data-record="ncaa" aria-pressed="false">NCAA</button>
+          <button data-record="nfl" aria-pressed="false">NFL</button>
+        </div>
       </section>
-      <div class="segmented record-tabs" role="group" aria-label="Record league">
-        <button class="active" data-record="all">NFL + NCAA</button>
-        <button data-record="ncaa">NCAA</button>
-        <button data-record="nfl">NFL</button>
-      </div>
+      <section id="record-headline" class="record-headline"></section>
       <section class="rule-cards" id="rule-cards"></section>
-      <section class="matchups">
-        <div class="table-head record-head"><span>Game</span><span>Rule</span><span>Side</span><span>Line &amp; quote</span><span>Actual</span><span>Result</span></div>
+      <section class="bets">
+        <div class="table-head record-head" aria-hidden="true">
+          <span>Wk</span><span>Selection</span><span>Cohort</span><span>Side</span><span>Line</span><span>Gap</span><span>Close</span><span>Actual</span><span>Result</span>
+        </div>
         <div id="bet-list"></div>
         <div id="bet-empty" class="panel-empty">No bets logged yet. The trackers append here automatically once the season starts.</div>
       </section>
-    </section>
     </div>
 
     <div id="league-view" class="workspace-view">
       <section class="view-heading">
-        <p class="eyebrow">League command center</p>
-        <div><h1>Read the whole field.</h1><p>Power structure, schedule volume, evidence maturity, and market coverage in one scan.</p></div>
+        <h1>League overview</h1>
+        <p>Power structure, schedule volume and evidence maturity.</p>
+        <span class="spacer"></span>
         <div class="segmented compact" role="group" aria-label="League overview league">
-          <button class="active" data-explorer-league="nfl">NFL</button>
-          <button data-explorer-league="ncaa">NCAA</button>
+          <button class="active" data-explorer-league="nfl" aria-pressed="true">NFL</button>
+          <button data-explorer-league="ncaa" aria-pressed="false">NCAA</button>
         </div>
       </section>
-      <section id="league-summary" class="stat-ribbon" aria-live="polite"></section>
+      <section id="league-summary" class="stat-ribbon"></section>
       <section class="overview-grid">
         <article class="data-panel rankings-panel">
-          <header><span>Power table</span><strong id="rankings-period"></strong></header>
-          <div class="ranking-head"><span>Rank / team</span><span>Overall</span><span>Off.</span><span>Def.</span></div>
+          <header><span>Power ratings</span><strong id="rankings-period"></strong></header>
+          <div class="ranking-head" aria-hidden="true"><span>Rk</span><span>Team</span><span>Net rating</span><span>Value</span><span>Off</span><span>Def</span></div>
           <div id="ranking-list"></div>
         </article>
         <aside class="data-panel evidence-panel">
-          <header><span>Evidence state</span><strong>Publication</strong></header>
+          <header><span>Evidence maturity</span><strong id="evidence-model"></strong></header>
           <div id="evidence-overview"></div>
         </aside>
       </section>
@@ -138,23 +168,21 @@
 
     <div id="teams-view" class="workspace-view">
       <section class="view-heading team-heading">
-        <p class="eyebrow">Team room</p>
-        <div><h1>One team.<br><em>Every angle.</em></h1><p>Current model standing, unit ratings, published forecasts, and the full season schedule.</p></div>
-        <div class="team-controls">
-          <div class="segmented compact" role="group" aria-label="Team league">
-            <button class="active" data-team-league="nfl">NFL</button>
-            <button data-team-league="ncaa">NCAA</button>
-          </div>
-          <label>Team<select id="team-select"></select></label>
+        <h1>Teams</h1>
+        <label class="team-picker"><span class="rail-label">Team</span><select id="team-select"></select></label>
+        <span class="spacer"></span>
+        <div class="segmented compact" role="group" aria-label="Team league">
+          <button class="active" data-team-league="nfl" aria-pressed="true">NFL</button>
+          <button data-team-league="ncaa" aria-pressed="false">NCAA</button>
         </div>
       </section>
       <section id="team-identity" class="team-identity"></section>
       <section class="team-grid">
         <article class="data-panel">
-          <header><span>Season schedule</span><strong id="team-schedule-label"></strong></header>
+          <header><span>Schedule</span><strong id="team-schedule-label"></strong></header>
           <div id="team-schedule" class="schedule-list"></div>
         </article>
-        <aside class="data-panel">
+        <aside class="data-panel side-panel">
           <header><span>Published forecasts</span><strong>Current ledger</strong></header>
           <div id="team-forecasts" class="team-forecast-list"></div>
         </aside>
@@ -162,12 +190,12 @@
     </div>
   </main>
 
-  <dialog id="detail-dialog">
+  <dialog id="detail-dialog" aria-labelledby="dialog-title">
     <button class="dialog-close" aria-label="Close details">×</button>
     <div id="dialog-content"></div>
   </dialog>
 
-  <footer><span>Fourth Down</span><span>Projection tool · not betting advice</span><a href="api/v1/predictions.json">API v1 ↗</a></footer>
+  <footer><span>Fourth Down · projection tool, not betting advice</span><a href="api/v1/predictions.json">API v1 ↗</a></footer>
   <script src="app.js" defer></script>
 </body>
 </html>
