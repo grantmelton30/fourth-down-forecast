@@ -1,4 +1,4 @@
-const state={records:[],explorer:null,league:'all',week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',tracker:null,recordLeague:'all',explorerLeague:'nfl',teamLeague:'nfl',team:null};
+const state={records:[],explorer:null,league:'all',status:'upcoming',week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',tracker:null,recordLeague:'all',explorerLeague:'nfl',teamLeague:'nfl',team:null};
 const $=selector=>document.querySelector(selector);
 const $$=selector=>[...document.querySelectorAll(selector)];
 const list=$('#game-list'),empty=$('#empty-state'),weekFilter=$('#week-filter'),sortFilter=$('#sort-filter'),groupFilter=$('#group-filter'),teamFilter=$('#team-filter'),dialog=$('#detail-dialog');
@@ -20,10 +20,21 @@ const normalize=value=>String(value||'').toLocaleLowerCase().normalize('NFD').re
 const ratingFor=(league,team)=>leagueData(league).ratings.find(r=>r.team===team);
 const groupFor=(league,team)=>ratingFor(league,team)?.group||null;
 
+// The feed carries every game the model has ever projected, oldest first, so an
+// unfiltered Kickoff sort opened this tab on games a fortnight old. Kickoff time is the
+// only status the feed carries -- it has no final scores -- so "settled" here means
+// "has kicked off", which includes a game still in progress.
+const hasKickedOff=(record,now)=>{
+  const kickoff=new Date(record.kickoff).getTime();
+  return Number.isFinite(kickoff)&&kickoff<now;
+};
+
 function filtered(){
   const query=normalize(state.teamQuery.trim());
+  const now=Date.now();
   let rows=state.records.filter(r=>
     (state.league==='all'||r.league===state.league)
+    &&(state.status==='all'||(state.status==='settled')===hasKickedOff(r,now))
     &&(state.week==='all'||String(r.week)===state.week)
     &&(state.group==='all'||groupFor(r.league,r.home_team)===state.group||groupFor(r.league,r.away_team)===state.group)
     &&(!query||normalize(r.home_team).includes(query)||normalize(r.away_team).includes(query))
@@ -35,8 +46,16 @@ function filtered(){
 }
 function renderProjections(){
   const rows=filtered();list.replaceChildren();empty.hidden=rows.length>0;
-  empty.querySelector('h2').textContent=state.records.length?'No projections match these filters.':'No published slate yet.';
-  empty.querySelector('p:last-child').textContent=state.records.length?'Try a different team, conference/division, league, or week.':'The site is ready, but it will not invent picks. Run the prospective model refresh to append evidence to the ledger; this page then updates from the versioned JSON artifact.';
+  // An empty Upcoming view is the ordinary state between slates, not a fault, and the
+  // default now hides settled games -- so say where they went rather than listing
+  // filters the reader has not touched.
+  const settledAvailable=state.status==='upcoming'&&state.records.some(r=>hasKickedOff(r,Date.now()));
+  empty.querySelector('h2').textContent=!state.records.length?'No published slate yet.'
+    :settledAvailable?'No upcoming games.':'No projections match these filters.';
+  empty.querySelector('p:last-child').textContent=!state.records.length
+    ?'The site is ready, but it will not invent picks. Run the prospective model refresh to append evidence to the ledger; this page then updates from the versioned JSON artifact.'
+    :settledAvailable?'Every projected game has kicked off. Switch Games to Settled to review them, or wait for the next slate to publish.'
+    :'Try a different team, conference/division, league, or week.';
   rows.forEach(r=>{
     const button=document.createElement('button');button.className=`game-row ${r.out_of_distribution?'flagged':''}`;
     const warning=r.out_of_distribution?'<span class="warning-mark" aria-label="Extreme model and market disagreement">!</span>':'';
@@ -172,7 +191,8 @@ weekFilter.addEventListener('change',()=>{state.week=weekFilter.value;renderProj
 sortFilter.addEventListener('change',()=>{state.sort=sortFilter.value;renderProjections()});
 groupFilter.addEventListener('change',()=>{state.group=groupFilter.value;renderProjections()});
 teamFilter.addEventListener('input',()=>{state.teamQuery=teamFilter.value;renderProjections()});
-$('#clear-filters').addEventListener('click',()=>{state.league='all';state.week='all';state.group='all';state.teamQuery='';teamFilter.value='';weekFilter.value='all';setButtonGroup('[data-league]','all','league');populateProjectionFilters();renderProjections()});
+$('#status-filter').addEventListener('change',()=>{state.status=$('#status-filter').value;renderProjections()});
+$('#clear-filters').addEventListener('click',()=>{state.league='all';state.status='upcoming';$('#status-filter').value='upcoming';state.week='all';state.group='all';state.teamQuery='';teamFilter.value='';weekFilter.value='all';setButtonGroup('[data-league]','all','league');populateProjectionFilters();renderProjections()});
 
 Promise.all([
   fetch('api/v1/predictions.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`predictions HTTP ${r.status}`);return r.json()}),

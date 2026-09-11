@@ -903,17 +903,53 @@ class NCAAAdapter(SportAdapter):
                       .drop(columns="_priced").reset_index(drop=True))
         return out
 
+    def _config_matches_manifest(self, path):
+        """Was this frame built by the configuration that is shipping right now?
+
+        `walk_forward` stamps every frame with a manifest and refuses a mismatched one,
+        but that check lives in the BUILDER. This adapter used to `pd.read_parquet` the
+        file directly and so walked straight past it -- and `rmse_vs_market()` is a hard
+        precondition inside `bets_allowed()`, which meant the college bet/no-bet decision
+        could be read from a model that no longer existed. On 2026-09-10 the frame on disk
+        was built 2026-08-19 from source that has since changed.
+
+        Config only, matching `nfl-model`'s `backtest_frame_path()`. That deliberately
+        does NOT invalidate on a pure code change: keying on the source tree would mark
+        the frame stale after every commit and leave the diagnostics permanently empty
+        between rebuilds. The tradeoff is the one nfl-model already documents and accepts.
+        """
+        from dataclasses import asdict
+        from cache_manifest import digest_payload, manifest_path
+        sidecar = manifest_path(path)
+        if not sidecar.exists():
+            return False
+        try:
+            manifest = json.loads(sidecar.read_text())
+        except (OSError, ValueError):
+            return False
+        stored = (manifest.get("signature") or {}).get("config_sha256")
+        try:
+            current = digest_payload(asdict(self._cfg()))
+        except Exception:  # noqa: BLE001 - an unreadable config cannot vouch for a cache
+            return False
+        return bool(stored) and stored == current
+
     def backtest_frame(self):
         # ncaa-model writes backtest_frame_{cache_key}.parquet -- "default" for the
         # shipped run and "sweep{i}" for the pre-registered grid. This looked for a bare
         # backtest_frame.parquet, which the repo has never written, so it returned None
         # and every consumer (Diagnostics, the accuracy precondition) silently saw nothing.
+        #
+        # Fail closed on a frame this config did not produce: a missing or mismatched
+        # manifest reads as no evidence, which blocks picks, rather than as evidence.
         for name in ("backtest_frame_default.parquet", "backtest_frame.parquet"):
             path = self._cache_dir() / name
             if path.exists():
+                return pd.read_parquet(path) if self._config_matches_manifest(path) else None
+        for path in sorted(self._cache_dir().glob("backtest_frame_*.parquet"), reverse=True):
+            if self._config_matches_manifest(path):
                 return pd.read_parquet(path)
-        cands = sorted(self._cache_dir().glob("backtest_frame_*.parquet"))
-        return pd.read_parquet(cands[-1]) if cands else None
+        return None
 
     def _cfg(self):
         if "cfg" not in self._cache:

@@ -91,6 +91,33 @@ def _movement(model, taken, later):
     return later-taken if model > taken else taken-later
 
 
+NON_BOOK_TOKENS = ("nflverse", "consensus", "unknown")
+
+
+def _entry_book(evidence):
+    """The one book whose number became the recorded line, or None if it is a blend.
+
+    ``providers`` lists every book SURVEYED, not the book that supplied the line, so a
+    two-book survey that took Bovada's number reads as ``["Bovada", "DraftKings"]``.
+    Requiring a single provider therefore discarded games whose entry book is known and
+    named -- 138 of the 286 rows graded up to 2026-09-10, every one of them labelled
+    "Bovada (of 2 books)". ``label`` names the book actually taken; a label naming no
+    single surveyed book ("two-book reference") is a blend and still fails closed, as
+    does anything flagged ``is_consensus``.
+
+    Dropping the old ``book_count == 1`` condition is safe because it was never the
+    check doing the work: the caller still requires the chosen book's own entry quote to
+    equal the recorded line exactly, so picking the wrong book fails closed there.
+    """
+    providers = evidence.get("providers") or []
+    if evidence.get("is_consensus"):
+        return None
+    if len(providers) == 1:
+        return providers[0]
+    named = (evidence.get("label") or "").split(" (of ")[0].strip()
+    return named if named in providers else None
+
+
 def _same_book_close(record, quotes, market, kickoff):
     """Same-provider point movement, only with a documented fresh closing sample.
 
@@ -98,11 +125,12 @@ def _same_book_close(record, quotes, market, kickoff):
     stale observations, post-kickoff samples and mismatched entry lines fail closed.
     """
     evidence = record.get("market_evidence") or {}
-    providers = evidence.get("providers") or []
-    if len(providers) != 1 or evidence.get("book_count_"+market) != 1:
+    provider = _entry_book(evidence)
+    if provider is None:
         return None, None, None
-    provider = providers[0]
-    if provider.lower() in ("nflverse", "consensus", "unknown"):
+    # Substring, not equality: the published-line baseline arrives as the provider
+    # "nflverse published line", which an exact-match check let through.
+    if any(token in provider.lower() for token in NON_BOOK_TOKENS):
         return None, None, None
     made = _stamp(record["generated_at"])
     observations=[]
@@ -238,6 +266,34 @@ def _horizon_coverage(bundles, missing, now):
     return result
 
 
+def _clv_coverage(frame):
+    """How often a closing line was actually resolved, per league and market.
+
+    ``horizon_coverage`` measures whether a forecast snapshot existed; it says nothing
+    about whether the close was captured, so a run could report "ok" on 96% of rows
+    having no CLV at all -- which is what happened up to 2026-09-10. CLV is the whole
+    reason this grader exists, so its capture rate is reported beside the rest.
+    """
+    result=[]
+    if frame is None or not len(frame):
+        return result
+    for league,rows in frame.groupby("league"):
+        for market in ("spread","total"):
+            column="close_"+market
+            if column not in rows:
+                continue
+            captured=int(rows[column].notna().sum())
+            total=int(len(rows))
+            result.append({"league":str(league),"market":market,"captured":captured,
+                           "total":total,
+                           "coverage_rate":captured/total if total else 0.0})
+    return result
+
+
+# Below this, the ledger cannot answer the question it was built for and says so.
+CLV_COVERAGE_FLOOR = 0.25
+
+
 def grade(limit=None,verbose=True):
     now=pd.Timestamp.now(tz="UTC")
     ledger=pd.read_csv(LEDGER,dtype={"game_id":str}) if LEDGER.exists() else pd.DataFrame()
@@ -283,12 +339,18 @@ def grade(limit=None,verbose=True):
         tmp=LEDGER.with_suffix(".csv.tmp")
         frame.to_csv(tmp,index=False)
         tmp.replace(LEDGER)
-    shadow_evaluation=evaluate_totals_shadow(frame if len(fresh) else ledger)
+    graded_frame=frame if len(fresh) else ledger
+    shadow_evaluation=evaluate_totals_shadow(graded_frame)
     horizon_coverage=_horizon_coverage(bundles,missing,now)
+    clv_coverage=_clv_coverage(graded_frame)
+    starved=[item for item in clv_coverage if item["coverage_rate"]<CLV_COVERAGE_FLOOR]
     _atomic_json(STATUS,{"generated_at":now.isoformat(),"schema_version":2,
                         "new_rows":len(fresh),"pending_game_count":len(game_keys),
                         "missing_horizon_snapshots":missing,"source_failures":failures,
                         "horizon_coverage":horizon_coverage,
+                        "clv_coverage":clv_coverage,
+                        "clv_coverage_floor":CLV_COVERAGE_FLOOR,
+                        "clv_starved":starved,
                         "ncaa_totals_shadow":shadow_evaluation,
                         "status":"degraded" if failures else "ok"})
     if failures:
@@ -297,6 +359,15 @@ def grade(limit=None,verbose=True):
     for item in horizon_coverage:
         print(f"  {item['league']} {item['decision_hours']}h snapshot coverage: "
               f"{item['available']}/{item['total']} ({item['coverage_rate']:.1%})")
+    for item in clv_coverage:
+        print(f"  {item['league']} {item['market']} closing-line coverage: "
+              f"{item['captured']}/{item['total']} ({item['coverage_rate']:.1%})")
+    if starved:
+        worst=", ".join(f"{i['league']} {i['market']} {i['coverage_rate']:.1%}" for i in starved)
+        # Not a source failure: the run is healthy, the evidence is thin. Saying so is
+        # the point -- a silent "ok" is how 2.8% CLV coverage went unnoticed for a week.
+        print(f"::warning::Closing-line coverage below {CLV_COVERAGE_FLOOR:.0%} ({worst}); "
+              "same-book CLV cannot be read from this ledger yet")
     return 1 if failures else 0
 
 

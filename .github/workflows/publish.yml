@@ -11,7 +11,18 @@ on:
     - cron: "17 */2 * * *"
     # Market capture only. Timestamped quotes cannot be reconstructed later, so this
     # runs far more often than any model work and spends ~1 API call per pass.
-    - cron: "23 */6 * * *"
+    #
+    # HOURLY, AT :47, because the closing line is what this archive is for. Same-book CLV
+    # needs a quote inside the final hour before kickoff, and on the six-hour cadence only
+    # 8 of 286 graded rows (2.8%) ever got one. Two causes, both fixed by frequency:
+    # kickoffs cluster at :00 (205 of 286) and :30 (69), so a fixed :17/:23 offset covered
+    # odd-hour kickoffs (23:00, 19:00) and structurally missed even-hour ones (16:00,
+    # 20:00, 22:00); and GitHub's scheduler drift -- already the reason the republish pass
+    # above went to two-hourly -- pushes a delayed run past kickoff, where the grader
+    # correctly rejects it as post-kickoff. :47 sits 13 minutes before a :00 kickoff and
+    # 43 before a :30 one, and an hourly pass gives drift somewhere to land.
+    # Cost: 24 CFBD calls a day against a 4,500/month budget that used 616 in August.
+    - cron: "47 * * * *"
 permissions:
   contents: write
 concurrency:
@@ -54,8 +65,11 @@ jobs:
       - name: Capture market quotes
         id: capture
         run: uv run python scripts/collect_market_quotes.py
+      # NOTE: these two conditions and the one below hard-code the capture-only cron
+      # string. Changing a `cron:` above without changing them here silently promotes the
+      # capture-only pass into a full hourly model rebuild -- keep them in step.
       - name: Refresh sources, rebuild models, and stage publication
-        if: github.event.schedule != '23 */6 * * *'
+        if: github.event.schedule != '47 * * * *'
         run: |
           if [ "${{ github.event.schedule }}" = "17 */2 * * *" ]; then
             uv run python scripts/refresh_publication.py --market-only
@@ -64,7 +78,7 @@ jobs:
           fi
       - name: Validate promoted publication
         id: validate
-        if: github.event.schedule != '23 */6 * * *'
+        if: github.event.schedule != '47 * * * *'
         run: uv run python scripts/validate_publication.py
       - name: Save successful source and model caches
         if: success()

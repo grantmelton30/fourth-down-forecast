@@ -98,6 +98,83 @@ def test_same_book_close_requires_a_fresh_matching_quote():
     assert grade._same_book_close(r,[entry,quote("2026-09-05T17:30:00Z",52,"Other")],"total",ko)[0] is None
 
 
+def two_book(taken="Bovada",label=None,**evidence):
+    """A survey of two books whose line was taken from one of them."""
+    r=record()
+    r["market_evidence"]={"providers":["Bovada","DraftKings"],
+                          "book_count_total":2,"book_count_spread":2,
+                          "label":label if label is not None else f"{taken} (of 2 books)",
+                          "is_consensus":False,**evidence}
+    return r
+
+
+def test_two_book_survey_still_has_a_named_entry_book():
+    # Requiring a single surveyed provider discarded 138 of 286 graded rows whose entry
+    # book was named all along. The number still has to match that book's own quote.
+    r=two_book();ko=pd.Timestamp(r["kickoff"])
+    entry=quote("2026-09-05T15:59:00Z",provider="Bovada")
+    close=quote("2026-09-05T17:30:00Z",52,provider="Bovada")
+    assert grade._same_book_close(r,[entry,close],"total",ko)[:2] == (52,"Bovada")
+    # The OTHER surveyed book's quotes are not the entry book's and settle nothing.
+    other=[quote("2026-09-05T15:59:00Z",provider="DraftKings"),
+           quote("2026-09-05T17:30:00Z",52,provider="DraftKings")]
+    assert grade._same_book_close(r,other,"total",ko)[0] is None
+
+
+def test_blended_and_consensus_references_still_fail_closed():
+    ko=pd.Timestamp(record()["kickoff"])
+    quotes=[quote("2026-09-05T15:59:00Z",provider="Bovada"),
+            quote("2026-09-05T17:30:00Z",52,provider="Bovada")]
+    # A label naming no single surveyed book is a blend, not a book.
+    assert grade._entry_book(two_book(label="two-book reference")["market_evidence"]) is None
+    assert grade._same_book_close(two_book(label="two-book reference"),quotes,"total",ko)[0] is None
+    # An explicit consensus flag fails closed even when one provider is listed.
+    assert grade._entry_book({"providers":["Bovada"],"is_consensus":True}) is None
+
+
+def test_published_line_baseline_is_not_treated_as_a_book():
+    # "nflverse published line" is not equal to "nflverse", so an exact-match exclusion
+    # let the baseline through and would have scored it as same-book CLV.
+    r=record()
+    r["market_evidence"]={"providers":["nflverse published line"],
+                          "book_count_total":1,"book_count_spread":1,
+                          "label":"published line baseline","is_consensus":False}
+    ko=pd.Timestamp(r["kickoff"])
+    quotes=[quote("2026-09-05T15:59:00Z",provider="nflverse published line"),
+            quote("2026-09-05T17:30:00Z",52,provider="nflverse published line")]
+    assert grade._same_book_close(r,quotes,"total",ko)[0] is None
+
+
+def test_status_reports_closing_line_coverage_not_just_snapshot_coverage():
+    # A ledger can be fully snapshot-covered and still resolve almost no closing lines.
+    frame=pd.DataFrame([{"league":"ncaa","close_spread":None,"close_total":1.0},
+                        {"league":"ncaa","close_spread":None,"close_total":None},
+                        {"league":"ncaa","close_spread":None,"close_total":None},
+                        {"league":"ncaa","close_spread":None,"close_total":None}])
+    coverage=grade._clv_coverage(frame)
+    assert {"league":"ncaa","market":"spread","captured":0,"total":4,
+            "coverage_rate":0.0} in coverage
+    assert {"league":"ncaa","market":"total","captured":1,"total":4,
+            "coverage_rate":.25} in coverage
+    assert grade._clv_coverage(pd.DataFrame()) == []
+
+
+def test_starved_closing_line_coverage_is_reported_without_faking_a_failure(tmp_path,monkeypatch):
+    monkeypatch.setattr(grade,"PREDICTIONS",tmp_path/"p.jsonl")
+    grade.PREDICTIONS.write_text(json.dumps(record())+"\n")
+    monkeypatch.setattr(grade,"QUOTES",tmp_path/"q.jsonl")
+    monkeypatch.setattr(grade,"LEDGER",tmp_path/"g.csv")
+    monkeypatch.setattr(grade,"STATUS",tmp_path/"s.json")
+    monkeypatch.setattr(grade,"_espn_final",lambda gid:(30,25))
+    assert grade.grade() == 0
+    status=json.loads(grade.STATUS.read_text())
+    # No quotes were supplied, so nothing resolved -- and the run still says "ok",
+    # because thin evidence is not a source failure. It must not be silent about it.
+    assert status["status"] == "ok"
+    assert all(item["coverage_rate"] == 0.0 for item in status["clv_coverage"])
+    assert status["clv_starved"] and status["clv_coverage_floor"] == grade.CLV_COVERAGE_FLOOR
+
+
 def test_grading_repeat_does_not_rewrite_existing_decision(tmp_path,monkeypatch):
     predictions=tmp_path/"predictions.jsonl"
     predictions.write_text(json.dumps(record())+"\n")

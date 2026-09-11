@@ -17,7 +17,11 @@ Run everything through the repo venv — the system Python has none of the depen
     uv run python <script>                    # from the repo root
     .venv/Scripts/python.exe <script>         # equivalent
 
-Test state: **shared 143, nfl-model 71, prop-model 64.** All green.
+Test state, 2026-09-10: **shared 187, nfl-model 77, ncaa-model 135, prop-model 75.**
+All green except one deliberate NCAA failure,
+`test_power.py::test_full_fbs_close_anchored_null_is_adequately_powered`, which is the
+provisional totals null documented in its own docstring and in GATES.md — a measurement,
+not a break. Do not "fix" it by relaxing the assertion.
 
 ## The state of play, in one paragraph
 
@@ -41,6 +45,35 @@ restricted universe, edge 0.5-6.0). Everything runs itself on GitHub Actions.
 W1 starts logging around 9 September, when week 1 enters the 16-day forecast window. P1 has
 28 bets logged and needs 200 settled to reach its first checkpoint. Both rules were designed
 so a season of forward evidence is the output; no modelling task substitutes for it.
+
+### Where that actually stands, 2026-09-10
+
+**P1: 49 logged, 30 settled, 14-16 — 46.7% against a 52.4% breakeven, -3.6 units.** At
+n=30 the interval is roughly +/-18 points, so this separates nothing from nothing; the
+checkpoint is still 170 settled bets away. Two legacy cohorts carry it: `P1-legacy-opener`
+12-14 over 26 settled, `P1-legacy-current` 2-2 over 4.
+
+**W1: 0 logged, and correctly so.** The tracker runs daily and reports `0 qualifying
+(forecast wind >= 10 mph)`. Nothing has met the rule yet — the machinery is fine.
+
+**The active cohort is empty and the site scoreboard therefore reads 0-0.** Every one of
+the 49 rows predates `protocol_version`, so `cohort_for()` files them under
+`P1-legacy-*` while `ACTIVE_PROTOCOL` points at `P1-current-v2`. Nothing is hidden — all
+49 bets and both cohort records are in `tracker.json` — but the headline a visitor sees
+will stay 0-0 until v2 bets settle. `validate_payload()` passes on all-zeros because
+0 = 0 + 0 reconciles. **Open decision: what the Record tab should show meanwhile.**
+
+**Closing-line capture is the real bottleneck, not the win rate.** Same-book CLV resolved
+on 8 of 286 graded rows (2.8%) up to 2026-09-10. Measured cause, in order: 138 rows were
+discarded for surveying two books even though the entry book was named all along; ~48%
+have no quote within six hours of the projection; ~47% have none inside the final hour
+before kickoff. Fixed 2026-09-10 by resolving the entry book from the evidence label
+(2.8% -> 4.2% on the existing ledger) and by moving market capture to hourly at :47, which
+is what actually governs the remaining gap — kickoffs cluster at :00 and :30, and the old
+fixed :17/:23 offsets structurally missed even-hour kickoffs. `grading_status.json` now
+reports `clv_coverage` and warns below 25%, because it previously said `"ok"` while 97% of
+rows had no CLV at all. **Expect the rate to climb through week 2; if it does not, the
+capture schedule is still the thing to look at, not the grader.**
 
 ## Superseded: the lambda grid search
 
@@ -141,8 +174,22 @@ NFL is now hashed/tagged on config (`ratings.walkforward_path`,
 `backtest.backtest_frame_path`) and is current: its config hashes to
 `backtest_frame_5275f05be1.parquet`, which exists on disk.
 
-**`ncaa-model`'s backtest frame is still untagged, and unlike the other three this
-instance is live right now.** `NcaaSport.backtest_frame()` (`shared/sport.py:634`)
+**~~`ncaa-model`'s backtest frame is still untagged~~ — RESOLVED 2026-09-10, and the
+original diagnosis was half right.** The frame was never unvalidated: `walk_forward`
+stamps every one with a `build_cache_signature` manifest over the full config and refuses
+a mismatch. But that guard lives in the BUILDER, and `NCAAAdapter.backtest_frame()` read
+the parquet with a bare `pd.read_parquet`, walking straight past it — so the leak was real
+even though the tagging existed. It now validates the manifest's `config_sha256` against
+the live config and returns None on a mismatch, which blocks picks rather than grading a
+retired model. Config only, matching `nfl-model`; keying on the source tree would mark the
+frame stale after every commit and leave the diagnostics permanently empty.
+
+Checked rather than assumed at the time of the fix: the frame on disk was built 2026-08-19
+from source that has since changed, but its **config hash still matches**, so the college
+no-bet verdict standing today was read from the configuration that is actually shipping.
+The guard is dormant until a config changes. The original text follows.
+
+`NcaaSport.backtest_frame()` (`shared/sport.py:634`)
 unconditionally reads `backtest_frame_default.parquet`. That file is dated Aug 5 07:37 —
 older than the simulator NCAA adopted (`drive_model_2019_2025.json`, Aug 6 20:36), the
 weather frame (Aug 6 09:15), the retuned ratings (Aug 6 21:06) and the drive rebuild
