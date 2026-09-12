@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-11T16:56:11.393297+00:00",
+  "generated_at": "2026-09-12T16:00:38.139138+00:00",
   "schema_version": 2,
-  "new_rows": 4,
-  "pending_game_count": 2,
+  "new_rows": 10,
+  "pending_game_count": 22,
   "missing_horizon_snapshots": [
     {
       "league": "ncaa",
@@ -173,6 +173,21 @@
       "league": "ncaa",
       "game_id": "401868111",
       "decision_hours": 24
+    },
+    {
+      "league": "ncaa",
+      "game_id": "401866632",
+      "decision_hours": 24
+    },
+    {
+      "league": "ncaa",
+      "game_id": "401866628",
+      "decision_hours": 24
+    },
+    {
+      "league": "ncaa",
+      "game_id": "401866633",
+      "decision_hours": 24
     }
   ],
   "source_failures": [],
@@ -180,18 +195,18 @@
     {
       "league": "ncaa",
       "decision_hours": 1,
-      "available": 155,
+      "available": 177,
       "missing": 5,
-      "total": 160,
-      "coverage_rate": 0.96875
+      "total": 182,
+      "coverage_rate": 0.9725274725274725
     },
     {
       "league": "ncaa",
       "decision_hours": 24,
-      "available": 131,
-      "missing": 29,
-      "total": 160,
-      "coverage_rate": 0.81875
+      "available": 150,
+      "missing": 32,
+      "total": 182,
+      "coverage_rate": 0.8241758241758241
     },
     {
       "league": "nfl",
@@ -215,15 +230,15 @@
       "league": "ncaa",
       "market": "spread",
       "captured": 8,
-      "total": 286,
-      "coverage_rate": 0.027972027972027972
+      "total": 296,
+      "coverage_rate": 0.02702702702702703
     },
     {
       "league": "ncaa",
       "market": "total",
       "captured": 8,
-      "total": 286,
-      "coverage_rate": 0.027972027972027972
+      "total": 296,
+      "coverage_rate": 0.02702702702702703
     },
     {
       "league": "nfl",
@@ -246,15 +261,15 @@
       "league": "ncaa",
       "market": "spread",
       "captured": 8,
-      "total": 286,
-      "coverage_rate": 0.027972027972027972
+      "total": 296,
+      "coverage_rate": 0.02702702702702703
     },
     {
       "league": "ncaa",
       "market": "total",
       "captured": 8,
-      "total": 286,
-      "coverage_rate": 0.027972027972027972
+      "total": 296,
+      "coverage_rate": 0.02702702702702703
     },
     {
       "league": "nfl",
@@ -280,21 +295,21 @@
     "status": "collecting",
     "eligible_for_review": false,
     "reason": "minimum game/week evidence has not accumulated",
-    "n_games": 1,
+    "n_games": 6,
     "n_weeks": 1,
     "model_version": "a5553352f511af7d5ef5",
-    "market_rmse": 19.0,
-    "bias_rmse": 18.274365987071107,
-    "tempo_rmse": 18.443934706141448,
-    "tempo_rmse_gain_vs_market": 0.556065293858552,
-    "tempo_rmse_gain_vs_bias": -0.169568719070341,
+    "market_rmse": 14.436643192469178,
+    "bias_rmse": 13.882989054906034,
+    "tempo_rmse": 13.767401959927783,
+    "tempo_rmse_gain_vs_market": 0.6692412325413954,
+    "tempo_rmse_gain_vs_bias": 0.1155870949782507,
     "tempo_gain_vs_market_ci90": [
-      0.556065293858552,
-      0.556065293858552
+      0.6692412325413954,
+      0.6692412325413954
     ],
     "tempo_gain_vs_bias_ci90": [
-      -0.169568719070341,
-      -0.169568719070341
+      0.1155870949782507,
+      0.1155870949782507
     ]
   },
   "status": "ok"
