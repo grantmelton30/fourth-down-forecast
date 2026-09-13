@@ -1,9 +1,49 @@
 {
-  "generated_at": "2026-09-12T16:00:38.139138+00:00",
+  "generated_at": "2026-09-13T16:51:24.608359+00:00",
   "schema_version": 2,
-  "new_rows": 10,
-  "pending_game_count": 22,
+  "new_rows": 224,
+  "pending_game_count": 126,
   "missing_horizon_snapshots": [
+    {
+      "league": "nfl",
+      "game_id": "2026_01_NYJ_TEN",
+      "decision_hours": 1
+    },
+    {
+      "league": "nfl",
+      "game_id": "2026_01_CLE_JAX",
+      "decision_hours": 1
+    },
+    {
+      "league": "nfl",
+      "game_id": "2026_01_BAL_IND",
+      "decision_hours": 1
+    },
+    {
+      "league": "nfl",
+      "game_id": "2026_01_ATL_PIT",
+      "decision_hours": 1
+    },
+    {
+      "league": "nfl",
+      "game_id": "2026_01_NO_DET",
+      "decision_hours": 1
+    },
+    {
+      "league": "nfl",
+      "game_id": "2026_01_TB_CIN",
+      "decision_hours": 1
+    },
+    {
+      "league": "nfl",
+      "game_id": "2026_01_CHI_CAR",
+      "decision_hours": 1
+    },
+    {
+      "league": "nfl",
+      "game_id": "2026_01_BUF_HOU",
+      "decision_hours": 1
+    },
     {
       "league": "ncaa",
       "game_id": "401864494",
@@ -186,6 +226,11 @@
     },
     {
       "league": "ncaa",
+      "game_id": "401868028",
+      "decision_hours": 24
+    },
+    {
+      "league": "ncaa",
       "game_id": "401866633",
       "decision_hours": 24
     }
@@ -195,33 +240,33 @@
     {
       "league": "ncaa",
       "decision_hours": 1,
-      "available": 177,
+      "available": 274,
       "missing": 5,
-      "total": 182,
-      "coverage_rate": 0.9725274725274725
+      "total": 279,
+      "coverage_rate": 0.982078853046595
     },
     {
       "league": "ncaa",
       "decision_hours": 24,
-      "available": 150,
-      "missing": 32,
-      "total": 182,
-      "coverage_rate": 0.8241758241758241
+      "available": 246,
+      "missing": 33,
+      "total": 279,
+      "coverage_rate": 0.8817204301075269
     },
     {
       "league": "nfl",
       "decision_hours": 1,
-      "available": 2,
-      "missing": 0,
-      "total": 2,
-      "coverage_rate": 1.0
+      "available": 6,
+      "missing": 8,
+      "total": 14,
+      "coverage_rate": 0.42857142857142855
     },
     {
       "league": "nfl",
       "decision_hours": 24,
-      "available": 2,
+      "available": 14,
       "missing": 0,
-      "total": 2,
+      "total": 14,
       "coverage_rate": 1.0
     }
   ],
@@ -229,16 +274,16 @@
     {
       "league": "ncaa",
       "market": "spread",
-      "captured": 8,
-      "total": 296,
-      "coverage_rate": 0.02702702702702703
+      "captured": 37,
+      "total": 520,
+      "coverage_rate": 0.07115384615384615
     },
     {
       "league": "ncaa",
       "market": "total",
-      "captured": 8,
-      "total": 296,
-      "coverage_rate": 0.02702702702702703
+      "captured": 37,
+      "total": 520,
+      "coverage_rate": 0.07115384615384615
     },
     {
       "league": "nfl",
@@ -260,16 +305,16 @@
     {
       "league": "ncaa",
       "market": "spread",
-      "captured": 8,
-      "total": 296,
-      "coverage_rate": 0.02702702702702703
+      "captured": 37,
+      "total": 520,
+      "coverage_rate": 0.07115384615384615
     },
     {
       "league": "ncaa",
       "market": "total",
-      "captured": 8,
-      "total": 296,
-      "coverage_rate": 0.02702702702702703
+      "captured": 37,
+      "total": 520,
+      "coverage_rate": 0.07115384615384615
     },
     {
       "league": "nfl",
@@ -295,21 +340,21 @@
     "status": "collecting",
     "eligible_for_review": false,
     "reason": "minimum game/week evidence has not accumulated",
-    "n_games": 6,
+    "n_games": 120,
     "n_weeks": 1,
     "model_version": "a5553352f511af7d5ef5",
-    "market_rmse": 14.436643192469178,
-    "bias_rmse": 13.882989054906034,
-    "tempo_rmse": 13.767401959927783,
-    "tempo_rmse_gain_vs_market": 0.6692412325413954,
-    "tempo_rmse_gain_vs_bias": 0.1155870949782507,
+    "market_rmse": 15.140659937180194,
+    "bias_rmse": 15.06781183700744,
+    "tempo_rmse": 15.060907707848045,
+    "tempo_rmse_gain_vs_market": 0.07975222933214887,
+    "tempo_rmse_gain_vs_bias": 0.006904129159394756,
     "tempo_gain_vs_market_ci90": [
-      0.6692412325413954,
-      0.6692412325413954
+      0.07975222933214887,
+      0.07975222933214887
     ],
     "tempo_gain_vs_bias_ci90": [
-      0.1155870949782507,
-      0.1155870949782507
+      0.006904129159394756,
+      0.006904129159394756
     ]
   },
   "status": "ok"
