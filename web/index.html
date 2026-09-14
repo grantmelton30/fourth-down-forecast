@@ -128,8 +128,11 @@
     <div id="record-view" class="workspace-view">
       <section class="view-heading">
         <h1>Record</h1>
-        <p>Pre-registered rules, graded at the line each selection was recorded at. Historical cohorts do not advance current checkpoints, and reference lines are not executable bets.</p>
+        <p>Every game the projections tab marked OVER or UNDER, graded at the line it was recorded at. Reference lines are not executable bets.</p>
         <span class="spacer"></span>
+        <label class="team-picker week-picker"><span class="rail-label">Week</span>
+          <select id="record-week"><option value="all">All weeks</option></select>
+        </label>
         <div class="segmented record-tabs" role="group" aria-label="Record league">
           <button class="active" data-record="all" aria-pressed="true">NFL + NCAA</button>
           <button data-record="ncaa" aria-pressed="false">NCAA</button>
@@ -137,7 +140,6 @@
         </div>
       </section>
       <section id="record-headline" class="record-headline"></section>
-      <section class="rule-cards" id="rule-cards"></section>
       <section class="bets">
         <div class="table-head record-head" aria-hidden="true">
           <span>Wk</span><span>Selection</span><span>Cohort</span><span>Side</span><span>Line</span><span>Gap</span><span>Close</span><span>Actual</span><span>Result</span>

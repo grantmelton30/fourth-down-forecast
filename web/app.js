@@ -1,4 +1,4 @@
-const state={records:[],explorer:null,league:'all',status:'upcoming',betsOnly:false,logged:new Map(),week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',tracker:null,recordLeague:'all',explorerLeague:'nfl',teamLeague:'nfl',team:null};
+const state={records:[],explorer:null,league:'all',status:'upcoming',betsOnly:false,logged:new Map(),week:'all',sort:'kickoff',group:'all',teamQuery:'',view:'projections',tracker:null,recordLeague:'all',recordWeek:'all',explorerLeague:'nfl',teamLeague:'nfl',team:null};
 const $=selector=>document.querySelector(selector);
 const $$=selector=>[...document.querySelectorAll(selector)];
 const list=$('#game-list'),empty=$('#empty-state'),weekFilter=$('#week-filter'),sortFilter=$('#sort-filter'),groupFilter=$('#group-filter'),teamFilter=$('#team-filter'),dialog=$('#detail-dialog');
@@ -120,52 +120,71 @@ const wilson=(wins,losses)=>{
   const z=1.96,p=wins/n,d=1+z*z/n,centre=(p+z*z/(2*n))/d,half=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;
   return{pct:100*p,low:100*(centre-half),high:100*(centre+half)};
 };
+// Risk 1.1 to win 1 at -110 -- the basis both registrations and GATES.md are stated on,
+// and the arithmetic `build_tracker._stats` uses, so the page and the artifact agree.
+const LOSS_UNITS=1.1;
+// The record is counted from the rows on screen rather than read from the cohort
+// aggregates in tracker.json. Those aggregates cannot answer "what did week 2 do", and a
+// headline sourced from somewhere other than the list beneath it can silently disagree
+// with it.
+const tally=bets=>bets.reduce((a,b)=>{
+  const result=(b.result||'').toUpperCase();
+  if(result==='WIN'){a.wins++;a.units+=1}
+  else if(result==='LOSS'){a.losses++;a.units-=LOSS_UNITS}
+  else if(result==='PUSH')a.pushes++;
+  else a.pending++;
+  return a;
+},{wins:0,losses:0,pushes:0,pending:0,units:0});
+
+function populateRecordFilters(){
+  const select=$('#record-week');if(!select)return;
+  const lg=state.recordLeague;
+  const weeks=[...new Set((state.tracker?.bets||[])
+    .filter(b=>lg==='all'||b.league===lg).map(b=>b.week))]
+    .filter(w=>w!=null).sort((a,b)=>a-b);
+  // A week the league filter just removed must not stay selected and match nothing.
+  const current=weeks.some(w=>String(w)===String(state.recordWeek))?state.recordWeek:'all';
+  state.recordWeek=current;
+  select.replaceChildren(new Option('All weeks','all'),
+    ...weeks.map(w=>new Option(`Week ${w}`,w,false,String(w)===String(current))));
+  select.value=current;
+  select.disabled=!weeks.length;
+}
+
 function renderRecord(){
-  const t=state.tracker,cards=$('#rule-cards'),betList=$('#bet-list'),blank=$('#bet-empty'),head=$('#record-headline');
-  if(!cards)return;
-  if(!t){head.replaceChildren();cards.replaceChildren();betList.replaceChildren();blank.hidden=false;blank.textContent='Record unavailable — the tracker could not be loaded.';return}
+  const betList=$('#bet-list'),blank=$('#bet-empty'),head=$('#record-headline');
+  const t=state.tracker;
+  if(!head)return;
+  if(!t){head.replaceChildren();betList.replaceChildren();blank.hidden=false;blank.textContent='Record unavailable — the tracker could not be loaded.';return}
   const pct=v=>v==null?'—':`${Number(v).toFixed(1)}%`;
   const be=Number(t.breakeven);
-  const lg=state.recordLeague;
-  const rules=Object.entries(t.rules||{}).map(([key,r])=>({...r,rule:r.rule||key})).filter(r=>lg==='all'||r.league===lg);
-  const active=rules.map(r=>({...r,legacy:false}));
-  const legacy=rules.flatMap(r=>(r.cohorts||[]).filter(c=>c.cohort!==r.cohort).map(c=>({...c,rule:r.rule,league:r.league,headline:c.headline||r.headline,legacy:true})));
+  const lg=state.recordLeague,wk=state.recordWeek;
+  const bets=(t.bets||[]).filter(b=>(lg==='all'||b.league===lg)&&(wk==='all'||String(b.week)===String(wk)));
+  const scope=wk==='all'?'every selection recorded to date':`week ${wk}`;
+  const total=tally(bets),settledN=total.wins+total.losses,ci=wilson(total.wins,total.losses);
 
-  // After a protocol change the active cohorts are legitimately empty, so they cannot be
-  // the scoreboard: that read 0-0 while 30 selections had settled. The headline pools every
-  // cohort of the selected rules and the split sits beneath it -- nothing hidden or dropped.
-  const pooled=rules.flatMap(r=>r.cohorts||[]).reduce((a,c)=>({wins:a.wins+(c.wins||0),losses:a.losses+(c.losses||0),pushes:a.pushes+(c.pushes||0),logged:a.logged+(c.logged||0),units:a.units+(Number(c.units)||0)}),{wins:0,losses:0,pushes:0,logged:0,units:0});
-  const settledN=pooled.wins+pooled.losses,ci=wilson(pooled.wins,pooled.losses);
-  const names=esc(rules.map(r=>r.rule).join(' + ')||'No rules');
+  // A protocol change splits the log into cohorts. The per-cohort cards are gone -- one
+  // record was the ask -- but the pooling stays disclosed in a line, because a headline
+  // that silently mixes two registrations is the thing the split exists to prevent.
+  const counts=bets.reduce((m,b)=>{const key=b.cohort||b.rule||'unlabelled';return m.set(key,(m.get(key)||0)+1)},new Map());
+  const pooled=counts.size>1?`<p>Pools ${[...counts].map(([name,n])=>`${esc(name)} (${n})`).join(' · ')}.</p>`:'';
+
   if(!ci){
-    head.innerHTML=`<div><span class="rail-label">${names} · every selection recorded to date</span><div class="big-line"><strong class="flat">—</strong><span>${pooled.logged?`${pooled.logged} logged, none settled yet`:'No selections recorded yet'}</span></div><p>Break-even at −110 is ${be.toFixed(2)}%.</p></div>`;
+    // No settled bets is a different claim from a 0% win rate; never render one as the other.
+    head.innerHTML=`<div><span class="rail-label">Logged selections · ${scope}</span><div class="big-line"><strong class="flat">—</strong><span>${bets.length?`${bets.length} logged, none settled yet`:'No selections recorded'}</span></div><p>Break-even at −110 is ${be.toFixed(2)}%.</p>${pooled}</div>`;
   }else{
     const winning=ci.pct>=be,headTone=winning?'pos':'neg';
     const straddles=ci.low<be&&be<ci.high;
-    head.innerHTML=`<div><span class="rail-label">${names} · every selection recorded to date</span>
-      <div class="big-line"><strong class="${headTone}"><i class="dir dir-${winning?'up':'dn'}" aria-hidden="true"></i>${pct(ci.pct)}</strong><span>${pooled.wins}–${pooled.losses}${pooled.pushes?` · ${pooled.pushes} push`:''}</span><span class="${headTone}">${signed(ci.pct-be)} pts vs break-even</span><span>${signed(pooled.units)} units @ −110</span></div>
-      <p>${settledN} settled of ${pooled.logged} logged · 95% interval ${pct(ci.low)}–${pct(ci.high)} · break-even ${be.toFixed(2)}%</p></div>
+    head.innerHTML=`<div><span class="rail-label">Logged selections · ${scope}</span>
+      <div class="big-line"><strong class="${headTone}"><i class="dir dir-${winning?'up':'dn'}" aria-hidden="true"></i>${pct(ci.pct)}</strong><span>${total.wins}–${total.losses}${total.pushes?` · ${total.pushes} push`:''}</span><span class="${headTone}">${signed(ci.pct-be)} pts vs break-even</span><span>${signed(total.units)} units @ −110</span></div>
+      <p>${settledN} settled of ${bets.length} logged${total.pending?` · ${total.pending} pending`:''} · 95% interval ${pct(ci.low)}–${pct(ci.high)} · break-even ${be.toFixed(2)}%</p>${pooled}</div>
       ${straddles?`<aside class="caveat"><strong>Too few settled bets to call this either way</strong><p>The 95% interval still contains the ${be.toFixed(2)}% break-even rate, so this record cannot yet tell a losing rule from a break-even one.</p></aside>`:''}`;
   }
 
-  const card=c=>{
-    const settled=(c.wins||0)+(c.losses||0);
-    const cardTone=!settled?'flat':(c.win_pct>=be?'pos':'neg');
-    const ciText=c.ci_low==null?'':` · CI ${Number(c.ci_low).toFixed(1)}–${Number(c.ci_high).toFixed(1)}`;
-    const priced=c.priced_bets?` · recorded-price units ${Number(c.priced_units).toFixed(2)} (${c.priced_bets} priced)`:'';
-    const body=settled
-      ?`<div class="card-big"><strong class="${cardTone}">${pct(c.win_pct)}</strong><span>${c.wins}–${c.losses}${c.pushes?` · ${c.pushes} push`:''}</span></div><p class="card-sub">${settled} settled · ${signed(c.units)} units${ciText}${c.pending?` · ${c.pending} pending`:''}${priced}</p>`
-      // No settled bets is a different claim from a 0% win rate; never render one as the other.
-      :`<div class="card-big"><strong class="flat">—</strong></div><p class="card-sub">${c.logged?`${c.logged} logged, none settled yet.`:'No selections recorded under this protocol yet.'}</p>`;
-    return`<article class="rule-card ${c.legacy?'legacy':'active'}"><header><h3>${esc(c.cohort||c.rule)}</h3><span class="card-tag">${c.legacy?'Historical':'Active'}</span></header><p class="sub">${esc(c.rule||'')}${c.headline?` · ${esc(c.headline)}`:''}</p>${body}<p class="status">${c.legacy?'Does not advance the active checkpoint.':esc(c.status||'')}</p></article>`;
-  };
-  cards.innerHTML=[...active,...legacy].map(card).join('');
-
-  const bets=(t.bets||[]).filter(b=>lg==='all'||b.league===lg);
   const settledBets=bets.filter(b=>b.result).sort((a,b)=>new Date(b.kickoff)-new Date(a.kickoff));
   const pendingBets=bets.filter(b=>!b.result).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff));
   blank.hidden=bets.length>0;
-  blank.textContent=(t.bets||[]).length?`No ${lg.toUpperCase()} bets logged yet.`:'No bets logged yet. The trackers append here automatically once the season starts.';
+  blank.textContent=(t.bets||[]).length?'No bets logged for this league and week.':'No bets logged yet. The trackers append here automatically once the season starts.';
   const betRow=b=>{
     const res=(b.result||'').toLowerCase()||'pending';
     const label=res==='pending'?'PENDING':b.result;
@@ -307,7 +326,8 @@ applyTheme(document.documentElement.getAttribute('data-theme')==='light'?'light'
 $('.dialog-close').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 $$('[data-view]').forEach(button=>button.addEventListener('click',()=>showView(button.dataset.view)));
-$$('[data-record]').forEach(button=>button.addEventListener('click',()=>{state.recordLeague=button.dataset.record;setButtonGroup('[data-record]',state.recordLeague,'record');renderRecord()}));
+$$('[data-record]').forEach(button=>button.addEventListener('click',()=>{state.recordLeague=button.dataset.record;setButtonGroup('[data-record]',state.recordLeague,'record');populateRecordFilters();renderRecord()}));
+$('#record-week').addEventListener('change',e=>{state.recordWeek=e.target.value;renderRecord()});
 $$('[data-league]').forEach(button=>button.addEventListener('click',()=>{setButtonGroup('[data-league]',button.dataset.league,'league');state.league=button.dataset.league;populateProjectionFilters();renderProjections()}));
 $$('[data-status]').forEach(button=>button.addEventListener('click',()=>{state.status=button.dataset.status;setButtonGroup('[data-status]',state.status,'status');renderProjections()}));
 $$('[data-explorer-league]').forEach(button=>button.addEventListener('click',()=>{state.explorerLeague=button.dataset.explorerLeague;setButtonGroup('[data-explorer-league]',state.explorerLeague,'explorerLeague');renderLeague()}));
@@ -337,5 +357,5 @@ Promise.all([
   // than offered and silently matching nothing.
   state.logged=new Map((tracker?.bets||[]).map(b=>[`${b.league}|${String(b.game_id)}`,b]));
   $('#bets-filter-group').hidden=!tracker;
-  populateProjectionFilters();renderProjections();renderLeague();renderTeam();renderRecord();
+  populateProjectionFilters();renderProjections();renderLeague();renderTeam();populateRecordFilters();renderRecord();
 }).catch(error=>{$('#data-status').textContent='Data unavailable';empty.hidden=false;empty.querySelector('p:last-child').textContent=`The publication artifacts could not be loaded (${error.message}).`;});
