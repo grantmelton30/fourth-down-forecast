@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-07T01:39:14.532511Z",
+  "generated_at": "2026-10-07T08:49:29.885320Z",
   "leagues": [
     "ncaa",
     "nfl"
@@ -60652,48 +60652,48 @@
     {
       "away_team": "Jacksonville State",
       "calibrated": {
-        "away_score": 27.092849870071227,
-        "home_score": 24.090348304732494,
+        "away_score": 26.721524903490618,
+        "home_score": 24.262684100959625,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -3.00250156533873,
-        "total": 51.18319817480372
+        "spread": -2.4588408025309945,
+        "total": 50.98420900445024
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401871051",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Kennesaw State",
       "independent": {
-        "away_score": 29.649731491809682,
-        "home_score": 26.861319007536117,
-        "home_win_probability": 0.43643018420204166,
-        "interval_80_high": 17.0,
-        "interval_80_low": -23.0,
+        "away_score": 28.382610462494704,
+        "home_score": 26.843878931499077,
+        "home_win_probability": 0.46801125334659405,
+        "interval_80_high": 18.0,
+        "interval_80_low": -21.0,
         "source": "football model + drive simulation",
-        "spread": -2.788412484273563,
-        "total": 56.5110504993458
+        "spread": -1.5387315309956238,
+        "total": 55.22648939399378
       },
       "kickoff": "2026-10-07T23:00:00Z",
       "league": "ncaa",
       "market": {
-        "away_score": 26.25,
-        "home_score": 23.25,
+        "away_score": 26.0,
+        "home_score": 23.5,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "Bovada (of 2 books)",
-        "spread": -3.0,
+        "spread": -2.5,
         "total": 49.5
       },
       "market_evidence": {
@@ -60701,34 +60701,34 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
         ],
-        "spread_dispersion": 0.0,
+        "spread_dispersion": 0.5,
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 0.21158751572643686,
-        "total": 7.011050499345799
+        "spread": 0.9612684690043762,
+        "total": 5.726489393993781
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "479493ab97d3b3ca0a9039dc",
+      "prediction_id": "4f318b31bbb3383835540877",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
       "schema_version": 2,
       "season": 2026,
       "tracked_rule": {
-        "label": "\u2014",
+        "label": "P1 \u00b7 OVER",
         "market": "total",
-        "qualifies": false,
-        "reason": "No \u2014 gap of 7.0 pts is at or above the 6.0 cap",
+        "qualifies": true,
+        "reason": "Yes \u2014 model above the market by 5.7 pts",
         "rule": "P1",
-        "side": null
+        "side": "OVER"
       },
       "unavailable_features": [],
       "warnings": [],
@@ -60737,37 +60737,37 @@
     {
       "away_team": "New Mexico State",
       "calibrated": {
-        "away_score": 20.58335575763334,
-        "home_score": 27.379904339248473,
+        "away_score": 20.544913540673818,
+        "home_score": 27.31426518331463,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 6.796548581615136,
-        "total": 47.96326009688181
+        "spread": 6.769351642640813,
+        "total": 47.85917872398845
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401871066",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Florida International",
       "independent": {
-        "away_score": 20.122400437208906,
-        "home_score": 31.96885470351261,
-        "home_win_probability": 0.7881293125921403,
+        "away_score": 20.019949024028985,
+        "home_score": 31.399415866720833,
+        "home_win_probability": 0.7803461025470128,
         "interval_80_high": 31.0,
-        "interval_80_low": -6.999999999999998,
+        "interval_80_low": -7.000000000000002,
         "source": "football model + drive simulation",
-        "spread": 11.846454266303704,
-        "total": 52.091255140721515
+        "spread": 11.379466842691846,
+        "total": 51.41936489074982
       },
       "kickoff": "2026-10-07T23:30:00Z",
       "league": "ncaa",
@@ -60786,7 +60786,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -60795,13 +60795,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 5.346454266303704,
-        "total": 5.591255140721515
+        "spread": 4.879466842691846,
+        "total": 4.919364890749819
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "2312e74db50f8bc48651b3d5",
+      "prediction_id": "b1709a4f714dcf6371aab3a7",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -60811,7 +60811,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 5.6 pts",
+        "reason": "Yes \u2014 model above the market by 4.9 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -60827,13 +60827,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_TB_DAL",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "DAL",
       "independent": {
         "away_score": 25.0753,
@@ -60876,7 +60876,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "8958bb66eda4e16bc13c6b72",
+      "prediction_id": "fa561d9a4000231497a11f4c",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -60900,37 +60900,37 @@
     {
       "away_team": "Sam Houston",
       "calibrated": {
-        "away_score": 19.823806462194916,
-        "home_score": 32.970795468438006,
+        "away_score": 19.792960887546418,
+        "home_score": 33.04425447959731,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 13.14698900624309,
-        "total": 52.79460193063292
+        "spread": 13.251293592050898,
+        "total": 52.837215367143735
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401870766",
       "games_observed": {
         "away": 4,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Liberty",
       "independent": {
-        "away_score": 21.426963437450556,
-        "home_score": 29.120098101434987,
-        "home_win_probability": 0.7076244645648366,
-        "interval_80_high": 27.0,
-        "interval_80_low": -10.0,
+        "away_score": 20.66902199855791,
+        "home_score": 30.1531276921599,
+        "home_win_probability": 0.7471285921419877,
+        "interval_80_high": 29.0,
+        "interval_80_low": -9.0,
         "source": "football model + drive simulation",
-        "spread": 7.693134663984433,
-        "total": 50.54706153888554
+        "spread": 9.484105693601986,
+        "total": 50.82214969071781
       },
       "kickoff": "2026-10-08T23:00:00Z",
       "league": "ncaa",
@@ -60949,7 +60949,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -60958,13 +60958,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -5.806865336015567,
-        "total": -1.9529384611144565
+        "spread": -4.015894306398014,
+        "total": -1.6778503092821921
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "2b2a2f3eea0273d6eef8a10f",
+      "prediction_id": "a12709bd168c354235190a08",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -60974,7 +60974,7 @@
         "label": "P1 \u00b7 UNDER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model below the market by 2.0 pts",
+        "reason": "Yes \u2014 model below the market by 1.7 pts",
         "rule": "P1",
         "side": "UNDER"
       },
@@ -60985,37 +60985,37 @@
     {
       "away_team": "Missouri State",
       "calibrated": {
-        "away_score": 27.428141680610484,
-        "home_score": 29.691838435313127,
+        "away_score": 27.54201238252213,
+        "home_score": 29.637255990623743,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 2.263696754702644,
-        "total": 57.11998011592361
+        "spread": 2.0952436081016113,
+        "total": 57.179268373145874
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401871052",
       "games_observed": {
         "away": 4,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Western Kentucky",
       "independent": {
-        "away_score": 30.339079600128276,
-        "home_score": 29.036154884787788,
-        "home_win_probability": 0.47548767808305226,
-        "interval_80_high": 18.0,
-        "interval_80_low": -21.0,
+        "away_score": 31.976665020294924,
+        "home_score": 27.781300791640298,
+        "home_win_probability": 0.4029019462113609,
+        "interval_80_high": 15.0,
+        "interval_80_low": -24.0,
         "source": "football model + drive simulation",
-        "spread": -1.302924715340488,
-        "total": 59.375234484916064
+        "spread": -4.1953642286546255,
+        "total": 59.75796581193522
       },
       "kickoff": "2026-10-08T23:00:00Z",
       "league": "ncaa",
@@ -61034,7 +61034,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61043,13 +61043,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -3.802924715340488,
-        "total": 3.3752344849160636
+        "spread": -6.6953642286546255,
+        "total": 3.7579658119352217
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "9bd153aa0fc58dbb6e9fd421",
+      "prediction_id": "bbe987f8ee245a710f1de99a",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61059,7 +61059,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 3.4 pts",
+        "reason": "Yes \u2014 model above the market by 3.8 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -61070,37 +61070,37 @@
     {
       "away_team": "South Florida",
       "calibrated": {
-        "away_score": 22.947320702593636,
-        "home_score": 29.76795940359115,
+        "away_score": 22.909846355501976,
+        "home_score": 29.509326522947873,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 6.820638700997515,
-        "total": 52.715280106184785
+        "spread": 6.599480167445893,
+        "total": 52.41917287844985
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401862794",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "UTSA",
       "independent": {
-        "away_score": 33.79203865909108,
-        "home_score": 29.881546812553314,
-        "home_win_probability": 0.4130204068735459,
-        "interval_80_high": 17.0,
-        "interval_80_low": -25.0,
+        "away_score": 34.73499957610574,
+        "home_score": 27.02708575165522,
+        "home_win_probability": 0.32396744864144333,
+        "interval_80_high": 12.0,
+        "interval_80_low": -29.0,
         "source": "football model + drive simulation",
-        "spread": -3.910491846537761,
-        "total": 63.67358547164439
+        "spread": -7.707913824450518,
+        "total": 61.762085327760964
       },
       "kickoff": "2026-10-08T23:30:00Z",
       "league": "ncaa",
@@ -61119,7 +61119,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61128,13 +61128,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -11.410491846537761,
-        "total": 13.673585471644387
+        "spread": -15.207913824450518,
+        "total": 11.762085327760964
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "a55324d1505a8fbef6fc9b59",
+      "prediction_id": "8ddfebfcfdfbd1bfcd66b759",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61144,7 +61144,7 @@
         "label": "\u2014",
         "market": "total",
         "qualifies": false,
-        "reason": "No \u2014 gap of 13.7 pts is at or above the 6.0 cap",
+        "reason": "No \u2014 gap of 11.8 pts is at or above the 6.0 cap",
         "rule": "P1",
         "side": null
       },
@@ -61155,37 +61155,37 @@
     {
       "away_team": "South Alabama",
       "calibrated": {
-        "away_score": 28.81274097287131,
-        "home_score": 30.24489593115431,
+        "away_score": 28.936184691400566,
+        "home_score": 30.325938070943426,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 1.4321549582830027,
-        "total": 59.05763690402562
+        "spread": 1.3897533795428614,
+        "total": 59.26212276234399
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401869933",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Arkansas State",
       "independent": {
-        "away_score": 27.463874118759577,
-        "home_score": 28.053475748039823,
-        "home_win_probability": 0.5238521549409711,
+        "away_score": 28.487926431240332,
+        "home_score": 28.349468037603003,
+        "home_win_probability": 0.5048284059393398,
         "interval_80_high": 20.0,
-        "interval_80_low": -19.0,
+        "interval_80_low": -20.0,
         "source": "football model + drive simulation",
-        "spread": 0.5896016292802451,
-        "total": 55.5173498667994
+        "spread": -0.13845839363732976,
+        "total": 56.837394468843335
       },
       "kickoff": "2026-10-08T23:30:00Z",
       "league": "ncaa",
@@ -61204,7 +61204,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61213,13 +61213,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -0.9103983707197549,
-        "total": -3.4826501332006004
+        "spread": -1.6384583936373298,
+        "total": -2.1626055311566645
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "fb1b6dcddc838b42fabc8299",
+      "prediction_id": "a082289f796a9f502f8ed5fe",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61229,7 +61229,7 @@
         "label": "P1 \u00b7 UNDER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model below the market by 3.5 pts",
+        "reason": "Yes \u2014 model below the market by 2.2 pts",
         "rule": "P1",
         "side": "UNDER"
       },
@@ -61240,37 +61240,37 @@
     {
       "away_team": "Florida State",
       "calibrated": {
-        "away_score": 27.9902395127502,
-        "home_score": 31.997167821117472,
+        "away_score": 27.867252383805788,
+        "home_score": 31.868596929095045,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 4.006928308367268,
-        "total": 59.98740733386767
+        "spread": 4.001344545289255,
+        "total": 59.73584931290083
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858254",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Louisville",
       "independent": {
-        "away_score": 23.166452978491098,
-        "home_score": 35.625250776134735,
-        "home_win_probability": 0.7939227646900922,
+        "away_score": 22.40243334591364,
+        "home_score": 34.765354650385675,
+        "home_win_probability": 0.794355312295736,
         "interval_80_high": 32.0,
-        "interval_80_low": -7.000000000000002,
+        "interval_80_low": -6.999999999999998,
         "source": "football model + drive simulation",
-        "spread": 12.458797797643639,
-        "total": 58.791703754625836
+        "spread": 12.362921304472033,
+        "total": 57.16778799629931
       },
       "kickoff": "2026-10-09T23:00:00Z",
       "league": "ncaa",
@@ -61289,7 +61289,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61298,13 +61298,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 8.958797797643639,
-        "total": -0.7082962453741644
+        "spread": 8.862921304472033,
+        "total": -2.3322120037006897
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "5f4d1f2076d31a57306e478c",
+      "prediction_id": "8305a075e4aa9128d9f31c57",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61325,48 +61325,48 @@
     {
       "away_team": "Iowa",
       "calibrated": {
-        "away_score": 20.061178721862714,
-        "home_score": 23.408294679532585,
+        "away_score": 19.6307499346678,
+        "home_score": 23.468507764662295,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 3.3471159576698692,
-        "total": 43.4694734013953
+        "spread": 3.837757829994497,
+        "total": 43.099257699330096
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858487",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Washington",
       "independent": {
-        "away_score": 19.208319439748884,
-        "home_score": 28.423045267234748,
-        "home_win_probability": 0.743081134878016,
+        "away_score": 17.843710526246785,
+        "home_score": 27.397751802538156,
+        "home_win_probability": 0.7545830074785145,
         "interval_80_high": 28.0,
-        "interval_80_low": -8.0,
+        "interval_80_low": -6.999999999999998,
         "source": "football model + drive simulation",
-        "spread": 9.21472582748586,
-        "total": 47.63136470698363
+        "spread": 9.554041276291374,
+        "total": 45.24146232878494
       },
       "kickoff": "2026-10-10T01:00:00Z",
       "league": "ncaa",
       "market": {
-        "away_score": 19.5,
-        "home_score": 22.5,
+        "away_score": 19.25,
+        "home_score": 22.75,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "Bovada (of 2 books)",
-        "spread": 3.0,
+        "spread": 3.5,
         "total": 42.0
       },
       "market_evidence": {
@@ -61374,7 +61374,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61383,13 +61383,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 6.214725827485861,
-        "total": 5.631364706983632
+        "spread": 6.054041276291374,
+        "total": 3.241462328784941
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "9df4ceeb10838f99cd04dc20",
+      "prediction_id": "0054e0453c0bb951de698195",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61410,71 +61410,71 @@
     {
       "away_team": "Washington State",
       "calibrated": {
-        "away_score": 20.20489845011528,
-        "home_score": 25.06710446015847,
+        "away_score": 20.419417718665017,
+        "home_score": 25.183927713296754,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 4.862206010043185,
-        "total": 45.27200291027375
+        "spread": 4.76450999463174,
+        "total": 45.60334543196177
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401860922",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Utah State",
       "independent": {
-        "away_score": 24.09789318344629,
-        "home_score": 26.986430268157363,
-        "home_win_probability": 0.585171437838441,
-        "interval_80_high": 22.0,
-        "interval_80_low": -16.0,
+        "away_score": 24.642263718389277,
+        "home_score": 25.853302810506133,
+        "home_win_probability": 0.5413012323097933,
+        "interval_80_high": 21.0,
+        "interval_80_low": -18.0,
         "source": "football model + drive simulation",
-        "spread": 2.8885370847110745,
-        "total": 51.08432345160365
+        "spread": 1.2110390921168546,
+        "total": 50.49556652889541
       },
       "kickoff": "2026-10-10T01:00:00Z",
       "league": "ncaa",
       "market": {
-        "away_score": 19.25,
-        "home_score": 24.25,
+        "away_score": 19.5,
+        "home_score": 24.5,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "Bovada (of 2 books)",
         "spread": 5.0,
-        "total": 43.5
+        "total": 44.0
       },
       "market_evidence": {
         "book_count_spread": 2,
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
         ],
         "spread_dispersion": 0.5,
-        "total_dispersion": 1.0
+        "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -2.1114629152889255,
-        "total": 7.584323451603652
+        "spread": -3.7889609078831454,
+        "total": 6.495566528895409
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "669571e73f0ed362a4d07605",
+      "prediction_id": "b914b23a6af14fd298c404d1",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -61493,37 +61493,37 @@
     {
       "away_team": "Wyoming",
       "calibrated": {
-        "away_score": 19.05620304503978,
-        "home_score": 25.655614841881004,
+        "away_score": 18.94697925632994,
+        "home_score": 25.634173248629885,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 6.599411796841226,
-        "total": 44.711817886920784
+        "spread": 6.687193992299946,
+        "total": 44.581152504959825
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401864519",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "San Jos\u00e9 State",
       "independent": {
-        "away_score": 19.503293580984394,
-        "home_score": 27.964793411511064,
-        "home_win_probability": 0.7251758027179374,
-        "interval_80_high": 27.0,
-        "interval_80_low": -9.999999999999998,
+        "away_score": 18.32790688218952,
+        "home_score": 28.296678591178743,
+        "home_win_probability": 0.7602003214124022,
+        "interval_80_high": 28.0,
+        "interval_80_low": -6.999999999999998,
         "source": "football model + drive simulation",
-        "spread": 8.461499830526671,
-        "total": 47.46808699249546
+        "spread": 9.968771708989225,
+        "total": 46.62458547336826
       },
       "kickoff": "2026-10-10T01:00:00Z",
       "league": "ncaa",
@@ -61542,7 +61542,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61551,13 +61551,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 1.9614998305266713,
-        "total": 3.968086992495458
+        "spread": 3.468771708989225,
+        "total": 3.1245854733682634
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "bb7d32743672a2ea54cb4e67",
+      "prediction_id": "5492037be1d21fae443bd908",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61567,7 +61567,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 4.0 pts",
+        "reason": "Yes \u2014 model above the market by 3.1 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -61578,37 +61578,37 @@
     {
       "away_team": "Iowa State",
       "calibrated": {
-        "away_score": 19.07173283543875,
-        "home_score": 29.40344451020402,
+        "away_score": 19.1331749134277,
+        "home_score": 29.136025922470996,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 10.331711674765273,
-        "total": 48.47517734564277
+        "spread": 10.002851009043297,
+        "total": 48.269200835898694
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856826",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "BYU",
       "independent": {
-        "away_score": 18.358980447195158,
-        "home_score": 34.309205685368475,
-        "home_win_probability": 0.8619481971099044,
-        "interval_80_high": 35.0,
-        "interval_80_low": -3.0,
+        "away_score": 20.517512184056542,
+        "home_score": 30.821006547193754,
+        "home_win_probability": 0.7628401585317568,
+        "interval_80_high": 29.0,
+        "interval_80_low": -7.0,
         "source": "football model + drive simulation",
-        "spread": 15.95022523817332,
-        "total": 52.66818613256363
+        "spread": 10.303494363137212,
+        "total": 51.338518731250296
       },
       "kickoff": "2026-10-10T02:15:00Z",
       "league": "ncaa",
@@ -61627,7 +61627,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61636,13 +61636,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 5.950225238173321,
-        "total": 5.668186132563633
+        "spread": 0.30349436313721156,
+        "total": 4.338518731250296
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "38e144626e851a33fa1de14b",
+      "prediction_id": "71deca86b929add9ddcd48aa",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61663,37 +61663,37 @@
     {
       "away_team": "Texas A&M",
       "calibrated": {
-        "away_score": 23.372507860300583,
-        "home_score": 26.71771946789033,
+        "away_score": 23.01989963444631,
+        "home_score": 26.67573046051926,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 3.3452116075897442,
-        "total": 50.09022732819091
+        "spread": 3.6558308260729513,
+        "total": 49.69563009496557
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856716",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Missouri",
       "independent": {
-        "away_score": 26.907075145273826,
-        "home_score": 28.003808353635147,
-        "home_win_probability": 0.5350941636837792,
-        "interval_80_high": 21.0,
-        "interval_80_low": -18.0,
+        "away_score": 22.966670041572733,
+        "home_score": 29.39691775686982,
+        "home_win_probability": 0.6713566721006835,
+        "interval_80_high": 26.0,
+        "interval_80_low": -12.0,
         "source": "football model + drive simulation",
-        "spread": 1.0967332083613224,
-        "total": 54.91088349890897
+        "spread": 6.4302477152970825,
+        "total": 52.36358779844255
       },
       "kickoff": "2026-10-10T16:00:00Z",
       "league": "ncaa",
@@ -61712,7 +61712,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61721,13 +61721,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -2.4032667916386776,
-        "total": 6.410883498908973
+        "spread": 2.9302477152970825,
+        "total": 3.863587798442552
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "ea5e302d6f02008378b5e9d7",
+      "prediction_id": "ac06e1d01ff491d3cf8c297f",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61748,37 +61748,37 @@
     {
       "away_team": "Arizona",
       "calibrated": {
-        "away_score": 31.970575869425918,
-        "home_score": 28.734021884675993,
+        "away_score": 31.954256970893262,
+        "home_score": 28.705909742315164,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -3.2365539847499267,
-        "total": 60.70459775410191
+        "spread": -3.2483472285780985,
+        "total": 60.660166713208426
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856823",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "West Virginia",
       "independent": {
-        "away_score": 31.022779808058132,
-        "home_score": 24.215549748977878,
-        "home_win_probability": 0.33568707605898335,
-        "interval_80_high": 12.0,
+        "away_score": 30.98061748440649,
+        "home_score": 23.970890498869043,
+        "home_win_probability": 0.3307199506604077,
+        "interval_80_high": 12.000000000000002,
         "interval_80_low": -27.0,
         "source": "football model + drive simulation",
-        "spread": -6.807230059080254,
-        "total": 55.23832955703601
+        "spread": -7.009726985537446,
+        "total": 54.95150798327553
       },
       "kickoff": "2026-10-10T16:00:00Z",
       "league": "ncaa",
@@ -61797,7 +61797,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61806,13 +61806,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -3.807230059080254,
-        "total": -5.76167044296399
+        "spread": -4.009726985537446,
+        "total": -6.048492016724467
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "55243aa08b973a292e955ede",
+      "prediction_id": "3d2fd9cde20294518fc755cd",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61833,37 +61833,37 @@
     {
       "away_team": "UCF",
       "calibrated": {
-        "away_score": 22.19525600558613,
-        "home_score": 30.61661849479038,
+        "away_score": 22.199825099516225,
+        "home_score": 30.6548893591347,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 8.421362489204252,
-        "total": 52.81187450037651
+        "spread": 8.455064259618476,
+        "total": 52.854714458650925
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856824",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Oklahoma State",
       "independent": {
-        "away_score": 32.39122007882722,
-        "home_score": 15.539627244518789,
-        "home_win_probability": 0.1334318684801067,
+        "away_score": 32.24015570179415,
+        "home_score": 15.967242069279541,
+        "home_win_probability": 0.1424832916594565,
         "interval_80_high": 3.0,
-        "interval_80_low": -37.0,
+        "interval_80_low": -36.0,
         "source": "football model + drive simulation",
-        "spread": -16.85159283430843,
-        "total": 47.93084732334601
+        "spread": -16.272913632514612,
+        "total": 48.207397771073694
       },
       "kickoff": "2026-10-10T16:00:00Z",
       "league": "ncaa",
@@ -61882,7 +61882,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61891,13 +61891,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -26.85159283430843,
-        "total": -5.069152676653992
+        "spread": -26.272913632514612,
+        "total": -4.792602228926306
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": true,
       "pick_eligible": false,
-      "prediction_id": "9fa14f0fb9e4a3b8827b408b",
+      "prediction_id": "e35fb77f4a2116f29827bacf",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -61920,37 +61920,37 @@
     {
       "away_team": "North Carolina",
       "calibrated": {
-        "away_score": 22.091193400165547,
-        "home_score": 26.05728322281119,
+        "away_score": 21.927586234391807,
+        "home_score": 26.046013405302563,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 3.966089822645644,
-        "total": 48.14847662297674
+        "spread": 4.1184271709107545,
+        "total": 47.97359963969437
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858256",
       "games_observed": {
         "away": 4,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Pittsburgh",
       "independent": {
-        "away_score": 23.443454282042087,
-        "home_score": 27.115737473180776,
-        "home_win_probability": 0.60703800968822,
-        "interval_80_high": 23.0,
-        "interval_80_low": -15.0,
+        "away_score": 21.57114013126914,
+        "home_score": 27.859145108353992,
+        "home_win_probability": 0.6736974964487101,
+        "interval_80_high": 25.0,
+        "interval_80_low": -12.000000000000002,
         "source": "football model + drive simulation",
-        "spread": 3.6722831911386917,
-        "total": 50.55919175522286
+        "spread": 6.288004977084851,
+        "total": 49.43028523962313
       },
       "kickoff": "2026-10-10T16:00:00Z",
       "league": "ncaa",
@@ -61969,7 +61969,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -61978,13 +61978,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -0.3277168088613083,
-        "total": 3.5591917552228622
+        "spread": 2.288004977084851,
+        "total": 2.4302852396231316
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "19bf072ffac1122e44b09e02",
+      "prediction_id": "86140039e2bf0a2b744ac27c",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -62005,37 +62005,37 @@
     {
       "away_team": "Wake Forest",
       "calibrated": {
-        "away_score": 31.70032517829781,
-        "home_score": 28.646510668258635,
+        "away_score": 31.648150566160115,
+        "home_score": 28.486634763855843,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -3.053814510039175,
-        "total": 60.346835846556445
+        "spread": -3.1615158023042707,
+        "total": 60.13478533001596
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858260",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "NC State",
       "independent": {
-        "away_score": 28.34808112537963,
-        "home_score": 32.763889037384736,
-        "home_win_probability": 0.6166568116131513,
-        "interval_80_high": 25.0,
-        "interval_80_low": -15.0,
+        "away_score": 28.588289492806915,
+        "home_score": 31.15480292935551,
+        "home_win_probability": 0.5714570103127471,
+        "interval_80_high": 22.0,
+        "interval_80_low": -17.0,
         "source": "football model + drive simulation",
-        "spread": 4.41580791200511,
-        "total": 61.111970162764365
+        "spread": 2.5665134365485933,
+        "total": 59.74309242216243
       },
       "kickoff": "2026-10-10T16:00:00Z",
       "league": "ncaa",
@@ -62054,7 +62054,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62063,13 +62063,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 7.91580791200511,
-        "total": 1.611970162764365
+        "spread": 6.066513436548593,
+        "total": 0.24309242216242666
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "afc55773910f4053db5b6ee0",
+      "prediction_id": "d2259c77181de321a77a5eba",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -62090,48 +62090,48 @@
     {
       "away_team": "Indiana",
       "calibrated": {
-        "away_score": 29.627190497496557,
-        "home_score": 22.29673991024123,
+        "away_score": 29.721266606510504,
+        "home_score": 21.90461103833627,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -7.330450587255329,
-        "total": 51.923930407737785
+        "spread": -7.816655568174235,
+        "total": 51.625877644846774
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858481",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Nebraska",
       "independent": {
-        "away_score": 35.49228550803717,
-        "home_score": 23.072795608564526,
-        "home_win_probability": 0.2185145111782981,
-        "interval_80_high": 7.0,
+        "away_score": 34.66182150899695,
+        "home_score": 21.97920019335422,
+        "home_win_probability": 0.2109445541892759,
+        "interval_80_high": 7.000000000000002,
         "interval_80_low": -33.0,
         "source": "football model + drive simulation",
-        "spread": -12.419489899472648,
-        "total": 58.5650811166017
+        "spread": -12.682621315642733,
+        "total": 56.641021702351175
       },
       "kickoff": "2026-10-10T16:00:00Z",
       "league": "ncaa",
       "market": {
-        "away_score": 28.5,
-        "home_score": 21.5,
+        "away_score": 28.75,
+        "home_score": 21.25,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "Bovada (of 2 books)",
-        "spread": -7.0,
+        "spread": -7.5,
         "total": 50.0
       },
       "market_evidence": {
@@ -62139,7 +62139,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62148,13 +62148,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -5.419489899472648,
-        "total": 8.565081116601696
+        "spread": -5.1826213156427325,
+        "total": 6.641021702351175
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "30d1848d6e4fad670cc57644",
+      "prediction_id": "0e33726953838331ced4dd91",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -62175,37 +62175,37 @@
     {
       "away_team": "Tulane",
       "calibrated": {
-        "away_score": 23.46983306622773,
-        "home_score": 25.938845994879344,
+        "away_score": 23.36588468021306,
+        "home_score": 25.966408880907554,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 2.4690129286516176,
-        "total": 49.40867906110707
+        "spread": 2.6005242006944926,
+        "total": 49.332293561120615
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401862795",
       "games_observed": {
         "away": 4,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Army",
       "independent": {
-        "away_score": 28.187007006986796,
-        "home_score": 22.324187836701455,
-        "home_win_probability": 0.35079269407468794,
-        "interval_80_high": 12.0,
-        "interval_80_low": -25.0,
+        "away_score": 26.811393387703045,
+        "home_score": 23.20670003684175,
+        "home_win_probability": 0.40877879666191225,
+        "interval_80_high": 14.0,
+        "interval_80_low": -22.0,
         "source": "football model + drive simulation",
-        "spread": -5.862819170285341,
-        "total": 50.51119484368825
+        "spread": -3.6046933508612957,
+        "total": 50.018093424544794
       },
       "kickoff": "2026-10-10T16:00:00Z",
       "league": "ncaa",
@@ -62224,7 +62224,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62233,13 +62233,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -8.862819170285341,
-        "total": 2.0111948436882514
+        "spread": -6.604693350861296,
+        "total": 1.5180934245447943
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "5c8e3097c8988aeff08c4b1b",
+      "prediction_id": "5bc82afde82ed4796801dd9e",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -62249,7 +62249,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 2.0 pts",
+        "reason": "Yes \u2014 model above the market by 1.5 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -62260,48 +62260,48 @@
     {
       "away_team": "Sacramento State",
       "calibrated": {
-        "away_score": 19.77374971123217,
-        "home_score": 26.19743739089585,
+        "away_score": 19.526810035076824,
+        "home_score": 26.36962433665357,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 6.423687679663679,
-        "total": 45.97118710212802
+        "spread": 6.842814301576746,
+        "total": 45.89643437173039
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401866436",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Bowling Green",
       "independent": {
-        "away_score": 30.434400762258985,
-        "home_score": 19.708026623681267,
-        "home_win_probability": 0.24269508975162082,
-        "interval_80_high": 7.000000000000002,
-        "interval_80_low": -30.0,
+        "away_score": 30.63744188162816,
+        "home_score": 19.022424318609932,
+        "home_win_probability": 0.2237954293363468,
+        "interval_80_high": 7.0,
+        "interval_80_low": -31.0,
         "source": "football model + drive simulation",
-        "spread": -10.726374138577716,
-        "total": 50.14242738594025
+        "spread": -11.615017563018228,
+        "total": 49.65986620023809
       },
       "kickoff": "2026-10-10T16:00:00Z",
       "league": "ncaa",
       "market": {
-        "away_score": 18.5,
-        "home_score": 26.0,
+        "away_score": 18.25,
+        "home_score": 26.25,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "Bovada (of 2 books)",
-        "spread": 7.5,
+        "spread": 8.0,
         "total": 44.5
       },
       "market_evidence": {
@@ -62309,22 +62309,22 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
         ],
-        "spread_dispersion": 0.0,
+        "spread_dispersion": 0.5,
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -18.226374138577718,
-        "total": 5.642427385940252
+        "spread": -19.615017563018228,
+        "total": 5.159866200238092
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "690e2b81b8b57e3722afdc89",
+      "prediction_id": "5b95ec39fde50e8ab97c0773",
       "quality_reasons": [
         "returning production",
         "quarterback continuity",
@@ -62337,7 +62337,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 5.6 pts",
+        "reason": "Yes \u2014 model above the market by 5.2 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -62352,37 +62352,37 @@
     {
       "away_team": "Ball State",
       "calibrated": {
-        "away_score": 8.364857533022441,
-        "home_score": 44.35986379120547,
+        "away_score": 8.544756869004342,
+        "home_score": 44.34609950182549,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 35.99500625818303,
-        "total": 52.724721324227914
+        "spread": 35.801342632821154,
+        "total": 52.89085637082984
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858482",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Northwestern",
       "independent": {
-        "away_score": 15.048872128381342,
-        "home_score": 35.04707989109251,
-        "home_win_probability": 0.9147158888447773,
-        "interval_80_high": 42.42032260271199,
-        "interval_80_low": -1.239677397288009,
+        "away_score": 17.24776802013557,
+        "home_score": 33.92065753506681,
+        "home_win_probability": 0.8703697237371252,
+        "interval_80_high": 38.29887988731238,
+        "interval_80_low": -6.541120112687622,
         "source": "football model + drive simulation",
-        "spread": 19.998207762711164,
-        "total": 50.09595201947385
+        "spread": 16.672889514931235,
+        "total": 51.168425555202376
       },
       "kickoff": "2026-10-10T16:30:00Z",
       "league": "ncaa",
@@ -62401,7 +62401,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62410,13 +62410,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -17.001792237288836,
-        "total": -2.404047980526151
+        "spread": -20.327110485068765,
+        "total": -1.3315744447976243
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
-      "out_of_distribution": false,
+      "out_of_distribution": true,
       "pick_eligible": false,
-      "prediction_id": "3b1ad332d2c45e112de1275f",
+      "prediction_id": "ff765c22e9279359c50f9581",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -62426,82 +62426,84 @@
         "label": "P1 \u00b7 UNDER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model below the market by 2.4 pts",
+        "reason": "Yes \u2014 model below the market by 1.3 pts",
         "rule": "P1",
         "side": "UNDER"
       },
       "unavailable_features": [],
-      "warnings": [],
+      "warnings": [
+        "Extreme model/market disagreement; pick suppressed"
+      ],
       "week": 6
     },
     {
       "away_team": "South Carolina",
       "calibrated": {
-        "away_score": 25.10266461200468,
-        "home_score": 35.95680867175805,
+        "away_score": 24.800632875063357,
+        "home_score": 35.769796715452564,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 10.854144059753368,
-        "total": 61.05947328376273
+        "spread": 10.969163840389205,
+        "total": 60.57042959051592
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856714",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Florida",
       "independent": {
-        "away_score": 27.068336760495185,
-        "home_score": 27.733151612161898,
-        "home_win_probability": 0.5253295495186964,
-        "interval_80_high": 20.0,
-        "interval_80_low": -19.0,
+        "away_score": 25.866221997777846,
+        "home_score": 28.505994070705402,
+        "home_win_probability": 0.5764601119915421,
+        "interval_80_high": 22.0,
+        "interval_80_low": -17.0,
         "source": "football model + drive simulation",
-        "spread": 0.6648148516667123,
-        "total": 54.80148837265708
+        "spread": 2.639772072927553,
+        "total": 54.37221606848325
       },
       "kickoff": "2026-10-10T16:45:00Z",
       "league": "ncaa",
       "market": {
-        "away_score": 25.0,
-        "home_score": 36.5,
+        "away_score": 24.75,
+        "home_score": 36.25,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "Bovada (of 2 books)",
         "spread": 11.5,
-        "total": 61.5
+        "total": 61.0
       },
       "market_evidence": {
         "book_count_spread": 2,
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
         ],
         "spread_dispersion": 1.0,
-        "total_dispersion": 0.0
+        "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -10.835185148333288,
-        "total": -6.698511627342917
+        "spread": -8.860227927072447,
+        "total": -6.627783931516753
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "12a0b31663ca36cf5e924fd7",
+      "prediction_id": "14ce81c11423870f7dfaa658",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -62520,37 +62522,37 @@
     {
       "away_team": "Old Dominion",
       "calibrated": {
-        "away_score": 21.434841018284192,
-        "home_score": 30.33505077989719,
+        "away_score": 21.449962664502465,
+        "home_score": 30.091978795252096,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 8.900209761612999,
-        "total": 51.76989179818138
+        "spread": 8.642016130749635,
+        "total": 51.54194145975456
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401869843",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "App State",
       "independent": {
-        "away_score": 29.057452644445974,
-        "home_score": 28.513242666098186,
-        "home_win_probability": 0.4927973423284647,
-        "interval_80_high": 19.0,
-        "interval_80_low": -21.0,
+        "away_score": 30.53836184338233,
+        "home_score": 25.560815503773266,
+        "home_win_probability": 0.3814951492881691,
+        "interval_80_high": 14.0,
+        "interval_80_low": -25.0,
         "source": "football model + drive simulation",
-        "spread": -0.5442099783477874,
-        "total": 57.57069531054416
+        "spread": -4.977546339609063,
+        "total": 56.099177347155596
       },
       "kickoff": "2026-10-10T17:00:00Z",
       "league": "ncaa",
@@ -62569,7 +62571,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62578,13 +62580,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -10.044209978347787,
-        "total": 7.57069531054416
+        "spread": -14.477546339609063,
+        "total": 6.099177347155596
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "29d8692becfcff2fa97c9469",
+      "prediction_id": "9974aff632ea3f9c6bf2a55a",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -62594,7 +62596,7 @@
         "label": "\u2014",
         "market": "total",
         "qualifies": false,
-        "reason": "No \u2014 gap of 7.6 pts is at or above the 6.0 cap",
+        "reason": "No \u2014 gap of 6.1 pts is at or above the 6.0 cap",
         "rule": "P1",
         "side": null
       },
@@ -62605,37 +62607,37 @@
     {
       "away_team": "Miami (OH)",
       "calibrated": {
-        "away_score": 25.516941513133435,
-        "home_score": 22.569501337032637,
+        "away_score": 25.459010510839278,
+        "home_score": 22.536474350118056,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -2.947440176100796,
-        "total": 48.08644285016607
+        "spread": -2.9225361607212195,
+        "total": 47.99548486095733
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401866440",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Massachusetts",
       "independent": {
-        "away_score": 30.04350341177614,
-        "home_score": 20.115233526587705,
-        "home_win_probability": 0.25922367211386976,
+        "away_score": 29.536108554783354,
+        "home_score": 20.03545524772079,
+        "home_win_probability": 0.2676366512603322,
         "interval_80_high": 8.0,
-        "interval_80_low": -29.0,
+        "interval_80_low": -28.0,
         "source": "football model + drive simulation",
-        "spread": -9.928269885188435,
-        "total": 50.158736938363845
+        "spread": -9.500653307062564,
+        "total": 49.571563802504144
       },
       "kickoff": "2026-10-10T18:00:00Z",
       "league": "ncaa",
@@ -62654,7 +62656,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62663,13 +62665,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -7.428269885188435,
-        "total": 3.1587369383638446
+        "spread": -7.000653307062564,
+        "total": 2.5715638025041443
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "9d7909421608b6a14d1c06dc",
+      "prediction_id": "018cb3f3cfc9309d6de73287",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -62679,7 +62681,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 3.2 pts",
+        "reason": "Yes \u2014 model above the market by 2.6 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -62690,37 +62692,37 @@
     {
       "away_team": "Texas",
       "calibrated": {
-        "away_score": 24.306468033633514,
-        "home_score": 16.794518952308323,
+        "away_score": 24.052252732021795,
+        "home_score": 16.772652782613864,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -7.511949081325191,
-        "total": 41.10098698594184
+        "spread": -7.279599949407933,
+        "total": 40.82490551463566
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856717",
       "games_observed": {
         "away": 4,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Oklahoma",
       "independent": {
-        "away_score": 28.07934487241037,
-        "home_score": 20.628712987114714,
-        "home_win_probability": 0.3142879727874585,
-        "interval_80_high": 11.0,
-        "interval_80_low": -27.0,
+        "away_score": 25.193446693464598,
+        "home_score": 21.732385935821558,
+        "home_win_probability": 0.41290717092022966,
+        "interval_80_high": 14.0,
+        "interval_80_low": -22.0,
         "source": "football model + drive simulation",
-        "spread": -7.450631885295654,
-        "total": 48.708057859525084
+        "spread": -3.4610607576430423,
+        "total": 46.925832629286155
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -62739,7 +62741,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62748,13 +62750,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 0.04936811470434588,
-        "total": 9.708057859525084
+        "spread": 4.038939242356958,
+        "total": 7.925832629286155
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "e52a9b061ded6aeb97b1edf9",
+      "prediction_id": "aa809dfab5f32bbf6b54c960",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -62773,37 +62775,37 @@
     {
       "away_team": "Ole Miss",
       "calibrated": {
-        "away_score": 34.95242557402217,
-        "home_score": 25.84653463093538,
+        "away_score": 34.669516936552945,
+        "home_score": 25.77827696499625,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -9.105890943086795,
-        "total": 60.79896020495755
+        "spread": -8.891239971556695,
+        "total": 60.4477939015492
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856718",
       "games_observed": {
         "away": 4,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Vanderbilt",
       "independent": {
-        "away_score": 33.25450168307794,
-        "home_score": 30.77612663858331,
-        "home_win_probability": 0.44408769550187777,
-        "interval_80_high": 17.0,
-        "interval_80_low": -22.0,
+        "away_score": 30.27819488806256,
+        "home_score": 31.48550315760774,
+        "home_win_probability": 0.5382692479163032,
+        "interval_80_high": 21.0,
+        "interval_80_low": -18.0,
         "source": "football model + drive simulation",
-        "spread": -2.4783750444946313,
-        "total": 64.03062832166125
+        "spread": 1.2073082695451811,
+        "total": 61.7636980456703
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -62822,7 +62824,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62831,13 +62833,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 7.021624955505368,
-        "total": 4.530628321661254
+        "spread": 10.70730826954518,
+        "total": 2.263698045670303
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "e75f4271c49971fe111733cc",
+      "prediction_id": "b4b7c0738b7c8e8ab12e4313",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -62858,37 +62860,37 @@
     {
       "away_team": "Houston",
       "calibrated": {
-        "away_score": 26.443337901490633,
-        "home_score": 29.196355150588186,
+        "away_score": 26.271035625713882,
+        "home_score": 29.2924929502782,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 2.7530172490975544,
-        "total": 55.63969305207882
+        "spread": 3.021457324564314,
+        "total": 55.56352857599208
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856825",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Kansas State",
       "independent": {
-        "away_score": 22.7240310315605,
-        "home_score": 29.823026738723833,
-        "home_win_probability": 0.6843544656864476,
-        "interval_80_high": 27.0,
-        "interval_80_low": -11.0,
+        "away_score": 20.173556806341946,
+        "home_score": 31.881826349606623,
+        "home_win_probability": 0.7851362665126025,
+        "interval_80_high": 31.0,
+        "interval_80_low": -7.0,
         "source": "football model + drive simulation",
-        "spread": 7.098995707163335,
-        "total": 52.54705777028433
+        "spread": 11.708269543264677,
+        "total": 52.05538315594857
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -62907,7 +62909,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62916,13 +62918,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 4.598995707163335,
-        "total": -2.952942229715667
+        "spread": 9.208269543264677,
+        "total": -3.4446168440514313
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "a5c887675701fbf01ded6c48",
+      "prediction_id": "b5222017e856738b45853f68",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -62941,37 +62943,37 @@
     {
       "away_team": "Duke",
       "calibrated": {
-        "away_score": 28.309570122774204,
-        "home_score": 22.230177934035602,
+        "away_score": 28.220166326721962,
+        "home_score": 22.086015570722342,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -6.079392188738602,
-        "total": 50.539748056809806
+        "spread": -6.134150755999623,
+        "total": 50.306181897444304
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858255",
       "games_observed": {
         "away": 4,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Georgia Tech",
       "independent": {
-        "away_score": 28.418054981676537,
-        "home_score": 29.394679120496942,
-        "home_win_probability": 0.5349829369749672,
-        "interval_80_high": 21.0,
-        "interval_80_low": -18.0,
+        "away_score": 28.134288112724157,
+        "home_score": 28.170675474529233,
+        "home_win_probability": 0.5103359814055863,
+        "interval_80_high": 19.0,
+        "interval_80_low": -19.0,
         "source": "football model + drive simulation",
-        "spread": 0.9766241388204082,
-        "total": 57.81273410217348
+        "spread": 0.036387361805077456,
+        "total": 56.30496358725339
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -62990,7 +62992,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -62999,13 +63001,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 7.476624138820409,
-        "total": 9.31273410217348
+        "spread": 6.536387361805078,
+        "total": 7.80496358725339
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "02b5a0053df7e8fa8219f8dc",
+      "prediction_id": "cdce690b6184d76e8dbe01c4",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -63026,37 +63028,37 @@
     {
       "away_team": "Stanford",
       "calibrated": {
-        "away_score": 8.461769038188123,
-        "home_score": 46.52771356158181,
+        "away_score": 8.427944378786584,
+        "home_score": 46.25154092252608,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 38.06594452339369,
-        "total": 54.989482599769936
+        "spread": 37.8235965437395,
+        "total": 54.67948530131267
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858257",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Notre Dame",
       "independent": {
-        "away_score": 7.209126706794262,
-        "home_score": 46.59597378623988,
-        "home_win_probability": 0.9974625139571462,
-        "interval_80_high": 59.0,
-        "interval_80_low": 21.0,
+        "away_score": 8.289172039088132,
+        "home_score": 43.51476189973076,
+        "home_win_probability": 0.9938260047412524,
+        "interval_80_high": 54.0,
+        "interval_80_low": 17.0,
         "source": "football model + drive simulation",
-        "spread": 39.38684707944562,
-        "total": 53.805100493034146
+        "spread": 35.22558986064263,
+        "total": 51.80393393881889
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -63075,7 +63077,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -63084,13 +63086,13 @@
         "total_dispersion": 1.0
       },
       "model_market_difference": {
-        "spread": 1.386847079445623,
-        "total": -0.6948995069658537
+        "spread": -2.7744101393573715,
+        "total": -2.6960660611811065
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "d7100becb8e101a2181c9ef7",
+      "prediction_id": "237560f275b24c0ea2ae8041",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -63111,37 +63113,37 @@
     {
       "away_team": "Virginia Tech",
       "calibrated": {
-        "away_score": 31.824903120609875,
-        "home_score": 21.85013921491779,
+        "away_score": 31.860316949782085,
+        "home_score": 21.90158346015303,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -9.974763905692082,
-        "total": 53.675042335527664
+        "spread": -9.958733489629056,
+        "total": 53.761900409935116
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858259",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "California",
       "independent": {
-        "away_score": 31.407554681168232,
-        "home_score": 22.095414112187743,
-        "home_win_probability": 0.27690775308941756,
-        "interval_80_high": 10.0,
+        "away_score": 31.550282056221974,
+        "home_score": 22.513393150811652,
+        "home_win_probability": 0.2836253032826388,
+        "interval_80_high": 10.000000000000002,
         "interval_80_low": -29.0,
         "source": "football model + drive simulation",
-        "spread": -9.312140568980489,
-        "total": 53.502968793355976
+        "spread": -9.03688890541032,
+        "total": 54.063675207033626
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -63160,22 +63162,22 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
         ],
-        "spread_dispersion": 0.5,
+        "spread_dispersion": 0.0,
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 0.6878594310195112,
-        "total": 0.5029687933559757
+        "spread": 0.9631110945896797,
+        "total": 1.0636752070336257
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "c45352617a833deb41ce392a",
+      "prediction_id": "9f599d96a2704d752ef0bebe",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -63196,37 +63198,37 @@
     {
       "away_team": "Illinois",
       "calibrated": {
-        "away_score": 25.98210238203909,
-        "home_score": 23.389852510984223,
+        "away_score": 25.918199230502786,
+        "home_score": 23.427085366347463,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -2.5922498710548707,
-        "total": 49.371954893023315
+        "spread": -2.491113864155325,
+        "total": 49.34528459685025
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858480",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Michigan State",
       "independent": {
-        "away_score": 28.415642107698417,
-        "home_score": 24.586198476519755,
-        "home_win_probability": 0.405120655644971,
-        "interval_80_high": 14.0,
-        "interval_80_low": -24.0,
+        "away_score": 27.461275628915814,
+        "home_score": 25.368396665584463,
+        "home_win_probability": 0.45033841163733956,
+        "interval_80_high": 17.0,
+        "interval_80_low": -21.0,
         "source": "football model + drive simulation",
-        "spread": -3.82944363117866,
-        "total": 53.00184058421817
+        "spread": -2.0928789633313523,
+        "total": 52.82967229450028
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -63245,7 +63247,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -63254,13 +63256,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -1.32944363117866,
-        "total": 5.001840584218172
+        "spread": 0.40712103666864774,
+        "total": 4.829672294500277
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "488a6176ec88ff0d7e29fb5d",
+      "prediction_id": "347140fce9c5fd8df7e550e9",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -63281,37 +63283,37 @@
     {
       "away_team": "UCLA",
       "calibrated": {
-        "away_score": 23.022739430228167,
-        "home_score": 34.62019588617626,
+        "away_score": 22.99077365263791,
+        "home_score": 34.42284177699491,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 11.597456455948093,
-        "total": 57.642935316404426
+        "spread": 11.432068124356997,
+        "total": 57.41361542963281
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858484",
       "games_observed": {
         "away": 4,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Oregon",
       "independent": {
-        "away_score": 15.163526290611507,
-        "home_score": 36.67674557822631,
-        "home_win_probability": 0.9294959639845873,
-        "interval_80_high": 41.0,
-        "interval_80_low": 3.0,
+        "away_score": 15.843254214974703,
+        "home_score": 34.516658663937775,
+        "home_win_probability": 0.9014664882439622,
+        "interval_80_high": 38.0,
+        "interval_80_low": 1.0,
         "source": "football model + drive simulation",
-        "spread": 21.513219287614803,
-        "total": 51.84027186883782
+        "spread": 18.673404448963076,
+        "total": 50.35991287891248
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -63330,7 +63332,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -63339,13 +63341,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 10.513219287614803,
-        "total": -6.159728131162183
+        "spread": 7.673404448963076,
+        "total": -7.640087121087518
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "57e0a139c884ed5fe9d9ce91",
+      "prediction_id": "5673ff6697f4fd57a7f94807",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -63364,37 +63366,37 @@
     {
       "away_team": "Charlotte",
       "calibrated": {
-        "away_score": 15.58586558969771,
-        "home_score": 43.56196010487536,
+        "away_score": 15.395074525337176,
+        "home_score": 43.79942147972868,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 27.976094515177653,
-        "total": 59.14782569457307
+        "spread": 28.4043469543915,
+        "total": 59.19449600506585
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401862796",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "North Texas",
       "independent": {
-        "away_score": 16.855460045083,
-        "home_score": 44.699529685938074,
-        "home_win_probability": 0.9629655706980558,
-        "interval_80_high": 48.0,
-        "interval_80_low": 7.0,
+        "away_score": 13.329425543378914,
+        "home_score": 48.52684121456393,
+        "home_win_probability": 0.9893101551016167,
+        "interval_80_high": 55.0,
+        "interval_80_low": 15.0,
         "source": "football model + drive simulation",
-        "spread": 27.84406964085507,
-        "total": 61.554989731021074
+        "spread": 35.19741567118501,
+        "total": 61.85626675794284
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -63413,7 +63415,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -63422,13 +63424,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -0.1559303591449286,
-        "total": 3.554989731021074
+        "spread": 7.197415671185013,
+        "total": 3.8562667579428407
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "0b42e467154155629e778e89",
+      "prediction_id": "e1217bf9a45942ef9147a4ec",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -63438,7 +63440,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 3.6 pts",
+        "reason": "Yes \u2014 model above the market by 3.9 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -63449,37 +63451,37 @@
     {
       "away_team": "Tulsa",
       "calibrated": {
-        "away_score": 24.018400299465018,
-        "home_score": 26.64943575489333,
+        "away_score": 23.739366508033374,
+        "home_score": 26.937639395025432,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 2.631035455428314,
-        "total": 50.66783605435835
+        "spread": 3.1982728869920605,
+        "total": 50.677005903058806
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401862799",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Navy",
       "independent": {
-        "away_score": 25.453692370331964,
-        "home_score": 30.45818900144372,
-        "home_win_probability": 0.6307707700255565,
-        "interval_80_high": 25.0,
-        "interval_80_low": -13.999999999999998,
+        "away_score": 20.613390029231407,
+        "home_score": 35.35768667946459,
+        "home_win_probability": 0.8337832167385149,
+        "interval_80_high": 35.0,
+        "interval_80_low": -3.9999999999999982,
         "source": "football model + drive simulation",
-        "spread": 5.004496631111758,
-        "total": 55.911881371775685
+        "spread": 14.744296650233183,
+        "total": 55.971076708695996
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -63498,7 +63500,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -63507,13 +63509,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 2.504496631111758,
-        "total": 6.911881371775685
+        "spread": 12.244296650233183,
+        "total": 6.971076708695996
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "4c31a80042da63eae794db7c",
+      "prediction_id": "7299b2224e025695261e49bc",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -63523,7 +63525,7 @@
         "label": "\u2014",
         "market": "total",
         "qualifies": false,
-        "reason": "No \u2014 gap of 6.9 pts is at or above the 6.0 cap",
+        "reason": "No \u2014 gap of 7.0 pts is at or above the 6.0 cap",
         "rule": "P1",
         "side": null
       },
@@ -63534,37 +63536,37 @@
     {
       "away_team": "Eastern Michigan",
       "calibrated": {
-        "away_score": 29.043809937040308,
-        "home_score": 23.103300227386647,
+        "away_score": 29.09246602450218,
+        "home_score": 23.205132657188344,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -5.940509709653658,
-        "total": 52.147110164426955
+        "spread": -5.88733336731384,
+        "total": 52.29759868169052
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401866435",
       "games_observed": {
         "away": 6,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Akron",
       "independent": {
-        "away_score": 24.23066832046785,
-        "home_score": 27.59198623508177,
-        "home_win_probability": 0.596109753083908,
-        "interval_80_high": 22.0,
-        "interval_80_low": -16.0,
+        "away_score": 24.259868010691868,
+        "home_score": 28.534254970679555,
+        "home_win_probability": 0.6187934746581226,
+        "interval_80_high": 24.0,
+        "interval_80_low": -15.0,
         "source": "football model + drive simulation",
-        "spread": 3.3613179146139185,
-        "total": 51.82265455554962
+        "spread": 4.274386959987684,
+        "total": 52.79412298137142
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -63583,7 +63585,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -63592,23 +63594,23 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 9.861317914613918,
-        "total": 0.32265455554961875
+        "spread": 10.774386959987684,
+        "total": 1.294122981371423
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "aebcc001f768f93dc758a9b2",
+      "prediction_id": "12d2c239f069de52b7b127c3",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
       "tracked_rule": {
-        "label": "\u2014",
+        "label": "P1 \u00b7 OVER",
         "market": "total",
-        "qualifies": false,
-        "reason": "No \u2014 model agrees with the market (0.3 pts, under the 0.5 minimum)",
+        "qualifies": true,
+        "reason": "Yes \u2014 model above the market by 1.3 pts",
         "rule": "P1",
-        "side": null
+        "side": "OVER"
       },
       "unavailable_features": [],
       "warnings": [],
@@ -63617,37 +63619,37 @@
     {
       "away_team": "Buffalo",
       "calibrated": {
-        "away_score": 17.02506286152898,
-        "home_score": 38.04328388857392,
+        "away_score": 16.800301072758177,
+        "home_score": 37.987253539375516,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 21.018221027044934,
-        "total": 55.0683467501029
+        "spread": 21.186952466617335,
+        "total": 54.78755461213369
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401866437",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Toledo",
       "independent": {
-        "away_score": 15.009539974250762,
-        "home_score": 36.576946578182024,
-        "home_win_probability": 0.9221231129362427,
-        "interval_80_high": 41.0,
-        "interval_80_low": 3.0,
+        "away_score": 12.65461368083002,
+        "home_score": 37.11923825192389,
+        "home_win_probability": 0.9503982056188915,
+        "interval_80_high": 44.0,
+        "interval_80_low": 5.0,
         "source": "football model + drive simulation",
-        "spread": 21.567406603931264,
-        "total": 51.58648655243279
+        "spread": 24.464624571093868,
+        "total": 49.77385193275391
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -63666,7 +63668,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -63675,13 +63677,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 0.5674066039312642,
-        "total": -3.4135134475672118
+        "spread": 3.464624571093868,
+        "total": -5.226148067246093
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "774ed19e84aae8ceca1004d8",
+      "prediction_id": "4169be9aab8e6a14a36e04a6",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -63691,7 +63693,7 @@
         "label": "P1 \u00b7 UNDER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model below the market by 3.4 pts",
+        "reason": "Yes \u2014 model below the market by 5.2 pts",
         "rule": "P1",
         "side": "UNDER"
       },
@@ -63702,37 +63704,37 @@
     {
       "away_team": "Central Michigan",
       "calibrated": {
-        "away_score": 22.526240809094773,
-        "home_score": 25.559687175106404,
+        "away_score": 22.40164462022896,
+        "home_score": 25.528073544095033,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 3.03344636601163,
-        "total": 48.08592798420118
+        "spread": 3.1264289238660745,
+        "total": 47.929718164323994
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401866438",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Ohio",
       "independent": {
-        "away_score": 23.16328931766822,
-        "home_score": 26.9921239383475,
-        "home_win_probability": 0.6118970604156675,
-        "interval_80_high": 23.0,
-        "interval_80_low": -14.0,
+        "away_score": 21.860805785776133,
+        "home_score": 27.28620556308137,
+        "home_win_probability": 0.6536115962590436,
+        "interval_80_high": 24.0,
+        "interval_80_low": -13.0,
         "source": "football model + drive simulation",
-        "spread": 3.828834620679282,
-        "total": 50.15541325601572
+        "spread": 5.42539977730524,
+        "total": 49.147011348857504
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
@@ -63751,7 +63753,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -63760,13 +63762,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 0.8288346206792818,
-        "total": 3.15541325601572
+        "spread": 2.4253997773052403,
+        "total": 2.1470113488575038
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "c0b8f51169abc5d6c875d782",
+      "prediction_id": "6d7b1312f4d0149d73793e97",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -63776,7 +63778,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 3.2 pts",
+        "reason": "Yes \u2014 model above the market by 2.1 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -63787,48 +63789,48 @@
     {
       "away_team": "Kent State",
       "calibrated": {
-        "away_score": 15.678211180611079,
-        "home_score": 29.657505187704807,
+        "away_score": 16.023121527050463,
+        "home_score": 29.459075823108805,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 13.97929400709373,
-        "total": 45.335716368315886
+        "spread": 13.435954296058345,
+        "total": 45.48219735015927
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401866439",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Western Michigan",
       "independent": {
-        "away_score": 18.79830728276071,
-        "home_score": 32.69731407989523,
-        "home_win_probability": 0.8282890395826075,
-        "interval_80_high": 33.0,
-        "interval_80_low": -5.0,
+        "away_score": 19.893190461843364,
+        "home_score": 32.54802895328716,
+        "home_win_probability": 0.804473650521262,
+        "interval_80_high": 32.0,
+        "interval_80_low": -6.999999999999998,
         "source": "football model + drive simulation",
-        "spread": 13.899006797134522,
-        "total": 51.49562136265594
+        "spread": 12.654838491443792,
+        "total": 52.44121941513052
       },
       "kickoff": "2026-10-10T19:30:00Z",
       "league": "ncaa",
       "market": {
-        "away_score": 14.75,
-        "home_score": 28.75,
+        "away_score": 15.0,
+        "home_score": 28.5,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "Bovada (of 2 books)",
-        "spread": 14.0,
+        "spread": 13.5,
         "total": 43.5
       },
       "market_evidence": {
@@ -63836,22 +63838,22 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
         ],
-        "spread_dispersion": 0.5,
+        "spread_dispersion": 0.0,
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -0.10099320286547808,
-        "total": 7.995621362655939
+        "spread": -0.8451615085562079,
+        "total": 8.941219415130519
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "10fd582babe3ac97022ae166",
+      "prediction_id": "c84e470bc8ef9d2e513caaef",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -63859,7 +63861,7 @@
         "label": "\u2014",
         "market": "total",
         "qualifies": false,
-        "reason": "No \u2014 gap of 8.0 pts is at or above the 6.0 cap",
+        "reason": "No \u2014 gap of 8.9 pts is at or above the 6.0 cap",
         "rule": "P1",
         "side": null
       },
@@ -63870,37 +63872,37 @@
     {
       "away_team": "UConn",
       "calibrated": {
-        "away_score": 26.539199585593327,
-        "home_score": 29.73108255301315,
+        "away_score": 26.66306641507382,
+        "home_score": 29.604071293239407,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 3.1918829674198195,
-        "total": 56.270282138606476
+        "spread": 2.941004878165584,
+        "total": 56.26713770831323
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401861964",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Temple",
       "independent": {
-        "away_score": 35.847259289008825,
-        "home_score": 26.225955837699352,
-        "home_win_probability": 0.2791285984432662,
-        "interval_80_high": 10.000000000000002,
-        "interval_80_low": -30.0,
+        "away_score": 37.99097206720863,
+        "home_score": 24.061944402813715,
+        "home_win_probability": 0.1955659618413737,
+        "interval_80_high": 6.000000000000002,
+        "interval_80_low": -35.0,
         "source": "football model + drive simulation",
-        "spread": -9.62130345130947,
-        "total": 62.07321512670818
+        "spread": -13.929027664394914,
+        "total": 62.052916470022346
       },
       "kickoff": "2026-10-10T19:45:00Z",
       "league": "ncaa",
@@ -63919,7 +63921,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -63928,13 +63930,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -13.62130345130947,
-        "total": 7.5732151267081775
+        "spread": -17.929027664394916,
+        "total": 7.552916470022346
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "86b138a664f094008bed7329",
+      "prediction_id": "f99c27b2362732773c42c413",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -63955,37 +63957,37 @@
     {
       "away_team": "Rice",
       "calibrated": {
-        "away_score": 19.547997303190026,
-        "home_score": 29.91722149681328,
+        "away_score": 19.324367240740912,
+        "home_score": 30.025473785397814,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 10.369224193623253,
-        "total": 49.465218800003306
+        "spread": 10.701106544656906,
+        "total": 49.349841026138726
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401862797",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "East Carolina",
       "independent": {
-        "away_score": 19.868639152541697,
-        "home_score": 36.46297638255416,
-        "home_win_probability": 0.8604346618752468,
-        "interval_80_high": 37.0,
-        "interval_80_low": -3.0,
+        "away_score": 16.646924958335475,
+        "home_score": 38.939877175783536,
+        "home_win_probability": 0.9291459503310069,
+        "interval_80_high": 42.0,
+        "interval_80_low": 3.0,
         "source": "football model + drive simulation",
-        "spread": 16.59433723001246,
-        "total": 56.33161553509586
+        "spread": 22.292952217448065,
+        "total": 55.58680213411901
       },
       "kickoff": "2026-10-10T20:00:00Z",
       "league": "ncaa",
@@ -64004,7 +64006,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64013,13 +64015,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 6.59433723001246,
-        "total": 8.831615535095857
+        "spread": 12.292952217448065,
+        "total": 8.086802134119011
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "26e65d197a5432a728270d33",
+      "prediction_id": "0d12de3a60b7dc333aee515a",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -64029,7 +64031,7 @@
         "label": "\u2014",
         "market": "total",
         "qualifies": false,
-        "reason": "No \u2014 gap of 8.8 pts is at or above the 6.0 cap",
+        "reason": "No \u2014 gap of 8.1 pts is at or above the 6.0 cap",
         "rule": "P1",
         "side": null
       },
@@ -64040,37 +64042,37 @@
     {
       "away_team": "Tennessee",
       "calibrated": {
-        "away_score": 33.97653298632388,
-        "home_score": 20.194369588327806,
+        "away_score": 33.76231400519809,
+        "home_score": 20.173689998842114,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -13.782163397996074,
-        "total": 54.170902574651684
+        "spread": -13.588624006355982,
+        "total": 53.93600400404021
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856713",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Arkansas",
       "independent": {
-        "away_score": 41.48873990469132,
-        "home_score": 23.398369419242663,
-        "home_win_probability": 0.1322165217371553,
-        "interval_80_high": 3.0,
-        "interval_80_low": -39.0,
+        "away_score": 39.06896146108797,
+        "home_score": 24.301776057414163,
+        "home_win_probability": 0.18028966248773862,
+        "interval_80_high": 4.999999999999998,
+        "interval_80_low": -35.0,
         "source": "football model + drive simulation",
-        "spread": -18.09037048544866,
-        "total": 64.88710932393398
+        "spread": -14.767185403673809,
+        "total": 63.37073751850213
       },
       "kickoff": "2026-10-10T20:15:00Z",
       "league": "ncaa",
@@ -64089,7 +64091,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64098,13 +64100,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -4.590370485448659,
-        "total": 13.387109323933984
+        "spread": -1.2671854036738086,
+        "total": 11.870737518502132
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "f8888747ac08e5b15cdd8036",
+      "prediction_id": "6a7369711f85b41801f585f1",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -64125,37 +64127,37 @@
     {
       "away_team": "Maryland",
       "calibrated": {
-        "away_score": 11.028212054990608,
-        "home_score": 45.155120743210944,
+        "away_score": 10.94827578470013,
+        "home_score": 44.91770854111471,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 34.12690868822033,
-        "total": 56.18333279820155
+        "spread": 33.969432756414584,
+        "total": 55.86598432581484
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858483",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Ohio State",
       "independent": {
-        "away_score": 12.490213695151523,
-        "home_score": 40.83855749912023,
-        "home_win_probability": 0.9736046842445992,
-        "interval_80_high": 48.0,
-        "interval_80_low": 9.0,
+        "away_score": 12.81788005789025,
+        "home_score": 38.462269576993606,
+        "home_win_probability": 0.9616906819357111,
+        "interval_80_high": 45.0,
+        "interval_80_low": 7.0,
         "source": "football model + drive simulation",
-        "spread": 28.348343803968707,
-        "total": 53.32877119427175
+        "spread": 25.644389519103356,
+        "total": 51.280149634883855
       },
       "kickoff": "2026-10-10T20:15:00Z",
       "league": "ncaa",
@@ -64174,7 +64176,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64183,13 +64185,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -6.151656196031293,
-        "total": -2.671228805728248
+        "spread": -8.855610480896644,
+        "total": -4.7198503651161445
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "70d6d7645acecc1266751b17",
+      "prediction_id": "c93106c8f5ee9ef0779a56dc",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -64208,37 +64210,37 @@
     {
       "away_team": "San Diego State",
       "calibrated": {
-        "away_score": 19.91101293904198,
-        "home_score": 33.0834028090359,
+        "away_score": 19.928650002835855,
+        "home_score": 33.20372004833209,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 13.172389869993921,
-        "total": 52.994415748077884
+        "spread": 13.275070045496236,
+        "total": 53.132370051167946
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401860902",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Oregon State",
       "independent": {
-        "away_score": 27.21140952864629,
-        "home_score": 19.170104330813164,
-        "home_win_probability": 0.29746333592317664,
-        "interval_80_high": 10.0,
-        "interval_80_low": -27.0,
+        "away_score": 26.77514738135973,
+        "home_score": 20.496921133665396,
+        "home_win_probability": 0.3411698944853948,
+        "interval_80_high": 11.000000000000002,
+        "interval_80_low": -25.0,
         "source": "football model + drive simulation",
-        "spread": -8.041305197833125,
-        "total": 46.38151385945945
+        "spread": -6.278226247694333,
+        "total": 47.272068515025126
       },
       "kickoff": "2026-10-10T22:00:00Z",
       "league": "ncaa",
@@ -64257,7 +64259,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64266,13 +64268,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -22.541305197833125,
-        "total": -7.118486140540547
+        "spread": -20.778226247694334,
+        "total": -6.227931484974874
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": true,
       "pick_eligible": false,
-      "prediction_id": "b4e9156827d617a2922b0cb8",
+      "prediction_id": "1b20b52549bfad019dc11d48",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -64293,48 +64295,48 @@
     {
       "away_team": "LSU",
       "calibrated": {
-        "away_score": 30.113061802212496,
-        "home_score": 21.90054116506391,
+        "away_score": 30.118898418910753,
+        "home_score": 21.681353066609695,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -8.212520637148586,
-        "total": 52.013602967276405
+        "spread": -8.437545352301056,
+        "total": 51.80025148552045
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856715",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Kentucky",
       "independent": {
-        "away_score": 27.086111446031627,
-        "home_score": 15.6915480877045,
-        "home_win_probability": 0.21936866016265066,
-        "interval_80_high": 7.0,
-        "interval_80_low": -31.0,
+        "away_score": 24.286729818644982,
+        "home_score": 17.113653681696537,
+        "home_win_probability": 0.3125263422875779,
+        "interval_80_high": 10.0,
+        "interval_80_low": -25.0,
         "source": "football model + drive simulation",
-        "spread": -11.394563358327126,
-        "total": 42.77765953373613
+        "spread": -7.1730761369484455,
+        "total": 41.40038350034152
       },
       "kickoff": "2026-10-10T23:00:00Z",
       "league": "ncaa",
       "market": {
-        "away_score": 30.5,
-        "home_score": 22.5,
+        "away_score": 30.75,
+        "home_score": 22.25,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "Bovada (of 2 books)",
-        "spread": -8.0,
+        "spread": -8.5,
         "total": 53.0
       },
       "market_evidence": {
@@ -64342,22 +64344,22 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
         ],
-        "spread_dispersion": 0.5,
+        "spread_dispersion": 0.0,
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -3.394563358327126,
-        "total": -10.222340466263873
+        "spread": 1.3269238630515545,
+        "total": -11.599616499658481
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "c032fab5880bcaca65f41a5f",
+      "prediction_id": "931810a685b4b23a29125edb",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -64378,37 +64380,37 @@
     {
       "away_team": "UAB",
       "calibrated": {
-        "away_score": 22.044813112894836,
-        "home_score": 35.64596658199651,
+        "away_score": 21.92430413708657,
+        "home_score": 35.78755262723693,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 13.601153469101671,
-        "total": 57.69077969489135
+        "spread": 13.86324849015036,
+        "total": 57.7118567643235
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401862798",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Memphis",
       "independent": {
-        "away_score": 26.463082405987773,
-        "home_score": 33.869193963447444,
-        "home_win_probability": 0.6910916538416689,
-        "interval_80_high": 27.0,
-        "interval_80_low": -11.0,
+        "away_score": 24.28095044110124,
+        "home_score": 36.18738752183303,
+        "home_win_probability": 0.7855539421317069,
+        "interval_80_high": 32.0,
+        "interval_80_low": -7.0,
         "source": "football model + drive simulation",
-        "spread": 7.406111557459674,
-        "total": 60.33227636943522
+        "spread": 11.906437080731791,
+        "total": 60.46833796293427
       },
       "kickoff": "2026-10-10T23:00:00Z",
       "league": "ncaa",
@@ -64427,7 +64429,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64436,13 +64438,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": -6.593888442540326,
-        "total": 3.8322763694352204
+        "spread": -2.0935629192682086,
+        "total": 3.968337962934271
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "792ee67d83da777966fe5b49",
+      "prediction_id": "40a051cba2ab804d4eab4dce",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -64452,7 +64454,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 3.8 pts",
+        "reason": "Yes \u2014 model above the market by 4.0 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -64463,37 +64465,37 @@
     {
       "away_team": "Nevada",
       "calibrated": {
-        "away_score": 29.284696735995897,
-        "home_score": 20.392277189444766,
+        "away_score": 29.26890064844146,
+        "home_score": 20.417295789288836,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -8.892419546551134,
-        "total": 49.67697392544066
+        "spread": -8.851604859152626,
+        "total": 49.686196437730295
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401864517",
       "games_observed": {
         "away": 4,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "UTEP",
       "independent": {
-        "away_score": 22.80033382415094,
-        "home_score": 23.987388097901594,
-        "home_win_probability": 0.5398492648562196,
-        "interval_80_high": 20.0,
+        "away_score": 22.479695392679222,
+        "home_score": 24.367561832524974,
+        "home_win_probability": 0.5589529579365864,
+        "interval_80_high": 21.0,
         "interval_80_low": -17.0,
         "source": "football model + drive simulation",
-        "spread": 1.1870542737506546,
-        "total": 46.78772192205253
+        "spread": 1.887866439845754,
+        "total": 46.847257225204196
       },
       "kickoff": "2026-10-10T23:00:00Z",
       "league": "ncaa",
@@ -64512,7 +64514,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64521,13 +64523,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 10.687054273750654,
-        "total": -2.7122780779474667
+        "spread": 11.387866439845753,
+        "total": -2.6527427747958043
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "6e3f34735f47cdc28f055e79",
+      "prediction_id": "22c02cd76cf96cd74d4a5ddd",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -64548,37 +64550,37 @@
     {
       "away_team": "North Dakota State",
       "calibrated": {
-        "away_score": 26.74311684480117,
-        "home_score": 23.311558264572323,
+        "away_score": 26.687356817862785,
+        "home_score": 22.911565948298538,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -3.4315585802288453,
-        "total": 50.05467510937349
+        "spread": -3.7757908695642497,
+        "total": 49.59892276616132
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401864518",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "UNLV",
       "independent": {
-        "away_score": 33.78233411513143,
-        "home_score": 23.626760563382902,
-        "home_win_probability": 0.26241920176116573,
-        "interval_80_high": 8.0,
-        "interval_80_low": -30.0,
+        "away_score": 35.26663027319251,
+        "home_score": 19.200386036315905,
+        "home_win_probability": 0.15020548839089393,
+        "interval_80_high": 4.0,
+        "interval_80_low": -36.0,
         "source": "football model + drive simulation",
-        "spread": -10.155573551748528,
-        "total": 57.40909467851433
+        "spread": -16.06624423687661,
+        "total": 54.467016309508416
       },
       "kickoff": "2026-10-10T23:00:00Z",
       "league": "ncaa",
@@ -64597,7 +64599,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64606,13 +64608,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -7.155573551748528,
-        "total": 9.409094678514329
+        "spread": -13.06624423687661,
+        "total": 6.467016309508416
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "195d276fe69fe58fbf41a1e6",
+      "prediction_id": "c1a14afcf089113b3c89e685",
       "quality_reasons": [
         "returning production",
         "quarterback continuity",
@@ -64625,7 +64627,7 @@
         "label": "\u2014",
         "market": "total",
         "qualifies": false,
-        "reason": "No \u2014 gap of 9.4 pts is at or above the 6.0 cap",
+        "reason": "No \u2014 gap of 6.5 pts is at or above the 6.0 cap",
         "rule": "P1",
         "side": null
       },
@@ -64640,37 +64642,37 @@
     {
       "away_team": "Coastal Carolina",
       "calibrated": {
-        "away_score": 28.010955312446402,
-        "home_score": 31.286706964792668,
+        "away_score": 28.129750596164357,
+        "home_score": 31.29994989998957,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 3.2757516523462624,
-        "total": 59.29766227723907
+        "spread": 3.170199303825213,
+        "total": 59.42970049615393
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401869943",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Marshall",
       "independent": {
-        "away_score": 25.902587374013798,
-        "home_score": 33.89194614411191,
-        "home_win_probability": 0.69773163208003,
-        "interval_80_high": 28.0,
-        "interval_80_low": -11.0,
+        "away_score": 27.23496718584852,
+        "home_score": 33.41193010733435,
+        "home_win_probability": 0.6558006111622752,
+        "interval_80_high": 27.0,
+        "interval_80_low": -14.000000000000002,
         "source": "football model + drive simulation",
-        "spread": 7.9893587700981135,
-        "total": 59.79453351812571
+        "spread": 6.1769629214858295,
+        "total": 60.646897293182874
       },
       "kickoff": "2026-10-10T23:00:00Z",
       "league": "ncaa",
@@ -64689,7 +64691,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64698,13 +64700,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 4.9893587700981135,
-        "total": 1.2945335181257107
+        "spread": 3.1769629214858295,
+        "total": 2.1468972931828745
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "588dc8cd05e2833a3e05746f",
+      "prediction_id": "8babf9504411e77db6814fe9",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -64714,7 +64716,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 1.3 pts",
+        "reason": "Yes \u2014 model above the market by 2.1 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -64725,71 +64727,71 @@
     {
       "away_team": "Georgia",
       "calibrated": {
-        "away_score": 26.460530292002492,
-        "home_score": 27.655603585375022,
+        "away_score": 25.939905971104217,
+        "home_score": 27.27529289738282,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 1.1950732933725292,
-        "total": 54.116133877377514
+        "spread": 1.3353869262785985,
+        "total": 53.215198868487036
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856712",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Alabama",
       "independent": {
-        "away_score": 28.551959552150265,
-        "home_score": 25.070729681360746,
-        "home_win_probability": 0.41749841548933164,
-        "interval_80_high": 16.0,
-        "interval_80_low": -24.0,
+        "away_score": 25.803221397306142,
+        "home_score": 24.731259054391227,
+        "home_win_probability": 0.47812112882235613,
+        "interval_80_high": 18.0,
+        "interval_80_low": -20.0,
         "source": "football model + drive simulation",
-        "spread": -3.481229870789523,
-        "total": 53.62268923351101
+        "spread": -1.0719623429149152,
+        "total": 50.53448045169737
       },
       "kickoff": "2026-10-10T23:30:00Z",
       "league": "ncaa",
       "market": {
-        "away_score": 26.0,
-        "home_score": 27.5,
+        "away_score": 25.75,
+        "home_score": 27.25,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "Bovada (of 2 books)",
         "spread": 1.5,
-        "total": 53.5
+        "total": 53.0
       },
       "market_evidence": {
         "book_count_spread": 2,
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
         ],
         "spread_dispersion": 0.0,
-        "total_dispersion": 1.0
+        "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -4.981229870789523,
-        "total": 0.1226892335110108
+        "spread": -2.571962342914915,
+        "total": -2.4655195483026304
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "442ba428ba877ea2edd15146",
+      "prediction_id": "cd8f358df74de4796e9e3ae5",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -64810,37 +64812,37 @@
     {
       "away_team": "Syracuse",
       "calibrated": {
-        "away_score": 20.455135562911952,
-        "home_score": 30.49297545237962,
+        "away_score": 20.301238570164827,
+        "home_score": 30.564479932751908,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 10.037839889467667,
-        "total": 50.94811101529157
+        "spread": 10.263241362587081,
+        "total": 50.865718502916735
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858258",
       "games_observed": {
         "away": 4,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Virginia",
       "independent": {
-        "away_score": 16.638088671296803,
-        "home_score": 35.62765648064919,
-        "home_win_probability": 0.8948419981956203,
-        "interval_80_high": 38.0,
-        "interval_80_low": -1.0,
+        "away_score": 14.437011159250872,
+        "home_score": 37.296854712124514,
+        "home_win_probability": 0.9366110657621048,
+        "interval_80_high": 42.0,
+        "interval_80_low": 3.0,
         "source": "football model + drive simulation",
-        "spread": 18.989567809352387,
-        "total": 52.26574515194599
+        "spread": 22.85984355287364,
+        "total": 51.733865871375386
       },
       "kickoff": "2026-10-10T23:30:00Z",
       "league": "ncaa",
@@ -64859,7 +64861,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64868,13 +64870,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 9.489567809352387,
-        "total": 2.2657451519459926
+        "spread": 13.359843552873642,
+        "total": 1.7338658713753858
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "8085ecb08b269f6ad0efe090",
+      "prediction_id": "92e09331f6b624d1ea49a24c",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -64895,37 +64897,37 @@
     {
       "away_team": "USC",
       "calibrated": {
-        "away_score": 27.455817975554023,
-        "home_score": 28.651735476433853,
+        "away_score": 27.10105201401632,
+        "home_score": 28.703598375258142,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 1.1959175008798326,
-        "total": 56.107553451987876
+        "spread": 1.6025463612418205,
+        "total": 55.804650389274464
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858485",
       "games_observed": {
         "away": 6,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Penn State",
       "independent": {
-        "away_score": 30.880874664874657,
-        "home_score": 27.41414033305743,
-        "home_win_probability": 0.4170320780775178,
-        "interval_80_high": 15.0,
-        "interval_80_low": -24.0,
+        "away_score": 26.41216132931521,
+        "home_score": 29.927483472527932,
+        "home_win_probability": 0.6003085168667913,
+        "interval_80_high": 23.0,
+        "interval_80_low": -15.0,
         "source": "football model + drive simulation",
-        "spread": -3.4667343318172312,
-        "total": 58.295014997932086
+        "spread": 3.5153221432127184,
+        "total": 56.33964480184314
       },
       "kickoff": "2026-10-10T23:30:00Z",
       "league": "ncaa",
@@ -64944,7 +64946,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -64953,13 +64955,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -4.966734331817231,
-        "total": 3.2950149979320855
+        "spread": 2.0153221432127184,
+        "total": 1.3396448018431428
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "c7f15b9831615ad20baa8b82",
+      "prediction_id": "e01fc2dfd04fea12f2b51b2a",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -64980,37 +64982,37 @@
     {
       "away_team": "Air Force",
       "calibrated": {
-        "away_score": 27.904699996198126,
-        "home_score": 20.385502616831978,
+        "away_score": 28.109745170578513,
+        "home_score": 20.485163635904,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -7.519197379366151,
-        "total": 48.290202613030104
+        "spread": -7.624581534674513,
+        "total": 48.594908806482515
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401864516",
       "games_observed": {
         "away": 4,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Northern Illinois",
       "independent": {
-        "away_score": 29.52459185114817,
-        "home_score": 21.94950242925567,
-        "home_win_probability": 0.3102383603314368,
-        "interval_80_high": 10.0,
-        "interval_80_low": -27.0,
+        "away_score": 31.41285087950225,
+        "home_score": 22.028253585292752,
+        "home_win_probability": 0.2708841792634316,
+        "interval_80_high": 7.999999999999998,
+        "interval_80_low": -28.0,
         "source": "football model + drive simulation",
-        "spread": -7.575089421892501,
-        "total": 51.47409428040384
+        "spread": -9.3845972942095,
+        "total": 53.441104464795
       },
       "kickoff": "2026-10-10T23:30:00Z",
       "league": "ncaa",
@@ -65029,7 +65031,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -65038,25 +65040,25 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -0.07508942189250067,
-        "total": 4.47409428040384
+        "spread": -1.8845972942095006,
+        "total": 6.4411044647950035
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "e6a4f0bcf243dc54a3f42253",
+      "prediction_id": "d717b7e6ce895b1e274ba331",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
       "schema_version": 2,
       "season": 2026,
       "tracked_rule": {
-        "label": "P1 \u00b7 OVER",
+        "label": "\u2014",
         "market": "total",
-        "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 4.5 pts",
+        "qualifies": false,
+        "reason": "No \u2014 gap of 6.4 pts is at or above the 6.0 cap",
         "rule": "P1",
-        "side": "OVER"
+        "side": null
       },
       "unavailable_features": [],
       "warnings": [],
@@ -65065,37 +65067,37 @@
     {
       "away_team": "James Madison",
       "calibrated": {
-        "away_score": 30.958754741907143,
-        "home_score": 23.4804140932751,
+        "away_score": 30.89140740617453,
+        "home_score": 23.214134095592968,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -7.47834064863204,
-        "total": 54.439168835182244
+        "spread": -7.677273310581561,
+        "total": 54.1055415017675
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401869949",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Georgia Southern",
       "independent": {
-        "away_score": 31.290787430604055,
-        "home_score": 24.417232083584423,
-        "home_win_probability": 0.33493174372533874,
-        "interval_80_high": 12.0,
-        "interval_80_low": -27.0,
+        "away_score": 31.921828459855725,
+        "home_score": 21.632482410663293,
+        "home_win_probability": 0.2570756309909413,
+        "interval_80_high": 8.0,
+        "interval_80_low": -31.0,
         "source": "football model + drive simulation",
-        "spread": -6.873555347019632,
-        "total": 55.70801951418848
+        "spread": -10.289346049192428,
+        "total": 53.55431087051902
       },
       "kickoff": "2026-10-10T23:30:00Z",
       "league": "ncaa",
@@ -65114,7 +65116,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -65123,25 +65125,25 @@
         "total_dispersion": 1.0
       },
       "model_market_difference": {
-        "spread": 0.6264446529803678,
-        "total": 2.2080195141884786
+        "spread": -2.789346049192428,
+        "total": 0.05431087051901784
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "60b739749ceb19da14e43dd1",
+      "prediction_id": "1690b79e1819a98704910dde",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
       "schema_version": 2,
       "season": 2026,
       "tracked_rule": {
-        "label": "P1 \u00b7 OVER",
+        "label": "\u2014",
         "market": "total",
-        "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 2.2 pts",
+        "qualifies": false,
+        "reason": "No \u2014 model agrees with the market (0.1 pts, under the 0.5 minimum)",
         "rule": "P1",
-        "side": "OVER"
+        "side": null
       },
       "unavailable_features": [],
       "warnings": [],
@@ -65150,37 +65152,37 @@
     {
       "away_team": "Louisiana",
       "calibrated": {
-        "away_score": 23.259797637821208,
-        "home_score": 26.161653338308994,
+        "away_score": 23.222591281741217,
+        "home_score": 26.272032838804343,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 2.9018557004877867,
-        "total": 49.4214509761302
+        "spread": 3.049441557063123,
+        "total": 49.49462412054556
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401869965",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Louisiana Tech",
       "independent": {
-        "away_score": 25.876006813118476,
-        "home_score": 27.44535238165241,
-        "home_win_probability": 0.5499834274368227,
-        "interval_80_high": 21.0,
-        "interval_80_low": -18.0,
+        "away_score": 24.845121010048757,
+        "home_score": 28.948602460151314,
+        "home_win_probability": 0.6149242222343269,
+        "interval_80_high": 24.0,
+        "interval_80_low": -15.0,
         "source": "football model + drive simulation",
-        "spread": 1.5693455685339361,
-        "total": 53.321359194770885
+        "spread": 4.103481450102553,
+        "total": 53.79372347020007
       },
       "kickoff": "2026-10-10T23:30:00Z",
       "league": "ncaa",
@@ -65199,7 +65201,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -65208,13 +65210,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -1.4306544314660639,
-        "total": 5.321359194770885
+        "spread": 1.103481450102553,
+        "total": 5.793723470200071
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "2dcb90e1121c13ecce6a2247",
+      "prediction_id": "fba127e2aa1ef402399206a0",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -65222,7 +65224,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 5.3 pts",
+        "reason": "Yes \u2014 model above the market by 5.8 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -65233,37 +65235,37 @@
     {
       "away_team": "Minnesota",
       "calibrated": {
-        "away_score": 27.079985226405938,
-        "home_score": 25.02636289650635,
+        "away_score": 27.186620156347995,
+        "home_score": 25.17094135210539,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -2.0536223298995866,
-        "total": 52.10634812291229
+        "spread": -2.0156788042426035,
+        "total": 52.35756150845339
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401858486",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Purdue",
       "independent": {
-        "away_score": 24.43406315991473,
-        "home_score": 29.853170917845162,
-        "home_win_probability": 0.6466952386335875,
+        "away_score": 24.919152337836337,
+        "home_score": 30.989772727612333,
+        "home_win_probability": 0.6612516476080943,
         "interval_80_high": 25.0,
-        "interval_80_low": -13.000000000000002,
+        "interval_80_low": -13.0,
         "source": "football model + drive simulation",
-        "spread": 5.419107757930432,
-        "total": 54.28723407775989
+        "spread": 6.070620389776,
+        "total": 55.90892506544867
       },
       "kickoff": "2026-10-11T00:00:00Z",
       "league": "ncaa",
@@ -65282,7 +65284,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -65291,13 +65293,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": 7.919107757930432,
-        "total": 3.2872340777598907
+        "spread": 8.570620389776,
+        "total": 4.9089250654486705
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "11b8ac6beab7f7c24b86c10b",
+      "prediction_id": "ba1a617cbf2876e5fee37cb8",
       "quality_reasons": [],
       "schema_version": 2,
       "season": 2026,
@@ -65316,37 +65318,37 @@
     {
       "away_team": "Hawai'i",
       "calibrated": {
-        "away_score": 15.442246531036488,
-        "home_score": 36.09110160257123,
+        "away_score": 15.320660429046354,
+        "home_score": 35.94007195119327,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 20.64885507153474,
-        "total": 51.53334813360772
+        "spread": 20.619411522146915,
+        "total": 51.260732380239624
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856808",
       "games_observed": {
         "away": 5,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Arizona State",
       "independent": {
-        "away_score": 19.045405745919297,
-        "home_score": 34.27058184749579,
-        "home_win_probability": 0.8480717684992406,
-        "interval_80_high": 38.55946830171623,
-        "interval_80_low": -7.460531698283766,
+        "away_score": 18.418261006733527,
+        "home_score": 33.137874063748626,
+        "home_win_probability": 0.8431598045543669,
+        "interval_80_high": 37.470469649737275,
+        "interval_80_low": -7.369530350262719,
         "source": "football model + drive simulation",
-        "spread": 15.22517610157649,
-        "total": 53.31598759341509
+        "spread": 14.719613057015101,
+        "total": 51.556135070482156
       },
       "kickoff": "2026-10-11T01:30:00Z",
       "league": "ncaa",
@@ -65365,7 +65367,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -65374,13 +65376,13 @@
         "total_dispersion": 1.0
       },
       "model_market_difference": {
-        "spread": -5.774823898423509,
-        "total": 2.8159875934150875
+        "spread": -6.280386942984899,
+        "total": 1.0561350704821564
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "01e4ea8fc059e7fc4e742acd",
+      "prediction_id": "09c73ca856debe309f9632f3",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -65390,7 +65392,7 @@
         "label": "P1 \u00b7 OVER",
         "market": "total",
         "qualifies": true,
-        "reason": "Yes \u2014 model above the market by 2.8 pts",
+        "reason": "Yes \u2014 model above the market by 1.1 pts",
         "rule": "P1",
         "side": "OVER"
       },
@@ -65401,37 +65403,37 @@
     {
       "away_team": "Kansas",
       "calibrated": {
-        "away_score": 18.93212817244906,
-        "home_score": 34.60989506860199,
+        "away_score": 18.77867748756578,
+        "home_score": 34.568653060676596,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": 15.677766896152932,
-        "total": 53.542023241051055
+        "spread": 15.789975573110812,
+        "total": 53.347330548242375
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "developing",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401856827",
       "games_observed": {
         "away": 4,
         "home": 4
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Utah",
       "independent": {
-        "away_score": 21.01025923563136,
-        "home_score": 39.81716216424088,
-        "home_win_probability": 0.8898929918172058,
-        "interval_80_high": 39.0,
-        "interval_80_low": -1.0,
+        "away_score": 19.41850203315506,
+        "home_score": 40.152093881018544,
+        "home_win_probability": 0.9136070138664842,
+        "interval_80_high": 41.0,
+        "interval_80_low": 2.0,
         "source": "football model + drive simulation",
-        "spread": 18.806902928609517,
-        "total": 60.827421399872236
+        "spread": 20.733591847863487,
+        "total": 59.57059591417361
       },
       "kickoff": "2026-10-11T02:15:00Z",
       "league": "ncaa",
@@ -65446,11 +65448,11 @@
         "total": 51.5
       },
       "market_evidence": {
-        "book_count_spread": 1,
+        "book_count_spread": 2,
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -65459,13 +65461,13 @@
         "total_dispersion": 0.0
       },
       "model_market_difference": {
-        "spread": 3.3069029286095173,
-        "total": 9.327421399872236
+        "spread": 5.233591847863487,
+        "total": 8.070595914173609
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "82a4fb545f58793f2cd895e1",
+      "prediction_id": "8dec7d6620602190e34a66a4",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -65486,37 +65488,37 @@
     {
       "away_team": "Boise State",
       "calibrated": {
-        "away_score": 27.999215511045595,
-        "home_score": 21.42173733288171,
+        "away_score": 27.915665430951293,
+        "home_score": 21.313275645001305,
         "home_win_probability": null,
         "interval_80_high": null,
         "interval_80_low": null,
         "source": "market blend, weight not independently significant",
-        "spread": -6.577478178163888,
-        "total": 49.4209528439273
+        "spread": -6.602389785949988,
+        "total": 49.2289410759526
       },
       "calibration_status": {
         "spread": true,
         "total": true
       },
       "confidence": "established",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "401860901",
       "games_observed": {
         "away": 5,
         "home": 5
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "Fresno State",
       "independent": {
-        "away_score": 30.44697426010541,
-        "home_score": 22.87116927598397,
-        "home_win_probability": 0.3163160905644719,
-        "interval_80_high": 10.999999999999998,
+        "away_score": 30.04108825366046,
+        "home_score": 22.0375363253317,
+        "home_win_probability": 0.30495462794913986,
+        "interval_80_high": 10.0,
         "interval_80_low": -28.0,
         "source": "football model + drive simulation",
-        "spread": -7.575804984121442,
-        "total": 53.31814353608938
+        "spread": -8.003551928328761,
+        "total": 52.07862457899216
       },
       "kickoff": "2026-10-11T02:30:00Z",
       "league": "ncaa",
@@ -65535,7 +65537,7 @@
         "book_count_total": 2,
         "is_consensus": false,
         "label": "Bovada (of 2 books)",
-        "observed_at": "2026-10-07T01:38:24.908725977+00:00",
+        "observed_at": "2026-10-07T08:48:38.856382132+00:00",
         "providers": [
           "Bovada",
           "DraftKings"
@@ -65544,13 +65546,13 @@
         "total_dispersion": 0.5
       },
       "model_market_difference": {
-        "spread": -1.0758049841214419,
-        "total": 5.31814353608938
+        "spread": -1.5035519283287613,
+        "total": 4.078624578992162
       },
       "model_version": "ncaa-d05e246769f11b1972c1",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "d57062289e93cfafc0284ea3",
+      "prediction_id": "636a2c147eeba33d1dfb14b1",
       "quality_reasons": [
         "Significant roster/QB turnover widens the forecast range; the point estimate is not manually penalized"
       ],
@@ -65576,13 +65578,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_PHI_JAX",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "JAX",
       "independent": {
         "away_score": 21.363750000000003,
@@ -65625,7 +65627,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "fd46764a10fe6edb358766e7",
+      "prediction_id": "e85b0cec0d75103b9c55849a",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -65636,7 +65638,7 @@
         "label": "\u2014",
         "market": "total",
         "qualifies": false,
-        "reason": "No \u2014 wind 7 mph, under the 10 mph trigger",
+        "reason": "No \u2014 wind 6 mph, under the 10 mph trigger",
         "rule": "W1",
         "side": null
       },
@@ -65654,13 +65656,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_CHI_GB",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "GB",
       "independent": {
         "away_score": 23.9535,
@@ -65703,7 +65705,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "36a6a9649cd4dc4e4c921ebd",
+      "prediction_id": "88eeea5df504ec6aaac08701",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -65711,12 +65713,12 @@
       "schema_version": 2,
       "season": 2026,
       "tracked_rule": {
-        "label": "\u2014",
+        "label": "W1 \u00b7 UNDER",
         "market": "total",
-        "qualifies": false,
-        "reason": "No \u2014 no wind forecast available yet",
+        "qualifies": true,
+        "reason": "Yes \u2014 wind 13 mph, at or over the trigger",
         "rule": "W1",
-        "side": null
+        "side": "UNDER"
       },
       "unavailable_features": [
         "confirmed live player availability"
@@ -65732,13 +65734,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_CIN_MIA",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "MIA",
       "independent": {
         "away_score": 23.7477,
@@ -65781,7 +65783,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "5466573f32bdad0db411969a",
+      "prediction_id": "0e18151a2fac632300512ae1",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -65810,13 +65812,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_CLE_NYJ",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "NYJ",
       "independent": {
         "away_score": 20.004199999999994,
@@ -65859,7 +65861,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "7fdb19fedba753e5df0a42f8",
+      "prediction_id": "150f62e4d8e9bc415d7912e8",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -65888,13 +65890,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_HOU_TEN",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "TEN",
       "independent": {
         "away_score": 24.143549999999998,
@@ -65937,7 +65939,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "304a6ad6446192f12a839067",
+      "prediction_id": "8bd4e0206d42ddf41cabbeb5",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -65945,12 +65947,12 @@
       "schema_version": 2,
       "season": 2026,
       "tracked_rule": {
-        "label": "\u2014",
+        "label": "W1 \u00b7 UNDER",
         "market": "total",
-        "qualifies": false,
-        "reason": "No \u2014 wind 9 mph, under the 10 mph trigger",
+        "qualifies": true,
+        "reason": "Yes \u2014 wind 12 mph, at or over the trigger",
         "rule": "W1",
-        "side": null
+        "side": "UNDER"
       },
       "unavailable_features": [
         "confirmed live player availability"
@@ -65966,13 +65968,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_IND_PIT",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "PIT",
       "independent": {
         "away_score": 20.967299999999994,
@@ -66015,7 +66017,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "5dbb07f2300fc651cb2d3a89",
+      "prediction_id": "e5c5e05e514d7070ac02f287",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -66026,7 +66028,7 @@
         "label": "\u2014",
         "market": "total",
         "qualifies": false,
-        "reason": "No \u2014 wind 10 mph, under the 10 mph trigger",
+        "reason": "No \u2014 wind 8 mph, under the 10 mph trigger",
         "rule": "W1",
         "side": null
       },
@@ -66044,13 +66046,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_LV_NE",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "NE",
       "independent": {
         "away_score": 16.059999999999995,
@@ -66093,7 +66095,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "5467490f98c8db1da1326d03",
+      "prediction_id": "e60edaf0f3ba51c343580dac",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -66122,13 +66124,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_MIN_NO",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "NO",
       "independent": {
         "away_score": 20.656199999999995,
@@ -66171,7 +66173,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "2f01de0a510262f09124f17c",
+      "prediction_id": "d0e17b8db2fdd9335f495eb3",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -66200,13 +66202,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_NYG_WAS",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "WAS",
       "independent": {
         "away_score": 23.4132,
@@ -66249,7 +66251,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "8744f7b6e72671d62cd1244c",
+      "prediction_id": "8225217ac452b5914eb0c4a7",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -66260,7 +66262,7 @@
         "label": "\u2014",
         "market": "total",
         "qualifies": false,
-        "reason": "No \u2014 wind 7 mph, under the 10 mph trigger",
+        "reason": "No \u2014 wind 8 mph, under the 10 mph trigger",
         "rule": "W1",
         "side": null
       },
@@ -66278,13 +66280,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_DEN_LAC",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "LAC",
       "independent": {
         "away_score": 23.28865,
@@ -66327,7 +66329,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "7babc11b5cc511d06e534794",
+      "prediction_id": "892e940b9e2f2cad4e3ce420",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -66356,13 +66358,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_DET_ARI",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "ARI",
       "independent": {
         "away_score": 25.9592,
@@ -66405,7 +66407,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "4289f5ec62ea767b791ebe15",
+      "prediction_id": "6e0c5c4c504c9a4fc2524db5",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -66434,13 +66436,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_SF_SEA",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "SEA",
       "independent": {
         "away_score": 21.752149999999997,
@@ -66483,7 +66485,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "ccac6e7cf6279c5803f90c34",
+      "prediction_id": "853e8b6007289eb74e98de25",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -66491,12 +66493,12 @@
       "schema_version": 2,
       "season": 2026,
       "tracked_rule": {
-        "label": "W1 \u00b7 UNDER",
+        "label": "\u2014",
         "market": "total",
-        "qualifies": true,
-        "reason": "Yes \u2014 wind 10 mph, at or over the trigger",
+        "qualifies": false,
+        "reason": "No \u2014 no wind forecast available yet",
         "rule": "W1",
-        "side": "UNDER"
+        "side": null
       },
       "unavailable_features": [
         "confirmed live player availability"
@@ -66512,13 +66514,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_BAL_ATL",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "ATL",
       "independent": {
         "away_score": 25.552499999999995,
@@ -66561,7 +66563,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "40d07ddc25a18e7d0fe8de6a",
+      "prediction_id": "29b6386d7807037ae5882914",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
@@ -66590,13 +66592,13 @@
         "total": true
       },
       "confidence": "incomplete",
-      "data_cutoff": "2026-10-07T01:39:14.532511Z",
+      "data_cutoff": "2026-10-07T08:49:29.885320Z",
       "game_id": "2026_05_BUF_LA",
       "games_observed": {
         "away": 0,
         "home": 0
       },
-      "generated_at": "2026-10-07T01:39:14.532511Z",
+      "generated_at": "2026-10-07T08:49:29.885320Z",
       "home_team": "LA",
       "independent": {
         "away_score": 27.56045,
@@ -66639,7 +66641,7 @@
       "model_version": "nfl-f6b86a58964932e2e1c2",
       "out_of_distribution": false,
       "pick_eligible": false,
-      "prediction_id": "e075657bb2151560e147cb2a",
+      "prediction_id": "0924f473926d85d4b774994d",
       "quality_reasons": [
         "confirmed live player availability",
         "spread experimental blend is unavailable"
